@@ -1,6 +1,6 @@
 require import AllCore FMap.
 
-type id, tag, state, key, pkey, skey, key_sess.
+type s_id, tag, state, key, pkey, skey, key_sess.
 op dkp : (pkey * skey) distr.
 
 type role = [
@@ -8,93 +8,106 @@ type role = [
 | Server
 ].
 
-type trace = (pkey * pkey) * pkey * tag.
+type trace = pkey * (pkey * tag).
+type sid = (s_id * pkey) * trace.
+
+type cr_status = { cr_ephemeral: bool; cr_session: bool }.
+type sr_status = { sr_longterm: bool; sr_ephemeral: bool; sr_session: bool }.
 
 type instance_state = [
-  CPending of id & pkey & skey
-| SCorrupted of pkey
-| IRevealed of pkey
-| Accepted of id & trace & key
-| Observed of trace & key
+  CPending  of s_id & pkey & skey & cr_status
+| CAccepted of s_id & trace & key & cr_status
+| SAccepted of trace & key & sr_status
 | Aborted
 ].
 
 module type Server = {
-  proc init(b: id) : (pkey * skey) option
-  proc respond_session(st: state, b: id, pk: pkey) : (pkey * tag) option * key_sess option
+  proc init(b: s_id) : pkey option
+  proc respond_session(st: instance_state option, b: s_id, pk: pkey) : (instance_state * (pkey * tag)) option
 }.
 
 module type Client = {
-  proc new_session(st: state, b: id) : (pkey * skey) option
-  proc complete_session(st: state, pk: pkey, t: tag) : (key_sess * id) option
+  proc new_session(st: instance_state option, b: s_id) : (instance_state * pkey) option
+  proc complete_session(st: instance_state option, pk: pkey, t: tag) : (instance_state * (key_sess * s_id)) option
 }.
 
 module type GAKE_out = {
-  proc init_s(b: id) : pkey option
-  proc send_msg1(a: id, i: int, m1: id) : pkey option
-  proc send_msg2(b: id, j: int, m2: pkey) : (pkey * tag) option
-  proc send_msg3(a: id, i: int, m3: (pkey * tag)) : unit option
-  proc rev_skey(i: int) : key option
-  proc rev_ltkey(a: id) : pkey
-  proc rev_ephkey(i: int) : pkey
-  proc test(i: int) : key option
+  (* server management *)
+  proc init_s(b: s_id) : pkey option
+
+  (* send *)
+  proc send_msg1(i: int, m1: s_id) : pkey option
+  proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option
+  proc send_msg3(i: int, m3: pkey * tag) : unit option
+
+  (* reveal and test *)
+  proc c_rev_skey(i: int) : key option
+  proc s_rev_skey(b: s_id, j: int) : key option
+  proc rev_ltkey(b: s_id) : pkey
+  proc c_rev_ephkey(i: int) : pkey
+  proc s_rev_ephkey(b: s_id, j: int) : pkey
+  proc c_test(i: int) : key option
+  proc s_test(b: s_id, j: int) : key option
 }.
 
-
 module GAKE0 (S: Server) (C: Client) : GAKE_out = {
-  var servers: (id, pkey * skey) fmap
-  var state_map: (id * int, instance_state) fmap
+  var servers : (s_id, pkey) fmap
+  var c_smap: (int, instance_state) fmap
+  var s_smap: (s_id * int, instance_state) fmap
 
   proc init_mem() : unit = {
-    servers <- empty;
-    state_map <- empty;
+    c_smap <- empty;
+    s_smap <- empty;
   }
   
-  proc init_s(b:  id) : pkey option = {
+  (** TODO: this needs figure out -- does Server keep track of
+   ** cert/PKI, or should this game do it?
+  **)
+  proc init_s(b: s_id) : pkey option = {
     var resp;
     
-    if (forall i, (b, i) \notin state_map) {
-      resp <@ S.init(b);
-      servers.[b] <- oget resp;
+    resp <@ S.init(b);
+    if (resp is Some pk) {
+      servers.[b] <- pk;
     } else {
       resp <- servers.[b];
     }
 
-    return Some (oget resp).`1;
+    return Some (oget resp);
   }
 
-  proc send_msg1(a: id, i: int, m1: id) : pkey option = {
-    var st, m2, sk_ce;
+  proc send_msg1(i: int, m1: s_id) : pkey option = {
+    var st, resp, st', m2;
+    var r <- None;
 
-    st <- state_map.[(a, i)];
-    (m2, sk_ce) <@ C.new_session(st, m1);
-    if ((m2, sk_ce) <> None) {
-      state_map.[(a,i)] <- CPending m1 pk_ce sk_ce;
+    st <- c_smap.[i];
+    resp <@ C.new_session(st, m1);
+    if (resp is Some r') {
+      (st', m2) <- r';
+      c_smap.[i] <- st';
+      r <- Some m2;
     } else {
-      state_map.[(a,i)] <- Aborted;
+      c_smap.[i] <- Aborted;
     }
 
-    return m2;
+    return r;
   }
 
-  proc send_msg2(b: id, j: int, m2: pkey) : (pkey * tag) option = {
-    var pk_s, sk_s, st;
-    var m3 <- None;
+  proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
+    var st, resp, st', m3;
+    var r <- None;
 
-    (pk_s, sk_s) <- servers.[b];
-    st <- state_map.[(b, j)];
-    if (st = None) { (* or if state is Corrupted *)
-      (m3, sk) <@ S.respond_session(sk_s, b, m2);
-      if (m3 <> None) {
-        state_map.[(b,j)] <- Accepted b ((pk_s, m3.`1) m2 m3.`2) sk;
-      } else {
-        state_map.[(b,j)] <- Aborted;
-      }
+    st <- s_smap.[b, j];
+    resp <@ S.respond_session(st, b, m2);
+    if (resp is Some r') {
+      (st', m3) <- r';
+      s_smap.[b, j] <- st';
+      r <- Some m3;
     } else {
-      state_map.[(b,j)] <- Aborted;
+      s_smap.[b, j] <- Aborted;
     }
 
-    return m3;
+    return r;
   }
 
   proc send_msg3(a: id, i: int, m3: (pkey * tag)) : unit option = {
