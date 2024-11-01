@@ -11,23 +11,28 @@ type role = [
 type trace = pkey * (pkey * tag).
 type sid = (s_id * pkey) * trace.
 
-type ir_status = { ir_ephemeral: bool; ir_session: bool }.
+type ir_status = { ir_eph: bool; ir_sess: bool }.
 
-type instance_state = [
-  CPending  of s_id & pkey & pkey & skey & ir_status
-| CAccepted of s_id & trace & key & ir_status
-| SAccepted of trace & key & ir_status
-| Aborted of ir_status
+type pr_st_client.
+type pr_st_server = s_id * skey.
+
+op get_eph_c: pr_st_client -> skey.
+op get_eph_s: pr_st_server -> skey.
+
+type 'a instance_state = [
+  Pending  of 'a & (pkey option) (* Partial trace on client side *) & ir_status
+| Accepted of trace & key & ir_status
+| Aborted  of ir_status
 ].
 
 module type Server = {
-  proc init(b: s_id) : (pkey * skey) option
-  proc respond_session(st: instance_state option, b: s_id, pk: pkey, sk: skey) : (instance_state * (pkey * tag)) option
+  proc keygen(b: s_id) : pkey * skey
+  proc respond_session(st: pr_st_server option, pk: pkey) : ((pkey * tag) * key) option
 }.
 
 module type Client = {
-  proc new_session(st: instance_state option, b: s_id) : (instance_state * pkey) option
-  proc complete_session(st: instance_state option, pk: pkey, t: tag) : instance_state option
+  proc new_session(b: s_id) : (pr_st_client * pkey) option
+  proc complete_session(st: pr_st_client, m: pkey * tag) : key option
 }.
 
 module type GAKE_out = {
@@ -49,10 +54,27 @@ module type GAKE_out = {
   proc s_test(b: s_id, j: int) : key option
 }.
 
+type server_state = [
+  Honest    of (pkey * skey)
+| Corrupt   of (pkey * skey)
+| Dishonest of pkey
+].
+
+op get_pkey s_st =
+with s_st = Honest    kp => kp.`1
+with s_st = Corrupt   kp => kp.`1
+with s_st = Dishonest pk => pk.
+
+op get_skey s_st =
+with s_st = Honest    kp => Some kp.`2
+with s_st = Corrupt   kp => Some kp.`2
+with s_st = Dishonest pk => None.
+
 module GAKE0 (S: Server) (C: Client) : GAKE_out = {
-  var servers : (s_id, (pkey * skey) * bool) fmap
-  var c_smap: (int, instance_state) fmap
-  var s_smap: (s_id * int, instance_state) fmap
+  var servers : (s_id, server_state) fmap
+
+  var c_smap: (int, pr_st_client instance_state) fmap
+  var s_smap: (s_id * int, pr_st_server instance_state) fmap
 
   proc init_mem() : unit = {
     c_smap <- empty;
@@ -63,17 +85,13 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
    ** cert/PKI, or should this game do it?
   **)
   proc init_s(b: s_id) : pkey option = {
-    var resp, s;
-    
-    resp <@ S.init(b);
-    if (resp is Some kp) {
-      servers.[b] <- (kp, false);
-    } else {
-      s <- servers.[b];
-      resp <- Some (oget s).`1;
-    }
+    var kp;
 
-    return Some (oget resp).`1;
+    if (b \notin servers) {
+      kp <@ S.keygen(b);
+      servers.[b] <- Honest kp;
+    }
+    return omap get_pkey servers.[b];
   }
 
   proc send_msg1(i: int, m1: s_id) : pkey option = {
@@ -81,177 +99,191 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     var r <- None;
 
     st <- c_smap.[i];
-    resp <@ C.new_session(st, m1);
-    if (resp is Some r') {
-      (st', m2) <- r';
-      c_smap.[i] <- st';
-      r <- Some m2;
-    } else {
-      match oget st with 
-      | CPending _ _ _ _ ir => c_smap.[i] <- Aborted ir;
-      | CAccepted _ _ _ ir => c_smap.[i] <- Aborted ir;
-      | SAccepted _ _ _ => {}
-      | Aborted _ => {}
-      end;     
-    }
+    match st with
+    | None => {
+        resp <@ C.new_session(m1);
+        if (resp is Some r') {
+          (st', m2) <- r';
+          c_smap.[i] <- Pending st' (Some m2) {| ir_eph = false; ir_sess = false |};
+          r <- Some m2;
+        } else {
+          c_smap.[i] <- Aborted {| ir_eph = false; ir_sess = false |};
+        }
+      }
+    | Some st => {
+        match st with
+        | Pending _ _ ir => c_smap.[i] <- Aborted ir;
+        | Accepted _ _ _ => { }
+        | Aborted _ => { }
+        end;
+      }
+    end;
     return r;
   }
 
   proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
-    var st, s, kp, resp, st', m3;
+    var sko, resp, k, m3;
     var r <- None;
 
-    st <- s_smap.[b, j];
-    s <- servers.[b];
-    kp <- (oget s).`1;
-    resp <@ S.respond_session(st, b, m2, kp.`2);
-    if (resp is Some r') {
-      (st', m3) <- r';
-      s_smap.[(b, j)] <- st';
-      r <- Some m3;
-    } else {
-      if (oget st is SAccepted _ _ ir) {
-        s_smap.[(b, j)] <- Aborted ir;
+    sko <- obind get_skey servers.[b];
+    if (sko is Some sk) (* Server was initialised as honest *) {
+      match s_smap.[b, j] with
+      | None => {
+          resp <@ S.respond_session(Some (b, sk), m2);
+          if (resp is Some r') {
+            (m3, k) <- r';
+            s_smap.[(b, j)] <- Accepted (m2, m3) k {| ir_eph = false; ir_sess = false; |};
+            r <- Some m3;
+          } else {
+            s_smap.[(b, j)] <- Aborted {| ir_eph = false; ir_sess = false; |};
+          }
+        }
+      | Some st => {
+        match st with
+        | Pending _ _ ir => s_smap.[b, j] <- Aborted ir;
+        | Accepted _ _ _ => { }
+        | Aborted _ => { }
+        end;
       }
+      end;
     }
 
     return r;
   }
 
-  proc send_msg3(i: int, m3: (pkey * tag)) : unit option = {
-    var st, resp;
+  proc send_msg3(i: int, m3: pkey * tag) : unit option = {
+    var resp;
     var r <- None;
-    
-    st <- c_smap.[i];
-    resp <@ C.complete_session(st, m3.`1, m3.`2);
-    if (resp is Some st') {
-      c_smap.[i] <- st';
-      r <- Some ();
-    } else {
-      if (st is None) {
-        c_smap.[i] <- Aborted {| ir_ephemeral = false; ir_session = false |};
-      } 
-      if (oget st is CAccepted _ _ _ ir) {
-        c_smap.[i] <- Aborted ir;
+
+    match c_smap.[i] with
+    | None => { } (* Abort? *)
+    | Some _ => {
+        match oget c_smap.[i] with
+        | Pending st pt ir => {
+            resp <@ C.complete_session(st, m3);
+            if (resp is Some k) {
+              c_smap.[i] <- Accepted (oget pt, m3) k ir;
+              r <- Some ();
+            } else {
+              c_smap.[i] <- Aborted ir;
+            }
+          }
+        | Accepted _ _ _ => { }
+        | Aborted _ => { }
+        end;
       }
-    }
+    end;
     return r;
   }
 
 
   (* reveal and test *)
   proc c_rev_skey(i: int) : key option = {
-    var st;
     var k <- None;
 
-    st <- c_smap.[i];
-    if (st is Some st') {
-      match st' with 
-      | CPending _ _ _ _ _ => {}
-      | CAccepted _ _ k' _ => k <- Some k'; (* Add freshness check and change state *)
-      | SAccepted _ _ _ => {}
-      | Aborted _ => {}
-      end;
-    }
-
+    match c_smap.[i] with
+    | None => { }
+    | Some _ => {
+        if (oget c_smap.[i] is Accepted t' k' ir') {
+          (* TODO: freshness check *)
+          k <- Some k';
+          c_smap.[i] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+        }
+      }
+    end;
     return k;
   }
 
   proc s_rev_skey(b: s_id, j: int) : key option = {
-    var st;
     var k <- None;
 
-    st <- s_smap.[(b, j)];
-    if (st is Some st') {
-      match st' with 
-      | CPending _ _ _ _ _ => {}
-      | CAccepted _ _ _ _ => {}
-      | SAccepted _ k' _ => k <- Some k'; (* Add freshness check and change state *)
-      | Aborted _ => {}
-      end;
-    }
-
+    match s_smap.[b, j] with
+    | None => { }
+    | Some _ => {
+        if (oget s_smap.[b, j] is Accepted t' k' ir') {
+          (* TODO: freshness check *)
+          k <- Some k';
+          s_smap.[b, j] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+        }
+      }
+    end;
     return k;
   }
 
   proc rev_ltkey(b: s_id) : skey option = {
-    var kp_s, s;
     var ltk <- None;
 
-    if (b \in servers) { (* there is not tested session with EK revealed of b or partner tested and EK revealed *)
-      s <- servers.[b];
-      kp_s <- (oget s).`1;
-      ltk <- Some (kp_s).`2;
-      (* Update state_map of b for all i as Corrupted *)
+    if (servers.[b] is Some kreg) {
+      (* TODO: and there is not tested session with EK revealed of b
+         or partner tested and EK revealed *)
+      match kreg with
+      | Honest kp => { ltk <- Some kp.`2; servers.[b] <- Corrupt kp; }
+      | Corrupt kp => { ltk <- Some kp.`2; }
+      | Dishonest _ => { }
+      end;
     }
     return ltk;
   }
 
   proc c_rev_ephkey(i: int) : skey option = {
-    var st;
     var ek <- None;
 
-    st <- c_smap.[i];
-    if (st is Some st') {
-      match st' with 
-      | CPending _ _ _ ek' _ => ek <- Some ek'; (* Add freshness check and change state *)
-      | CAccepted _ tr _ _ => {} (* Add freshness check and change state *)
-      | SAccepted _ _ _ => {}
-      | Aborted _ => {}
-      end;
-    }
-
+    match c_smap.[i] with
+    | None => { }
+    | Some _ => {
+        if (oget c_smap.[i] is Pending st pk_e ir) {
+          ek <- Some (get_eph_c st);
+          c_smap.[i] <- Pending st pk_e {| ir_sess = ir.`ir_sess; ir_eph = true; |};
+        }
+      }
+    end;
     return ek;
   }
 
   proc s_rev_ephkey(b: s_id, j: int) : skey option = {
-    var st;
     var ek <- None;
 
-    st <- s_smap.[(b, j)];
-    if (st is Some st') {
-      match st' with 
-      | CPending _ _ _ _ _ => {}
-      | CAccepted _ _ _ _ => {}
-      | SAccepted tr _ _ => {} (* Add freshness check and change state *)
-      | Aborted _ => {}
-      end;
-    }
-
+    match s_smap.[b, j] with
+    | None => { }
+    | Some _ => {
+        if (oget s_smap.[b, j] is Pending st pt ir) {
+          ek <- Some (get_eph_s st);
+          s_smap.[b, j] <- Pending st pt {| ir_sess = ir.`ir_sess; ir_eph = true; |};
+        }
+      }
+    end;
     return ek;
   }
 
   proc c_test(i: int) : key option = {
-    var st;
     var k <- None;
 
-    st <- c_smap.[i];
-    if (st is Some st') {
-      match st' with 
-      | CPending _ _ _ _ _ => {}
-      | CAccepted _ _ k' _ => k <- Some k'; (* Add freshness check and change state *)
-      | SAccepted _ _ _ => {}
-      | Aborted _ => {}
-      end;
-    }
-
+    match c_smap.[i] with
+    | None => { }
+    | Some _ => {
+        if (oget c_smap.[i] is Accepted t' k' ir') {
+          (* TODO: freshness check *)
+          k <- Some k';
+          c_smap.[i] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+        }
+      }
+    end;
     return k;
   }
 
   proc s_test(b: s_id, j: int) : key option = {
-    var st;
     var k <- None;
 
-    st <- s_smap.[(b, j)];
-    if (st is Some st') {
-      match st' with 
-      | CPending _ _ _ _ _ => {}
-      | CAccepted _ _ _ _ => {}
-      | SAccepted _ k' _ => k <- Some k'; (* Add freshness check and change state *)
-      | Aborted _ => {}
-      end;
-    }
-
+    match s_smap.[b, j] with
+    | None => { }
+    | Some _ => {
+        if (oget s_smap.[b, j] is Accepted t' k' ir') {
+          (* TODO: freshness check *)
+          k <- Some k';
+          s_smap.[b, j] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+        }
+      }
+    end;
     return k;
   }
 }.
