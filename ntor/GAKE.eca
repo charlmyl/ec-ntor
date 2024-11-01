@@ -11,19 +11,18 @@ type role = [
 type trace = pkey * (pkey * tag).
 type sid = (s_id * pkey) * trace.
 
-type cr_status = { cr_ephemeral: bool; cr_session: bool }.
-type sr_status = { sr_longterm: bool; sr_ephemeral: bool; sr_session: bool }.
+type ir_status = { ir_ephemeral: bool; ir_session: bool }.
 
 type instance_state = [
-  CPending  of s_id & pkey & pkey & skey & cr_status
-| CAccepted of s_id & trace & key & cr_status
-| SAccepted of trace & key & sr_status
-| Aborted
+  CPending  of s_id & pkey & pkey & skey & ir_status
+| CAccepted of s_id & trace & key & ir_status
+| SAccepted of trace & key & ir_status
+| Aborted of ir_status
 ].
 
 module type Server = {
   proc init(b: s_id) : (pkey * skey) option
-  proc respond_session(st: instance_state option, b: s_id, pk: pkey) : (instance_state * (pkey * tag)) option
+  proc respond_session(st: instance_state option, b: s_id, pk: pkey, sk: skey) : (instance_state * (pkey * tag)) option
 }.
 
 module type Client = {
@@ -51,7 +50,7 @@ module type GAKE_out = {
 }.
 
 module GAKE0 (S: Server) (C: Client) : GAKE_out = {
-  var servers : (s_id, pkey * skey) fmap
+  var servers : (s_id, (pkey * skey) * bool) fmap
   var c_smap: (int, instance_state) fmap
   var s_smap: (s_id * int, instance_state) fmap
 
@@ -64,13 +63,14 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
    ** cert/PKI, or should this game do it?
   **)
   proc init_s(b: s_id) : pkey option = {
-    var resp;
+    var resp, s;
     
     resp <@ S.init(b);
     if (resp is Some kp) {
-      servers.[b] <- kp;
+      servers.[b] <- (kp, false);
     } else {
-      resp <- servers.[b];
+      s <- servers.[b];
+      resp <- Some (oget s).`1;
     }
 
     return Some (oget resp).`1;
@@ -87,24 +87,32 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       c_smap.[i] <- st';
       r <- Some m2;
     } else {
-      c_smap.[i] <- Aborted;
+      match oget st with 
+      | CPending _ _ _ _ ir => c_smap.[i] <- Aborted ir;
+      | CAccepted _ _ _ ir => c_smap.[i] <- Aborted ir;
+      | SAccepted _ _ _ => {}
+      | Aborted _ => {}
+      end;     
     }
-
     return r;
   }
 
   proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
-    var st, resp, st', m3;
+    var st, s, kp, resp, st', m3;
     var r <- None;
 
     st <- s_smap.[b, j];
-    resp <@ S.respond_session(st, b, m2);
+    s <- servers.[b];
+    kp <- (oget s).`1;
+    resp <@ S.respond_session(st, b, m2, kp.`2);
     if (resp is Some r') {
       (st', m3) <- r';
       s_smap.[(b, j)] <- st';
       r <- Some m3;
     } else {
-      s_smap.[(b, j)] <- Aborted;
+      if (oget st is SAccepted _ _ ir) {
+        s_smap.[(b, j)] <- Aborted ir;
+      }
     }
 
     return r;
@@ -120,7 +128,12 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       c_smap.[i] <- st';
       r <- Some ();
     } else {
-      c_smap.[i] <- Aborted;
+      if (st is None) {
+        c_smap.[i] <- Aborted {| ir_ephemeral = false; ir_session = false |};
+      } 
+      if (oget st is CAccepted _ _ _ ir) {
+        c_smap.[i] <- Aborted ir;
+      }
     }
     return r;
   }
@@ -137,7 +150,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       | CPending _ _ _ _ _ => {}
       | CAccepted _ _ k' _ => k <- Some k'; (* Add freshness check and change state *)
       | SAccepted _ _ _ => {}
-      | Aborted => {}
+      | Aborted _ => {}
       end;
     }
 
@@ -154,7 +167,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       | CPending _ _ _ _ _ => {}
       | CAccepted _ _ _ _ => {}
       | SAccepted _ k' _ => k <- Some k'; (* Add freshness check and change state *)
-      | Aborted => {}
+      | Aborted _ => {}
       end;
     }
 
@@ -162,12 +175,13 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc rev_ltkey(b: s_id) : skey option = {
-    var kp_s;
+    var kp_s, s;
     var ltk <- None;
 
     if (b \in servers) { (* there is not tested session with EK revealed of b or partner tested and EK revealed *)
-      kp_s <- servers.[b];
-      ltk <- Some (oget kp_s).`2;
+      s <- servers.[b];
+      kp_s <- (oget s).`1;
+      ltk <- Some (kp_s).`2;
       (* Update state_map of b for all i as Corrupted *)
     }
     return ltk;
@@ -183,7 +197,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       | CPending _ _ _ ek' _ => ek <- Some ek'; (* Add freshness check and change state *)
       | CAccepted _ tr _ _ => {} (* Add freshness check and change state *)
       | SAccepted _ _ _ => {}
-      | Aborted => {}
+      | Aborted _ => {}
       end;
     }
 
@@ -200,7 +214,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       | CPending _ _ _ _ _ => {}
       | CAccepted _ _ _ _ => {}
       | SAccepted tr _ _ => {} (* Add freshness check and change state *)
-      | Aborted => {}
+      | Aborted _ => {}
       end;
     }
 
@@ -217,7 +231,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       | CPending _ _ _ _ _ => {}
       | CAccepted _ _ k' _ => k <- Some k'; (* Add freshness check and change state *)
       | SAccepted _ _ _ => {}
-      | Aborted => {}
+      | Aborted _ => {}
       end;
     }
 
@@ -234,7 +248,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       | CPending _ _ _ _ _ => {}
       | CAccepted _ _ _ _ => {}
       | SAccepted _ k' _ => k <- Some k'; (* Add freshness check and change state *)
-      | Aborted => {}
+      | Aborted _ => {}
       end;
     }
 
