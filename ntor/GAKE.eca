@@ -38,6 +38,7 @@ module type Client = {
 module type GAKE_out = {
   (* server management *)
   proc init_s(b: s_id) : pkey option
+  proc set_cert(b: s_id, pk: pkey) : unit option
 
   (* send *)
   proc send_msg1(i: int, m1: s_id) : pkey option
@@ -81,9 +82,17 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     s_smap <- empty;
   }
   
-  (** TODO: this needs figure out -- does Server keep track of
-   ** cert/PKI, or should this game do it?
-  **)
+  proc set_cert(b: s_id, pk: pkey) : unit option = {
+    var r <- None;
+
+    if (b \notin servers) {
+      servers.[b] <- Dishonest pk;
+      r <- Some ();
+    }
+    return r;
+  }
+
+
   proc init_s(b: s_id) : pkey option = {
     var kp;
 
