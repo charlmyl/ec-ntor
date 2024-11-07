@@ -17,7 +17,7 @@ op get_eph_c: pr_st_client -> skey.
 op get_eph_s: pr_st_server -> skey.
 
 module type Server = {
-  proc keygen(b: s_id) : pkey * skey
+  proc keygen() : pkey * skey
   proc respond_session(st: pr_st_server option, pk: pkey) : ((pkey * tag) * key) option
 }.
 
@@ -30,7 +30,7 @@ op hash_ntor: pkey -> pkey -> s_id -> pkey -> pkey -> key_mac * key.
 op hash_mac: key_mac -> s_id -> pkey -> pkey -> tag.
 
 module Server : Server = {
-  proc keygen(b: s_id) : (pkey * skey) = {
+  proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
 
     (pk_s, sk_s) <$ dkp;

@@ -14,7 +14,7 @@ type sid = (s_id * pkey) * trace.
 type ir_status = { ir_eph: bool; ir_sess: bool }.
 
 type pr_st_client = s_id * pkey * pkey * skey.
-type pr_st_server = s_id * skey.
+type pr_st_server = s_id * skey * skey option.
 
 op get_eph_c: pr_st_client -> skey.
 op get_eph_s: pr_st_server -> skey.
@@ -22,24 +22,24 @@ op get_eph_s: pr_st_server -> skey.
 type 'a instance_state = [
   Pending  of 'a & (pkey option) (* Partial trace on client side *) & ir_status
 | Accepted of 'a & trace & key & ir_status
-| Aborted  of trace option & ir_status
+| Aborted  of 'a option & trace option & ir_status
 ].
 
 (* Return the trace from an accepted state *)
 op get_trace (s: 'a instance_state) : trace option =
-with s = Pending _ _ _      => None
-with s = Accepted _ t _ _   => Some t
-with s = Aborted t _        => t.
+with s = Pending _ _ _     => None
+with s = Accepted _ t _ _  => Some t
+with s = Aborted _ t _     => t.
 
 op get_key (s: 'a instance_state) : key option =
 with s = Pending _ _ _    => None
 with s = Accepted _ _ k _ => Some k
-with s = Aborted _ _      => None.
+with s = Aborted _ _ _    => None.
 
 op is_observed (s: 'a instance_state) : bool =
 with s = Pending _ _ ir    => ir.`ir_sess
 with s = Accepted _ _ _ ir => ir.`ir_sess
-with s = Aborted _ ir      => ir.`ir_sess.
+with s = Aborted _ _ ir    => ir.`ir_sess.
 
 op get_partners_c (i: int) (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
 fdom (
@@ -62,7 +62,7 @@ fdom (
 ).
 
 module type Server = {
-  proc keygen(b: s_id) : pkey * skey
+  proc keygen() : pkey * skey
   proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
 }.
 
@@ -133,7 +133,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     var kp;
 
     if (b \notin servers) {
-      kp <@ S.keygen(b);
+      kp <@ S.keygen();
       servers.[b] <- Honest kp;
     }
     return omap get_pkey servers.[b];
@@ -154,14 +154,14 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             c_smap.[i] <- Pending st' (Some m2) {| ir_eph = false; ir_sess = false |};
             r <- Some m2;
           } else {
-            c_smap.[i] <- Aborted None {| ir_eph = false; ir_sess = false |};
+            c_smap.[i] <- Aborted None None {| ir_eph = false; ir_sess = false |};
           }
         }
       | Some st => {
           match st with
-          | Pending _ _ ir => c_smap.[i] <- Aborted None ir;
+          | Pending st _ ir => c_smap.[i] <- Aborted (Some st) None ir;
           | Accepted _ _ _ _ => { }
-          | Aborted _ _ => { }
+          | Aborted _ _ _ => { }
           end;
         }
       end;
@@ -177,22 +177,16 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     if (sko is Some sk) (* Server was initialised as honest *) {
       match s_smap.[b, j] with
       | None => {
-          resp <@ S.respond_session(Some (b, sk), m2);
+          resp <@ S.respond_session(Some (b, sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
             s_smap.[(b, j)] <- Accepted st' (m2, m3) k {| ir_eph = false; ir_sess = false; |};
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted None {| ir_eph = false; ir_sess = false; |};
+            s_smap.[(b, j)] <- Aborted None None (*partial trace instead?*) {| ir_eph = false; ir_sess = false; |};
           }
         }
-      | Some st => {
-        match st with
-        | Pending _ _ ir => s_smap.[(b, j)] <- Aborted None ir;
-        | Accepted _ _ _ _ => { }
-        | Aborted _ _ => { }
-        end;
-      }
+      | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
       end;
     }
 
@@ -214,11 +208,11 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
               c_smap.[i] <- Accepted st' (oget pt, m3) k ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some (oget pt, m3)) ir;
+              c_smap.[i] <- Aborted (Some st) (Some (oget pt, m3)) ir;
             }
           }
         | Accepted _ _ _ _ => { }
-        | Aborted _ _ => { }
+        | Aborted _ _ _ => { }
         end;
       }
     end;
@@ -243,7 +237,6 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
               k' <- get_key (oget s_smap.[p]);
             }
           }
-
           k <- Some k';
           c_smap.[i] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
@@ -268,7 +261,6 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
               k' <- get_key (oget c_smap.[p]);
             }
           }
-
           k <- Some k';
           s_smap.[(b, j)] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
@@ -306,12 +298,12 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     match c_smap.[i] with
     | None => { }
     | Some _ => {
-        match oget c_smap.[i] with 
+        match oget c_smap.[i] with
         | Pending st pk_e ir => {
             ek <- Some (get_eph_c st);
             c_smap.[i] <- Pending st pk_e {| ir_sess = ir.`ir_sess; ir_eph = true; |};
           }
-        | Accepted st t k ir => { 
+        | Accepted st t k ir => {
             ek <- Some (get_eph_c st);
             ire <- true;
             ps <- get_partners_c i (Some t) s_smap;
@@ -326,7 +318,12 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             }
             c_smap.[i] <- Accepted st t k {| ir_sess = ir.`ir_sess; ir_eph = ire; |};
           }
-        | Aborted _ _ => {} 
+        | Aborted sto to ir => {
+            if (sto is Some st) {
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- Aborted (Some st) to {| ir_sess = ir.`ir_sess; ir_eph = true; |};
+            }
+          }
         end;
       }
     end;
@@ -363,7 +360,12 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             }
             s_smap.[(b, j)] <- Accepted st t k {| ir_sess = ir.`ir_sess; ir_eph = ire; |};
           }
-        | Aborted _ _ => {} 
+        | Aborted sto to ir => {
+            if (sto is Some st) {
+              ek <- Some (get_eph_s st);
+              s_smap.[b, j] <- Aborted (Some st) to {| ir_sess = ir.`ir_sess; ir_eph = true; |};
+            }
+          }
         end;
       }
     end;
@@ -386,7 +388,6 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
               k' <- get_key (oget s_smap.[p]);
             }
           }
-
           k <- Some k';
           c_smap.[i] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
@@ -411,7 +412,6 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
               k' <- get_key (oget c_smap.[p]);
             }
           }
-
           k <- Some k';
           s_smap.[(b, j)] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
