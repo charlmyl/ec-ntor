@@ -1,4 +1,4 @@
-require import AllCore FMap.
+require import AllCore FMap FSet.
 
 type s_id, tag, state, key, pkey, skey, key_sess.
 op dkp : (pkey * skey) distr.
@@ -21,18 +21,54 @@ op get_eph_s: pr_st_server -> skey.
 
 type 'a instance_state = [
   Pending  of 'a & (pkey option) (* Partial trace on client side *) & ir_status
-| Accepted of trace & key & ir_status
-| Aborted  of ir_status
+| Accepted of 'a & trace & key & ir_status
+| Aborted  of trace option & ir_status
 ].
+
+(* Return the trace from an accepted state *)
+op get_trace (s: 'a instance_state) : trace option =
+with s = Pending _ _ _      => None
+with s = Accepted _ t _ _   => Some t
+with s = Aborted t _        => t.
+
+op get_key (s: 'a instance_state) : key option =
+with s = Pending _ _ _    => None
+with s = Accepted _ _ k _ => Some k
+with s = Aborted _ _      => None.
+
+op is_observed (s: 'a instance_state) : bool =
+with s = Pending _ _ ir    => ir.`ir_sess
+with s = Accepted _ _ _ ir => ir.`ir_sess
+with s = Aborted _ ir      => ir.`ir_sess.
+
+op get_partners_c (i: int) (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
+fdom (
+  filter
+  (fun bj (val: pr_st_server instance_state) =>
+       get_trace val = t    (* Partners share the same trace *)
+    /\ t <> None            (* We must be accepted *)
+  )
+  fmap
+).
+
+op get_partners_s (bj: s_id * int) (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+fdom (
+  filter
+  (fun i (val: pr_st_client instance_state) =>
+       get_trace val = t    (* Partners share the same trace *)
+    /\ t <> None            (* We must be accepted *)
+  )
+  fmap
+).
 
 module type Server = {
   proc keygen(b: s_id) : pkey * skey
-  proc respond_session(st: pr_st_server option, pk: pkey) : ((pkey * tag) * key) option
+  proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
 }.
 
 module type Client = {
   proc new_session(b: s_id, pk: pkey) : (pr_st_client * pkey) option
-  proc complete_session(st: pr_st_client, m: pkey * tag) : key option
+  proc complete_session(st: pr_st_client, m: pkey * tag) : (pr_st_client * key) option
 }.
 
 module type GAKE_out = {
@@ -118,14 +154,14 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             c_smap.[i] <- Pending st' (Some m2) {| ir_eph = false; ir_sess = false |};
             r <- Some m2;
           } else {
-            c_smap.[i] <- Aborted {| ir_eph = false; ir_sess = false |};
+            c_smap.[i] <- Aborted None {| ir_eph = false; ir_sess = false |};
           }
         }
       | Some st => {
           match st with
-          | Pending _ _ ir => c_smap.[i] <- Aborted ir;
-          | Accepted _ _ _ => { }
-          | Aborted _ => { }
+          | Pending _ _ ir => c_smap.[i] <- Aborted None ir;
+          | Accepted _ _ _ _ => { }
+          | Aborted _ _ => { }
           end;
         }
       end;
@@ -134,7 +170,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
-    var sko, resp, k, m3;
+    var sko, resp, st', k, m3;
     var r <- None;
 
     sko <- obind get_skey servers.[b];
@@ -143,18 +179,18 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
       | None => {
           resp <@ S.respond_session(Some (b, sk), m2);
           if (resp is Some r') {
-            (m3, k) <- r';
-            s_smap.[(b, j)] <- Accepted (m2, m3) k {| ir_eph = false; ir_sess = false; |};
+            (st', m3, k) <- r';
+            s_smap.[(b, j)] <- Accepted st' (m2, m3) k {| ir_eph = false; ir_sess = false; |};
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted {| ir_eph = false; ir_sess = false; |};
+            s_smap.[(b, j)] <- Aborted None {| ir_eph = false; ir_sess = false; |};
           }
         }
       | Some st => {
         match st with
-        | Pending _ _ ir => s_smap.[(b, j)] <- Aborted ir;
-        | Accepted _ _ _ => { }
-        | Aborted _ => { }
+        | Pending _ _ ir => s_smap.[(b, j)] <- Aborted None ir;
+        | Accepted _ _ _ _ => { }
+        | Aborted _ _ => { }
         end;
       }
       end;
@@ -164,7 +200,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc send_msg3(i: int, m3: pkey * tag) : unit option = {
-    var resp;
+    var resp, st', k;
     var r <- None;
 
     match c_smap.[i] with
@@ -173,15 +209,16 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
         match oget c_smap.[i] with
         | Pending st pt ir => {
             resp <@ C.complete_session(st, m3);
-            if (resp is Some k) {
-              c_smap.[i] <- Accepted (oget pt, m3) k ir;
+            if (resp is Some r') {
+              (st', k) <- r';
+              c_smap.[i] <- Accepted st' (oget pt, m3) k ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted ir;
+              c_smap.[i] <- Aborted (Some (oget pt, m3)) ir;
             }
           }
-        | Accepted _ _ _ => { }
-        | Aborted _ => { }
+        | Accepted _ _ _ _ => { }
+        | Aborted _ _ => { }
         end;
       }
     end;
@@ -191,15 +228,24 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
 
   (* reveal and test *)
   proc c_rev_skey(i: int) : key option = {
+    var ps, p, k';
     var k <- None;
 
     match c_smap.[i] with
     | None => { }
     | Some _ => {
-        if (oget c_smap.[i] is Accepted t' k' ir') {
-          (* TODO: freshness check *)
+        if (oget c_smap.[i] is Accepted st' t' k' ir') {
+          ps <- get_partners_c (i) (Some t') s_smap;
+
+          if (card ps <= 1) {
+            p <- pick ps;
+            if (is_observed (oget s_smap.[p])) {
+              k' <- get_key (oget s_smap.[p]);
+            }
+          }
+
           k <- Some k';
-          c_smap.[i] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+          c_smap.[i] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
       }
     end;
@@ -207,15 +253,24 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc s_rev_skey(b: s_id, j: int) : key option = {
+    var ps, p, k';
     var k <- None;
 
     match s_smap.[(b, j)] with
     | None => { }
     | Some _ => {
-        if (oget s_smap.[b, j] is Accepted t' k' ir') {
-          (* TODO: freshness check *)
+        if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
+          ps <- get_partners_s (b, j) (Some t') c_smap;
+
+          if (card ps <= 1) {
+            p <- pick ps;
+            if (is_observed (oget c_smap.[p])) {
+              k' <- get_key (oget c_smap.[p]);
+            }
+          }
+
           k <- Some k';
-          s_smap.[(b, j)] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+          s_smap.[(b, j)] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
       }
     end;
@@ -225,58 +280,115 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   proc rev_ltkey(b: s_id) : skey option = {
     var ltk <- None;
 
-    if (servers.[b] is Some kreg) {
+    match servers.[b] with 
+    | None => { }
+    | Some kreg => {
       (* TODO: and there is not tested session with EK revealed of b
          or partner tested and EK revealed *)
-      match kreg with
-      | Honest kp => { ltk <- Some kp.`2; servers.[b] <- Corrupt kp; }
-      | Corrupt kp => { ltk <- Some kp.`2; }
-      | Dishonest _ => { }
-      end;
+
+        match kreg with
+        | Honest kp => { 
+            ltk <- Some kp.`2; 
+            servers.[b] <- Corrupt kp; 
+          }
+        | Corrupt kp => { ltk <- Some kp.`2; }
+        | Dishonest _ => { }
+        end;
     }
+    end;
     return ltk;
   }
 
   proc c_rev_ephkey(i: int) : skey option = {
+    var ire, ps, p;
     var ek <- None;
 
     match c_smap.[i] with
     | None => { }
     | Some _ => {
-        if (oget c_smap.[i] is Pending st pk_e ir) {
-          ek <- Some (get_eph_c st);
-          c_smap.[i] <- Pending st pk_e {| ir_sess = ir.`ir_sess; ir_eph = true; |};
-        }
+        match oget c_smap.[i] with 
+        | Pending st pk_e ir => {
+            ek <- Some (get_eph_c st);
+            c_smap.[i] <- Pending st pk_e {| ir_sess = ir.`ir_sess; ir_eph = true; |};
+          }
+        | Accepted st t k ir => { 
+            ek <- Some (get_eph_c st);
+            ire <- true;
+            ps <- get_partners_c i (Some t) s_smap;
+
+            if (card ps <= 1) {
+              p <- pick ps; 
+
+              if (is_observed (oget s_smap.[p]) \/ ir.`ir_sess) {
+                ek <- None;
+                ire <- false;
+              }
+            }
+            c_smap.[i] <- Accepted st t k {| ir_sess = ir.`ir_sess; ir_eph = ire; |};
+          }
+        | Aborted _ _ => {} 
+        end;
       }
     end;
     return ek;
   }
 
   proc s_rev_ephkey(b: s_id, j: int) : skey option = {
+    var ire, ps, p;
     var ek <- None;
 
     match s_smap.[b, j] with
     | None => { }
     | Some _ => {
-        if (oget s_smap.[(b, j)] is Pending st pt ir) {
-          ek <- Some (get_eph_s st);
-          s_smap.[(b, j)] <- Pending st pt {| ir_sess = ir.`ir_sess; ir_eph = true; |};
-        }
+        match oget s_smap.[(b, j)] with 
+        | Pending _ _ _ => { (* Does not happen *) }
+        | Accepted st t k ir => { 
+            ek <- Some (get_eph_s st);
+            ire <- true;
+            ps <- get_partners_s (b, j) (Some t) c_smap;
+
+            if (card ps <= 1) {
+              p <- pick ps; 
+
+              if (is_observed (oget c_smap.[p]) \/ ir.`ir_sess) { (* TODO: make this pretty *)
+                if (oget servers.[b] is Corrupt kreg) {
+                  ek <- None;
+                  ire <- false;
+                }
+                if (oget servers.[b] is Dishonest kreg) {
+                  ek <- None;
+                  ire <- false;
+                }
+              }
+            }
+            s_smap.[(b, j)] <- Accepted st t k {| ir_sess = ir.`ir_sess; ir_eph = ire; |};
+          }
+        | Aborted _ _ => {} 
+        end;
       }
     end;
     return ek;
   }
 
   proc c_test(i: int) : key option = {
+    var ps, p, k';
     var k <- None;
 
     match c_smap.[i] with
     | None => { }
     | Some _ => {
-        if (oget c_smap.[i] is Accepted t' k' ir') {
-          (* TODO: freshness check *)
+        if (oget c_smap.[i] is Accepted st' t' k' ir') {
+          ps <- get_partners_c (i) (Some t') s_smap;
+
+          if (card ps <= 1) { (* add other reveals as well *)
+            p <- pick ps;
+            if (is_observed (oget s_smap.[p])) {
+              k' <- get_key (oget s_smap.[p]);
+            }
+          }
+
           k <- Some k';
-          c_smap.[i] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+          c_smap.[i] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
       }
     end;
@@ -284,15 +396,24 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc s_test(b: s_id, j: int) : key option = {
+    var ps, p, k';
     var k <- None;
 
-    match s_smap.[b, j] with
+    match s_smap.[(b, j)] with
     | None => { }
     | Some _ => {
-        if (oget s_smap.[(b, j)] is Accepted t' k' ir') {
-          (* TODO: freshness check *)
+        if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
+          ps <- get_partners_s (b, j) (Some t') c_smap;
+
+          if (card ps <= 1) { (* add other reveals as well *)
+            p <- pick ps;
+            if (is_observed (oget c_smap.[p])) {
+              k' <- get_key (oget c_smap.[p]);
+            }
+          }
+
           k <- Some k';
-          s_smap.[(b, j)] <- Accepted t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
+          s_smap.[(b, j)] <- Accepted st' t' k' {| ir_eph = ir'.`ir_eph; ir_sess = true; |};
         }
       }
     end;
