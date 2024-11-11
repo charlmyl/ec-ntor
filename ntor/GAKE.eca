@@ -333,13 +333,19 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     match servers.[b] with 
     | None => { }
     | Some kreg => {
-      (* TODO: partner tested and EK revealed *)
-
         match kreg with
         | Honest kp => {
-            (* not allowed when b has an instance j that is already tested and ephkey revealed 
-               or that has a tested partner i and j is ephkey revealed *)
-            if (forall j, (get_ir_test (oget s_smap.[b, j]) = false /\ get_ir_eph (oget s_smap.[b, j]) = false)) {
+            if (forall j, card (get_partners_s (b, j) (get_trace (oget s_smap.[b, j])) c_smap) <= 1) {
+              (* not allowed when b has an instance j that is already tested and ephkey revealed 
+                 or that has a tested partner i and j is ephkey revealed *)
+              if (forall j, (get_ir_test (oget s_smap.[b, j]) = false /\ get_ir_eph (oget s_smap.[b, j]) = false)) {
+     
+                (* TO DO: Distinguish instances with 0 and 1 partner *) 
+
+                ltk <- Some kp.`2; 
+                servers.[b] <- Corrupt kp; 
+              }
+            } else { (* integrity breach makes everything fresh *)
               ltk <- Some kp.`2; 
               servers.[b] <- Corrupt kp; 
             }
