@@ -86,6 +86,11 @@ fdom (
   fmap
 ).
 
+op partner_s (s: int fset) : bool = if card s = 1 then true else false.
+
+op tested_partner_s (bj: s_id * int) (t: trace option) (fmap_c: (int, pr_st_client instance_state) fmap) : bool option =
+
+
 module type Server = {
   proc keygen() : pkey * skey
   proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
