@@ -259,21 +259,29 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          (* A cannot reveal sesskey of tested instance *)
-          if (get_ir_test (oget c_smap.[i]) = false) {
-            ps <- get_partners_c i (Some t') s_smap;
-            if (card ps = 1) {
-              p <- pick ps;
-              (* key reveal needs to be consistent with revealed key of partner *)
-              if (get_ir_sess (oget s_smap.[p])) {
-                k' <- get_key (oget s_smap.[p]);
-              }
-              (* A cannot reveal sesskey of instance with tested partner *)
-              if (get_ir_test (oget s_smap.[p]) = false) {
+          ps <- get_partners_c i (Some t') s_smap;
+          if (card ps <= 1) {
+            (* A cannot reveal sesskey of tested instance *)
+            if (get_ir_test (oget c_smap.[i]) = false) {
+              if (card ps = 1) {
+                p <- pick ps;
+                (* key reveal needs to be consistent with revealed key of partner *)
+                if (get_ir_sess (oget s_smap.[p])) {
+                  k' <- get_key (oget s_smap.[p]);
+                }
+                (* A cannot reveal sesskey of instance with tested partner *)
+                if (get_ir_test (oget s_smap.[p]) = false) {
+                  k <- Some k';
+                  c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+                }
+              } else {
                 k <- Some k';
                 c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
               }
             }
+          } else { (* integrity breach makes everything fresh *)
+            k <- Some k';
+            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -289,21 +297,29 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          (* A cannot reveal sesskey of tested instance *)
-          if (get_ir_test (oget s_smap.[b, j]) = false) {
-            ps <- get_partners_s (b, j) (Some t') c_smap;
-            if (card ps = 1) {
-              p <- pick ps;
-              (* key reveal needs to be consistent with revealed key of partner *)
-              if (get_ir_sess (oget c_smap.[p])) {
-                k' <- get_key (oget c_smap.[p]);
-              }
-              (* A cannot reveal sesskey of instance with tested partner *)
-              if (get_ir_test (oget c_smap.[p]) = false) {
+          ps <- get_partners_s (b, j) (Some t') c_smap;
+          if (card ps <= 1) {
+            (* A cannot reveal sesskey of tested instance *)
+            if (get_ir_test (oget s_smap.[b, j]) = false) {
+              if (card ps = 1) {
+                p <- pick ps;
+                (* key reveal needs to be consistent with revealed key of partner *)
+                if (get_ir_sess (oget c_smap.[p])) {
+                  k' <- get_key (oget c_smap.[p]);
+                }
+                (* A cannot reveal sesskey of instance with tested partner *)
+                if (get_ir_test (oget c_smap.[p]) = false) {
+                  k <- Some k';
+                  s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+                }
+              } else {
                 k <- Some k';
                 s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
               }
             }
+          } else { (* integrity breach makes everything fresh *)
+            k <- Some k';
+            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -349,17 +365,25 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             c_smap.[i] <- set_ir_sess (Pending st pk_e ir);
           }
         | Accepted st t k ir => {
-            (* A cannot reveal ephkey of tested client instance *)
-            if (get_ir_test (oget c_smap.[i]) = false) {
-              ps <- get_partners_c i (Some t) s_smap;
-              if (card ps = 1) {
-                p <- pick ps;
-                (* A cannot reveal ephkey of client instance with tested partner *)
-                if (get_ir_test (oget s_smap.[p]) = false) {
+            ps <- get_partners_c i (Some t) s_smap;
+            if (card ps <= 1) {
+              (* A cannot reveal ephkey of tested client instance *)
+              if (get_ir_test (oget c_smap.[i]) = false) {
+                if (card ps = 1) {
+                  p <- pick ps;
+                  (* A cannot reveal ephkey of client instance with tested partner *)
+                  if (get_ir_test (oget s_smap.[p]) = false) {
+                    ek <- Some (get_eph_c st);
+                    c_smap.[i] <- set_ir_eph (Accepted st t k ir);
+                  }
+                } else {
                   ek <- Some (get_eph_c st);
                   c_smap.[i] <- set_ir_eph (Accepted st t k ir);
                 }
               }
+            } else { (* integrity breach makes everything fresh *)
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- set_ir_eph (Accepted st t k ir);
             }
           }
         | Aborted _ _ _ => {  }
@@ -379,17 +403,26 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
         match oget s_smap.[(b, j)] with 
         | Pending _ _ _ => { (* Does not happen *) }
         | Accepted st t k ir => { 
-            (* A cannot reveal ephkey of tested server instance of corrupted server *)
-            if (get_ir_test (oget s_smap.[b, j]) = false /\ get_sr_ltk (oget servers.[b]) = false) {
-              ps <- get_partners_s (b, j) (Some t) c_smap;
-              if (card ps = 1) {
-                p <- pick ps;
-                (* A cannot reveal ephkey of server instance of corrupted server with tested partner *)
-                if (get_ir_test (oget c_smap.[p]) = false /\ get_sr_ltk (oget servers.[b]) = false) {
+            ps <- get_partners_s (b, j) (Some t) c_smap;
+
+            if (card ps <= 1) {
+              (* A cannot reveal ephkey of tested server instance of corrupted server *)
+              if (get_ir_test (oget s_smap.[b, j]) = false /\ get_sr_ltk (oget servers.[b]) = false) {
+                if (card ps = 1) {
+                  p <- pick ps;
+                  (* A cannot reveal ephkey of server instance of corrupted server with tested partner *)
+                  if (get_ir_test (oget c_smap.[p]) = false /\ get_sr_ltk (oget servers.[b]) = false) {
+                    ek <- Some (get_eph_s st);
+                    s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+                  } 
+                } else {
                   ek <- Some (get_eph_s st);
                   s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
                 }
               }
+            } else { (* integrity breach makes everything fresh *)
+              ek <- Some (get_eph_s st);
+              s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
             }
           }
         | Aborted _ _ _ => { }
@@ -407,18 +440,26 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          (* A cannot test if sesskey was already revealed *)
-          if (get_ir_sess (oget c_smap.[i]) = false) {
-            ps <- get_partners_c i (Some t') s_smap;
-            if (card ps = 1) {
-              p <- pick ps;
-              (* A cannot test if partner is tested, sesskey revealed or trivially corrupted *)
-              if (get_ir_test (oget s_smap.[p]) = false /\ get_ir_sess (oget s_smap.[p]) = false
-                    /\ (get_sr_ltk (oget servers.[p.`1]) = false \/ get_ir_eph (oget s_smap.[p]) = false)) {
+          ps <- get_partners_c i (Some t') s_smap;
+          if (card ps <= 1) {
+            (* A cannot test if sesskey was already revealed or trivially broken *)
+            if (get_ir_sess (oget c_smap.[i]) = false /\ get_ir_eph (oget c_smap.[i]) = false) {
+              if (card ps = 1) {
+                p <- pick ps;
+                (* A cannot test if partner is tested, sesskey revealed or trivially corrupted *)
+                if (get_ir_test (oget s_smap.[p]) = false /\ get_ir_sess (oget s_smap.[p]) = false
+                      /\ (get_sr_ltk (oget servers.[p.`1]) = false \/ get_ir_eph (oget s_smap.[p]) = false)) {
+                  k <- Some k';
+                  c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+                }
+              } else {
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
             }
+          } else { (* integrity breach makes everything fresh *)
+            k <- Some k';
+            c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
           }
         }
       }
@@ -434,18 +475,26 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          (* A cannot test if sesskey was already revealed *)
-          if (get_ir_sess (oget s_smap.[b, j]) = false) {
-            ps <- get_partners_s (b, j) (Some t') c_smap;
-            if (card ps = 1) {
-              p <- pick ps;
-              (* A cannot test if partner is tested, sesskey revealed or trivially corrupted *)
-              if (get_ir_test (oget c_smap.[p]) = false /\ get_ir_sess (oget c_smap.[p]) = false
-                    /\ get_ir_eph (oget c_smap.[p]) = false) {
+          ps <- get_partners_s (b, j) (Some t') c_smap;
+          if (card ps <= 1) {
+            (* A cannot test if sesskey was already revealed *)
+            if (get_ir_sess (oget s_smap.[b, j]) = false) {
+              if (card ps = 1) {
+                p <- pick ps;
+                (* A cannot test if partner is tested, sesskey revealed or trivially corrupted *)
+                if (get_ir_test (oget c_smap.[p]) = false /\ get_ir_sess (oget c_smap.[p]) = false
+                      /\ get_ir_eph (oget c_smap.[p]) = false) {
+                  k <- Some k';
+                  s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                }
+              } else {
                 k <- Some k';
                 s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
             }
+          } else { (* integrity breach makes everything fresh *)
+            k <- Some k';
+            s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
           }
         }
       }
