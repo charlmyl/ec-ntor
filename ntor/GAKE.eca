@@ -86,9 +86,44 @@ fdom (
   fmap
 ).
 
-op partner_s (s: int fset) : bool = if card s = 1 then true else false.
+op get_untested_partners_c (i: int) (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
+fdom (
+  filter
+  (fun bj (val: pr_st_server instance_state) =>
+       get_trace val = t    (* Partners share the same trace *)
+    /\ t <> None            (* We must be accepted *)
+    /\ get_ir_test val = false
+  )
+  fmap
+).
 
-op tested_partner_s (bj: s_id * int) (t: trace option) (fmap_c: (int, pr_st_client instance_state) fmap) : bool option =
+op get_untested_partners_s (bj: s_id * int) (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+fdom (
+  filter
+  (fun i (val: pr_st_client instance_state) =>
+       get_trace val = t    (* Partners share the same trace *)
+    /\ t <> None            (* We must be accepted *)
+    /\ get_ir_test val = false
+  )
+  fmap
+).
+
+op untested_partner_c (i: int) (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
+if 1 <= card (get_partners_c i t fmap) then Some (1 <= card (get_untested_partners_c i t fmap)) else None.
+
+op get_untested_partner_c (i: int) (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : s_id * int =
+pick (get_untested_partners_c i t fmap).
+
+op untested_partner_s (bj: s_id * int) (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
+if 1 <= card (get_partners_s bj t fmap) then Some (1 <= card (get_untested_partners_s bj t fmap)) else None.
+
+op get_untested_partner_s (bj: s_id * int) (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int =
+pick (get_untested_partners_s bj t fmap).
+
+op tested_partner_s (bj: s_id * int) (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
+let p = (get_partners_s bj t fmap) in
+if card p = 1 then Some (get_ir_test (oget fmap.[(pick p)])) else None.
+
 
 
 module type Server = {
@@ -257,36 +292,33 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
 
   (* reveal and test *)
   proc c_rev_skey(i: int) : key option = {
-    var ps, p, k';
+    var p;
     var k <- None;
 
     match c_smap.[i] with
     | None => { }
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          ps <- get_partners_c i (Some t') s_smap;
-          if (card ps <= 1) {
-            (* A cannot reveal sesskey of tested instance *)
-            if (get_ir_test (oget c_smap.[i]) = false) {
-              if (card ps = 1) {
-                p <- pick ps;
-                (* key reveal needs to be consistent with revealed key of partner *)
-                if (get_ir_sess (oget s_smap.[p])) {
-                  k' <- get_key (oget s_smap.[p]);
+          if (get_ir_test (oget c_smap.[i]) = false) { (* if tested we disallow sesskey reveal *)
+            match untested_partner_c i (Some t') s_smap with
+            | Some utp => { (* there is at least one partner *)
+                if (utp) { (* and at least one of them is not tested *)
+                  p <- get_untested_partner_c i (Some t') s_smap;
+                  (* If partner has revealed sesskey we need to be consistent, otherwise just reveal k' *)
+                  if (get_ir_sess (oget s_smap.[p])) {
+                    k <- get_key (oget s_smap.[p]);
+                    c_smap.[i] <- set_ir_sess (Accepted st' t' (oget k) ir');
+                  } else { 
+                    k <- Some k';
+                    c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+                  }
                 }
-                (* A cannot reveal sesskey of instance with tested partner *)
-                if (get_ir_test (oget s_smap.[p]) = false) {
-                  k <- Some k';
-                  c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
-                }
-              } else {
+              }
+            | None => { (* there is no partner *)
                 k <- Some k';
                 c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
               }
-            }
-          } else { (* integrity breach makes everything fresh *)
-            k <- Some k';
-            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+            end;
           }
         }
       }
@@ -295,36 +327,33 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc s_rev_skey(b: s_id, j: int) : key option = {
-    var ps, p, k';
+    var p;
     var k <- None;
 
     match s_smap.[(b, j)] with
     | None => { }
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          ps <- get_partners_s (b, j) (Some t') c_smap;
-          if (card ps <= 1) {
-            (* A cannot reveal sesskey of tested instance *)
-            if (get_ir_test (oget s_smap.[b, j]) = false) {
-              if (card ps = 1) {
-                p <- pick ps;
-                (* key reveal needs to be consistent with revealed key of partner *)
-                if (get_ir_sess (oget c_smap.[p])) {
-                  k' <- get_key (oget c_smap.[p]);
+          if (get_ir_test (oget s_smap.[b, j]) = false) { (* if tested we disallow sesskey reveal *)
+            match untested_partner_s (b, j) (Some t') c_smap with
+            | Some utp => { (* there is at least one partner *)
+                if (utp) { (* and at least one of them is not tested *)
+                  p <- get_untested_partner_s (b, j) (Some t') c_smap;
+                  (* If partner has revealed sesskey we need to be consistent, otherwise just reveal k' *)
+                  if (get_ir_sess (oget c_smap.[p])) {
+                    k <- get_key (oget c_smap.[p]);
+                    s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' (oget k) ir');
+                  } else { 
+                    k <- Some k';
+                    s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+                  }
                 }
-                (* A cannot reveal sesskey of instance with tested partner *)
-                if (get_ir_test (oget c_smap.[p]) = false) {
-                  k <- Some k';
-                  s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
-                }
-              } else {
+              }
+            | None => { (* there is no partner *)
                 k <- Some k';
                 s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
               }
-            }
-          } else { (* integrity breach makes everything fresh *)
-            k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+            end;
           }
         }
       }
@@ -345,10 +374,11 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
                  or that has a tested partner i and j is ephkey revealed *)
               if (forall j, (get_ir_test (oget s_smap.[b, j]) = false /\ get_ir_eph (oget s_smap.[b, j]) = false)) {
      
-                (* TO DO: Distinguish instances with 0 and 1 partner *) 
-
-                ltk <- Some kp.`2; 
-                servers.[b] <- Corrupt kp; 
+                if (forall j, tested_partner_s (b, j) (get_trace (oget s_smap.[b, j])) c_smap <> Some true 
+                                \/ get_ir_eph (oget s_smap.[b, j]) = false) {
+                  ltk <- Some kp.`2; 
+                  servers.[b] <- Corrupt kp; 
+                }
               }
             } else { (* integrity breach makes everything fresh *)
               ltk <- Some kp.`2; 
@@ -444,33 +474,32 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc c_test(i: int) : key option = {
-    var ps, p;
+    var p;
     var k <- None;
 
     match c_smap.[i] with
     | None => { }
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          ps <- get_partners_c i (Some t') s_smap;
-          if (card ps <= 1) {
-            (* A cannot test if sesskey was already revealed or trivially broken *)
-            if (get_ir_sess (oget c_smap.[i]) = false /\ get_ir_eph (oget c_smap.[i]) = false) {
-              if (card ps = 1) {
-                p <- pick ps;
-                (* A cannot test if partner is tested, sesskey revealed or trivially corrupted *)
-                if (get_ir_test (oget s_smap.[p]) = false /\ get_ir_sess (oget s_smap.[p]) = false
-                      /\ (get_sr_ltk (oget servers.[p.`1]) = false \/ get_ir_eph (oget s_smap.[p]) = false)) {
-                  k <- Some k';
-                  c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+          (* A cannot test if sesskey was already revealed or trivially broken *)
+          if (get_ir_sess (oget c_smap.[i]) = false /\ get_ir_eph (oget c_smap.[i]) = false) {
+            match untested_partner_c i (Some t') s_smap with
+            | Some utp => { (* there is at least one partner *)
+                if (utp) { (* and at least one of them is not tested *)
+                  p <- get_untested_partner_c i (Some t') s_smap;
+                  (* A cannot test if partner is tested, sesskey revealed or trivially broken *)
+                  if (get_ir_test (oget s_smap.[p]) = false /\ get_ir_sess (oget s_smap.[p]) = false
+                        /\ (get_sr_ltk (oget servers.[p.`1]) = false \/ get_ir_eph (oget s_smap.[p]) = false)) {
+                    k <- Some k';
+                    c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+                  }
                 }
-              } else {
+              }
+            | None => { (* there is no partner *)
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
-            }
-          } else { (* integrity breach makes everything fresh *)
-            k <- Some k';
-            c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+            end;
           }
         }
       }
@@ -479,33 +508,33 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc s_test(b: s_id, j: int) : key option = {
-    var ps, p;
+    var p;
     var k <- None;
 
     match s_smap.[(b, j)] with
     | None => { }
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          ps <- get_partners_s (b, j) (Some t') c_smap;
-          if (card ps <= 1) {
-            (* A cannot test if sesskey was already revealed *)
-            if (get_ir_sess (oget s_smap.[b, j]) = false) {
-              if (card ps = 1) {
-                p <- pick ps;
-                (* A cannot test if partner is tested, sesskey revealed or trivially corrupted *)
-                if (get_ir_test (oget c_smap.[p]) = false /\ get_ir_sess (oget c_smap.[p]) = false
-                      /\ get_ir_eph (oget c_smap.[p]) = false) {
-                  k <- Some k';
-                  s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+          (* A cannot test if sesskey was already revealed or trivially broken *)
+          if (get_ir_sess (oget s_smap.[b, j]) = false /\ 
+               (get_ir_eph (oget s_smap.[b, j]) = false \/ get_sr_ltk (oget servers.[b]) = false)) {
+            match untested_partner_s (b, j) (Some t') c_smap with
+            | Some utp => { (* there is at least one partner *)
+                if (utp) { (* and at least one of them is not tested *)
+                  p <- get_untested_partner_s (b, j) (Some t') c_smap;
+                  (* A cannot test if partner is tested, sesskey revealed or trivially broken *)
+                  if (get_ir_test (oget c_smap.[p]) = false /\ get_ir_sess (oget c_smap.[p]) = false
+                        /\ get_ir_eph (oget c_smap.[p]) = false) {
+                    k <- Some k';
+                    s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                  }
                 }
-              } else {
+              }
+            | None => { (* there is no partner *)
                 k <- Some k';
                 s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
-            }
-          } else { (* integrity breach makes everything fresh *)
-            k <- Some k';
-            s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+            end;
           }
         }
       }
