@@ -120,10 +120,6 @@ if 1 <= card (get_partners_s bj t fmap) then Some (1 <= card (get_untested_partn
 op get_untested_partner_s (bj: s_id * int) (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int =
 pick (get_untested_partners_s bj t fmap).
 
-op tested_partner_s (bj: s_id * int) (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
-let p = (get_partners_s bj t fmap) in
-if card p = 1 then Some (get_ir_test (oget fmap.[(pick p)])) else None.
-
 
 
 module type Server = {
@@ -369,22 +365,16 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | Some kreg => {
         match kreg with
         | Honest kp => {
-            if (forall j, card (get_partners_s (b, j) (get_trace (oget s_smap.[b, j])) c_smap) <= 1) {
-              (* not allowed when b has an instance j that is already tested and ephkey revealed 
-                 or that has a tested partner i and j is ephkey revealed *)
-              if (forall j, (get_ir_test (oget s_smap.[b, j]) = false /\ get_ir_eph (oget s_smap.[b, j]) = false)) {
-     
-                if (forall j, tested_partner_s (b, j) (get_trace (oget s_smap.[b, j])) c_smap <> Some true 
-                                \/ get_ir_eph (oget s_smap.[b, j]) = false) {
-                  ltk <- Some kp.`2; 
-                  servers.[b] <- Corrupt kp; 
-                }
-              }
-            } else { (* integrity breach makes everything fresh *)
+          (* A cannot reveal ltkey of server b if one of its instances is tested and ephkey reveal *)
+          if (forall j, (get_ir_test (oget s_smap.[b, j]) = false /\ get_ir_eph (oget s_smap.[b, j]) = false)) {
+            (* A cannot reveal ltkey if there is an ephkrevealed instance with partners that are all tested *)
+            if (forall j, untested_partner_s (b, j) (get_trace (oget s_smap.[b, j])) c_smap <> Some false
+                            \/ get_ir_eph (oget s_smap.[b,j]) = false) {
               ltk <- Some kp.`2; 
               servers.[b] <- Corrupt kp; 
             }
           }
+        }
         | Corrupt kp => { ltk <- Some kp.`2; }
         | Dishonest _ => { }
         end;
@@ -394,7 +384,6 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc c_rev_ephkey(i: int) : skey option = {
-    var ps, p;
     var ek <- None;
 
     match c_smap.[i] with
@@ -403,28 +392,23 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
         match oget c_smap.[i] with
         | Pending st pk_e ir => {
             ek <- Some (get_eph_c st);
-            c_smap.[i] <- set_ir_sess (Pending st pk_e ir);
+            c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
           }
         | Accepted st t k ir => {
-            ps <- get_partners_c i (Some t) s_smap;
-            if (card ps <= 1) {
-              (* A cannot reveal ephkey of tested client instance *)
-              if (get_ir_test (oget c_smap.[i]) = false) {
-                if (card ps = 1) {
-                  p <- pick ps;
-                  (* A cannot reveal ephkey of client instance with tested partner *)
-                  if (get_ir_test (oget s_smap.[p]) = false) {
-                    ek <- Some (get_eph_c st);
-                    c_smap.[i] <- set_ir_eph (Accepted st t k ir);
-                  }
-                } else {
+          (* A cannot reveal ephkey of client if tested *)
+          if (get_ir_test (oget c_smap.[i]) = false) {
+            match untested_partner_c i (Some t) s_smap with
+            | Some utp => { (* there is at least one partner *)
+                if (utp) { (* and at least one of them is not tested so A can reveal ephkey of client *)
                   ek <- Some (get_eph_c st);
                   c_smap.[i] <- set_ir_eph (Accepted st t k ir);
                 }
               }
-            } else { (* integrity breach makes everything fresh *)
-              ek <- Some (get_eph_c st);
-              c_smap.[i] <- set_ir_eph (Accepted st t k ir);
+            | None => { (* there is no partner *)
+                ek <- Some (get_eph_c st);
+                c_smap.[i] <- set_ir_eph (Accepted st t k ir);
+              }
+            end;
             }
           }
         | Aborted _ _ _ => {  }
@@ -435,39 +419,37 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc s_rev_ephkey(b: s_id, j: int) : skey option = {
-    var ps, p;
+    var p;
     var ek <- None;
 
     match s_smap.[b, j] with
     | None => { }
     | Some _ => {
-        match oget s_smap.[(b, j)] with 
-        | Pending _ _ _ => { (* Does not happen *) }
-        | Accepted st t k ir => { 
-            ps <- get_partners_s (b, j) (Some t) c_smap;
-
-            if (card ps <= 1) {
-              (* A cannot reveal ephkey of tested server instance of corrupted server *)
-              if (get_ir_test (oget s_smap.[b, j]) = false /\ get_sr_ltk (oget servers.[b]) = false) {
-                if (card ps = 1) {
-                  p <- pick ps;
-                  (* A cannot reveal ephkey of server instance of corrupted server with tested partner *)
-                  if (get_ir_test (oget c_smap.[p]) = false /\ get_sr_ltk (oget servers.[b]) = false) {
-                    ek <- Some (get_eph_s st);
-                    s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
-                  } 
-                } else {
+        if (oget s_smap.[b, j] is Accepted st t k ir) { (* No Pending on Server side *)
+          (* A cannot reveal ephkey of server if tested and ltkrevealed *)
+          if (get_ir_test (oget s_smap.[b, j]) = false \/ get_sr_ltk (oget servers.[b]) = false) {
+            match untested_partner_s (b, j) (Some t) c_smap with
+            | Some utp => { (* there is at least one partner *)
+                if (utp) { (* and at least one of them is not tested *)
+                  p <- get_untested_partner_s (b, j) (Some t) c_smap;
+                  (* A can reveal ephkey of server if untested partner exists *)
                   ek <- Some (get_eph_s st);
                   s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+                } else {
+                  (* If all partners tested A only can reveal ephkey of server if it is not ltkrevealed *)
+                  if (get_sr_ltk (oget servers.[b]) = false) {
+                    ek <- Some (get_eph_s st);
+                    s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+                  }
                 }
               }
-            } else { (* integrity breach makes everything fresh *)
-              ek <- Some (get_eph_s st);
-              s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
-            }
+            | None => { (* there is no partner *)
+                ek <- Some (get_eph_s st);
+                s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+              }
+            end;
           }
-        | Aborted _ _ _ => { }
-        end;
+        }
       }
     end;
     return ek;
