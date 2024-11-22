@@ -127,9 +127,9 @@ op get_fresh_partners_c (t: trace option) (fmap1: (s_id * int, pr_st_server inst
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
-       get_trace val = t                                               (* Partners share the same trace *)
-    /\ t <> None                                                       (* We must be accepted *)
-    /\ get_ir_test val = false                                         (* Partner is not tested *)
+       get_trace val = t                                                    (* Partners share the same trace *)
+    /\ t <> None                                                            (* We must be accepted *)
+    /\ get_ir_test val = false                                              (* Partner is not tested *)
     /\ (get_ir_eph val = false \/ get_sr_ltk (oget fmap2.[fst bj]) = false) (* Partner is not trivially broken *)
   )
   fmap1
@@ -139,10 +139,10 @@ op get_fresh_partners_s (t: trace option) (fmap: (int, pr_st_client instance_sta
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-       get_trace val = t       (* Partners share the same trace *)
-    /\ t <> None               (* We must be accepted *)
-    /\ get_ir_test val = false (* Partner is not tested *)
-    /\ get_ir_eph val = false  (* Partner is not trivially broken *)
+       (get_trace val = t \/ get_trace val = Some (fst (oget t), None)) (* Partners share the same (partial) trace *)
+    /\ t <> None                                                        (* We must be accepted *)
+    /\ get_ir_test val = false                                          (* Partner is not tested *)
+    /\ get_ir_eph val = false                                           (* Partner is not trivially broken *)
   )
   fmap
 ).
