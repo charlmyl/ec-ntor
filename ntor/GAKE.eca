@@ -3,7 +3,7 @@ require import AllCore FMap FSet.
 type s_id, tag, state, key, pkey, skey, key_sess.
 op dkp : (pkey * skey) distr.
 
-type trace = pkey * (pkey * tag).
+type trace = pkey * (pkey * tag) option.
 type sid = (s_id * pkey) * trace.
 
 type ir_status = bool * bool * bool.
@@ -20,9 +20,14 @@ type 'a instance_state = [
 | Aborted  of 'a option & trace option & ir_status
 ].
 
-(* Return the trace from an accepted state *)
+type server_state = [
+  Honest    of (pkey * skey)
+| Corrupt   of (pkey * skey)
+| Dishonest of pkey
+].
+
 op get_trace (s: 'a instance_state) : trace option =
-with s = Pending _ _ _     => None
+with s = Pending _ pt _     => Some (oget pt, None)
 with s = Accepted _ t _ _  => Some t
 with s = Aborted _ t _     => t.
 
@@ -61,12 +66,27 @@ with s = Pending s t ir    => Pending s t (ir.`1, ir.`2, true)
 with s = Accepted s t k ir => Accepted s t k (ir.`1, ir.`2, true)
 with s = Aborted s t ir    => Aborted s t (ir.`1, ir.`2, true).
 
+op get_pkey s_st =
+with s_st = Honest    kp => kp.`1
+with s_st = Corrupt   kp => kp.`1
+with s_st = Dishonest pk => pk.
+
+op get_skey s_st =
+with s_st = Honest    kp => Some kp.`2
+with s_st = Corrupt   kp => Some kp.`2
+with s_st = Dishonest pk => None.
+
+op get_sr_ltk s_st : bool =
+with s_st = Honest    _ => false
+with s_st = Corrupt   _ => true
+with s_st = Dishonest _ => true.
+
 op get_partners_c (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
-       get_trace val = t    (* Partners share the same trace *)
-    /\ t <> None            (* We must be accepted *)
+       get_trace val = t (* Partners share the same trace *)
+    /\ t <> None         (* We must be initialised *)
   )
   fmap
 ).
@@ -75,8 +95,8 @@ op get_partners_s (t: trace option) (fmap: (int, pr_st_client instance_state) fm
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-       get_trace val = t    (* Partners share the same trace *)
-    /\ t <> None            (* We must be accepted *)
+       get_trace val = t (* Partners share the same trace *)
+    /\ t <> None         (* We must be initialised *)
   )
   fmap
 ).
@@ -85,9 +105,9 @@ op get_untested_partners_c (t: trace option) (fmap: (s_id * int, pr_st_server in
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
-       get_trace val = t    (* Partners share the same trace *)
-    /\ t <> None            (* We must be accepted *)
-    /\ get_ir_test val = false
+       get_trace val = t       (* Partners share the same trace *)
+    /\ t <> None               (* We must be accepted *)
+    /\ get_ir_test val = false (* Partner is not tested *)
   )
   fmap
 ).
@@ -96,9 +116,33 @@ op get_untested_partners_s (t: trace option) (fmap: (int, pr_st_client instance_
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-       get_trace val = t    (* Partners share the same trace *)
-    /\ t <> None            (* We must be accepted *)
-    /\ get_ir_test val = false
+       get_trace val = t       (* Partners share the same trace *)
+    /\ t <> None               (* We must be accepted *)
+    /\ get_ir_test val = false (* Partner is not tested *)
+  )
+  fmap
+).
+
+op get_fresh_partners_c (t: trace option) (fmap1: (s_id * int, pr_st_server instance_state) fmap) (fmap2: (s_id, server_state) fmap) : (s_id * int) fset =
+fdom (
+  filter
+  (fun bj (val: pr_st_server instance_state) =>
+       get_trace val = t                                               (* Partners share the same trace *)
+    /\ t <> None                                                       (* We must be accepted *)
+    /\ get_ir_test val = false                                         (* Partner is not tested *)
+    /\ (get_ir_eph val = false \/ get_sr_ltk (oget fmap2.[fst bj]) = false) (* Partner is not trivially broken *)
+  )
+  fmap1
+).
+
+op get_fresh_partners_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+fdom (
+  filter
+  (fun i (val: pr_st_client instance_state) =>
+       get_trace val = t       (* Partners share the same trace *)
+    /\ t <> None               (* We must be accepted *)
+    /\ get_ir_test val = false (* Partner is not tested *)
+    /\ get_ir_eph val = false  (* Partner is not trivially broken *)
   )
   fmap
 ).
@@ -106,15 +150,14 @@ fdom (
 op untested_partner_c (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
 if 1 <= card (get_partners_c t fmap) then Some (1 <= card (get_untested_partners_c t fmap)) else None.
 
-op get_untested_partner_c (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : s_id * int =
-pick (get_untested_partners_c t fmap).
+op fresh_partner_c (t: trace option) (fmap1: (s_id * int, pr_st_server instance_state) fmap) (fmap2: (s_id, server_state) fmap) : bool option =
+if 1 <= card (get_partners_c t fmap1) then Some (1 <= card (get_fresh_partners_c t fmap1 fmap2)) else None.
 
 op untested_partner_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
 if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_untested_partners_s t fmap)) else None.
 
-op get_untested_partner_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int =
-pick (get_untested_partners_s t fmap).
-
+op fresh_partner_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
+if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_fresh_partners_s t fmap)) else None.
 
 
 module type Server = {
@@ -146,27 +189,6 @@ module type GAKE_out = {
   proc c_test(i: int) : key option
   proc s_test(b: s_id, j: int) : key option
 }.
-
-type server_state = [
-  Honest    of (pkey * skey)
-| Corrupt   of (pkey * skey)
-| Dishonest of pkey
-].
-
-op get_pkey s_st =
-with s_st = Honest    kp => kp.`1
-with s_st = Corrupt   kp => kp.`1
-with s_st = Dishonest pk => pk.
-
-op get_skey s_st =
-with s_st = Honest    kp => Some kp.`2
-with s_st = Corrupt   kp => Some kp.`2
-with s_st = Dishonest pk => None.
-
-op get_sr_ltk s_st : bool =
-with s_st = Honest    _ => false
-with s_st = Corrupt   _ => true
-with s_st = Dishonest _ => true.
 
 module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   var servers : (s_id, server_state) fmap
@@ -241,7 +263,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
           resp <@ S.respond_session(Some (b, sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
-            s_smap.[(b, j)] <- Accepted st' (m2, m3) k (false, false, false);
+            s_smap.[(b, j)] <- Accepted st' (m2, Some m3) k (false, false, false);
             r <- Some m3;
           } else {
             s_smap.[(b, j)] <- Aborted None None (*partial trace instead?*) (false, false, false);
@@ -266,10 +288,10 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             resp <@ C.complete_session(st, m3);
             if (resp is Some r') {
               (st', k) <- r';
-              c_smap.[i] <- Accepted st' (oget pt, m3) k ir;
+              c_smap.[i] <- Accepted st' (oget pt, Some m3) k ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some st) (Some (oget pt, m3)) ir;
+              c_smap.[i] <- Aborted (Some st) (Some (oget pt, Some m3)) ir;
             }
           }
         | Accepted _ _ _ _ => { }
@@ -289,11 +311,9 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          if (get_ir_test (oget c_smap.[i]) = false) { (* if tested we disallow sesskey reveal *)
-            if (untested_partner_c (Some t') s_smap <> Some false) {
-              k <- Some k';
-              c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
-            }
+          if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c (Some t') s_smap <> Some false) {
+            k <- Some k';
+            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -308,11 +328,9 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          if (get_ir_test (oget s_smap.[b, j]) = false) { (* if tested we disallow sesskey reveal *)
-            if (untested_partner_s (Some t') c_smap <> Some false) {
-              k <- Some k';
-              s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
-            }
+          if (!get_ir_test (oget s_smap.[b, j]) /\ untested_partner_s (Some t') c_smap <> Some false) {
+            k <- Some k';
+            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -323,25 +341,18 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   proc rev_ltkey(b: s_id) : skey option = {
     var ltk <- None;
 
-    match servers.[b] with 
+    match servers.[b] with
     | None => { }
-    | Some kreg => {
-        match kreg with
-        | Honest kp => {
-          (* A cannot reveal ltkey of server b if one of its instances is tested and ephkey reveal *)
-          if (forall j, (get_ir_test (oget s_smap.[b, j]) = false /\ get_ir_eph (oget s_smap.[b, j]) = false)) {
-            (* A cannot reveal ltkey if there is an ephkrevealed instance with partners that are all tested *)
-            if (forall j, untested_partner_s (get_trace (oget s_smap.[b, j])) c_smap <> Some false
-                       \/ get_ir_eph (oget s_smap.[b,j]) = false) {
-              ltk <- Some kp.`2; 
-              servers.[b] <- Corrupt kp; 
-            }
+    | Some _ => {
+        if (oget servers.[b] is Honest kp) {
+          if (forall j, !((   get_ir_test (oget s_smap.[b, j]) 
+                           \/ untested_partner_s (get_trace (oget s_smap.[b, j])) c_smap = Some false)
+                          /\ get_ir_eph (oget s_smap.[b,j]))) {
+            ltk <- Some kp.`2; 
+            servers.[b] <- Corrupt kp; 
           }
         }
-        | Corrupt kp => { ltk <- Some kp.`2; } (* Needed? *)
-        | Dishonest _ => { }
-        end;
-    }
+      }
     end;
     return ltk;
   }
@@ -353,17 +364,16 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         match oget c_smap.[i] with
-        | Pending st pk_e ir => { (* This is bad *)
-            ek <- Some (get_eph_c st);
-            c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
+        | Pending st pk_e ir => {
+            if (untested_partner_c (Some (oget pk_e, None)) s_smap <> Some false) {
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
+            }
           }
         | Accepted st t k ir => {
-            (* A cannot reveal ephkey of client if tested *)
-            if (get_ir_test (oget c_smap.[i]) = false) {
-              if (untested_partner_c (Some t) s_smap <> Some false) {
-                ek <- Some (get_eph_c st);
-                c_smap.[i] <- set_ir_eph (Accepted st t k ir);
-              }
+            if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c (Some t) s_smap <> Some false) {
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- set_ir_eph (Accepted st t k ir);
             }
           }
         | Aborted _ _ _ => {  }
@@ -393,33 +403,16 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc c_test(i: int) : key option = {
-    var p;
     var k <- None;
 
     match c_smap.[i] with
     | None => { }
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          (* A cannot test if sesskey was already revealed or trivially broken *)
-          if (get_ir_sess (oget c_smap.[i]) = false /\ get_ir_eph (oget c_smap.[i]) = false) {
-            match untested_partner_c (Some t') s_smap with
-            | Some utp => { (* there is at least one partner *)
-                if (utp) { (* and at least one of them is not tested *)
-                  p <- get_untested_partner_c (Some t') s_smap;
-                  (* A cannot test if partner is tested, sesskey revealed or trivially broken *)
-                  if (   get_ir_sess (oget s_smap.[p]) = false
-                      /\ (   get_sr_ltk (oget servers.[p.`1]) = false
-                          \/ get_ir_eph (oget s_smap.[p]) = false)) {
-                    k <- Some k';
-                    c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
-                  }
-                }
-              }
-            | None => { (* there is no partner *)
-                k <- Some k';
-                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
-              }
-            end;
+          if (   !get_ir_sess (oget c_smap.[i]) /\ !get_ir_eph (oget c_smap.[i]) 
+              /\ fresh_partner_c (Some t') s_smap servers <> Some false) {
+            k <- Some k';
+            c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
           }
         }
       }
@@ -428,33 +421,17 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
   }
 
   proc s_test(b: s_id, j: int) : key option = {
-    var p;
     var k <- None;
 
     match s_smap.[(b, j)] with
     | None => { }
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          (* A cannot test if sesskey was already revealed or trivially broken *)
-          if (get_ir_sess (oget s_smap.[b, j]) = false /\ 
-               (get_ir_eph (oget s_smap.[b, j]) = false \/ get_sr_ltk (oget servers.[b]) = false)) {
-            match untested_partner_s (Some t') c_smap with
-            | Some utp => { (* there is at least one partner *)
-                if (utp) { (* and at least one of them is not tested *)
-                  p <- get_untested_partner_s (Some t') c_smap;
-                  (* A cannot test if partner is tested, sesskey revealed or trivially broken *)
-                  if (get_ir_sess (oget c_smap.[p]) = false
-                        /\ get_ir_eph (oget c_smap.[p]) = false) {
-                    k <- Some k';
-                    s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
-                  }
-                }
-              }
-            | None => { (* there is no partner *)
-                k <- Some k';
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
-              }
-            end;
+          if (   !get_ir_sess (oget s_smap.[b, j]) 
+              /\ !(get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
+              /\ fresh_partner_s (Some t') c_smap <> Some false) {
+            k <- Some k';
+            s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
           }
         }
       }
