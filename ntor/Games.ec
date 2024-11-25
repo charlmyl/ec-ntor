@@ -2,6 +2,25 @@
 require import AllCore FMap FSet Distr NTOR.
 import GAKEc.
 
+(* Proof:
+- Step 0: inline everathing;
+- Step 1: prevent collisions in and between long-term and ephemeral
+  keys;
+- Step 2: prevent collisions in random oracle output;
+  + IN THEORY: "at most one partner" is possible here; consider it?
+- Step 3: "reduction" if the adversary wins, it must be because they
+  directly queried H on the right input before the test session;
+  + Question: do we want to first hybrid over the instance the
+    adversary tests? Francois thinks yes.
+- Step 4: case split: is the test session a client or a server?
+  + Client: case split: (check Stebila et al)
+    * is the server's long-term key compromised? => Gap-DH one way;
+    * if not => Gap-DH another way.
+  + Server: case split:
+    * is the server's long-term key compromised? => Gap-DH one way;
+    * if not => Gap-DH another way.
+*)
+
 (* Removing key collisions *)
 module Game1 = {
   var servers : (s_id, server_state) fmap
