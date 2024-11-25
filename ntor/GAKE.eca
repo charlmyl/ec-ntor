@@ -15,7 +15,7 @@ op get_eph_c: pr_st_client -> skey.
 op get_eph_s: pr_st_server -> skey.
 
 type 'a instance_state = [
-  Pending  of 'a & (pkey option) (* Partial trace on client side *) & ir_status
+  Pending  of 'a & pkey (* Partial trace on client side, useless state on server side *) & ir_status
 | Accepted of 'a & trace & key & ir_status
 | Aborted  of 'a option & trace option & ir_status
 ].
@@ -27,7 +27,7 @@ type server_state = [
 ].
 
 op get_trace (s: 'a instance_state) : trace option =
-with s = Pending _ pt _     => Some (oget pt, None)
+with s = Pending _ pt _     => Some (pt, None)
 with s = Accepted _ t _ _  => Some t
 with s = Aborted _ t _     => t.
 
@@ -81,82 +81,77 @@ with s_st = Honest    _ => false
 with s_st = Corrupt   _ => true
 with s_st = Dishonest _ => true.
 
-op get_partners_c (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
+op get_partners_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
-       get_trace val = t (* Partners share the same trace *)
-    /\ t <> None         (* We must be initialised *)
+       get_trace val = Some t (* Partners share the same trace *)
   )
   fmap
 ).
 
-op get_partners_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+op get_partners_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-       get_trace val = t (* Partners share the same trace *)
-    /\ t <> None         (* We must be initialised *)
+       get_trace val = Some t (* Partners share the same trace *)
   )
   fmap
 ).
 
-op get_untested_partners_c (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
+op get_untested_partners_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
-       get_trace val = t       (* Partners share the same trace *)
-    /\ t <> None               (* We must be accepted *)
+       get_trace val = Some t  (* Partners share the same trace *)
     /\ get_ir_test val = false (* Partner is not tested *)
   )
   fmap
 ).
 
-op get_untested_partners_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+op get_untested_partners_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-       get_trace val = t       (* Partners share the same trace *)
-    /\ t <> None               (* We must be accepted *)
+       get_trace val = Some t  (* Partners share the same trace *)
     /\ get_ir_test val = false (* Partner is not tested *)
   )
   fmap
 ).
 
-op get_fresh_partners_c (t: trace option) (fmap1: (s_id * int, pr_st_server instance_state) fmap) (fmap2: (s_id, server_state) fmap) : (s_id * int) fset =
+op get_fresh_partners_c (t: trace) (fmap1: (s_id * int, pr_st_server instance_state) fmap) (fmap2: (s_id, server_state) fmap) : (s_id * int) fset =
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
-       get_trace val = t                                                    (* Partners share the same trace *)
-    /\ t <> None                                                            (* We must be accepted *)
+       get_trace val = Some t                                               (* Partners share the same trace *)
     /\ get_ir_test val = false                                              (* Partner is not tested *)
     /\ (get_ir_eph val = false \/ get_sr_ltk (oget fmap2.[fst bj]) = false) (* Partner is not trivially broken *)
   )
   fmap1
 ).
 
-op get_fresh_partners_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+op get_fresh_partners_s (t : trace) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-       (get_trace val = t \/ get_trace val = Some (fst (oget t), None)) (* Partners share the same (partial) trace *)
-    /\ t <> None                                                        (* We must be accepted *)
+       (* CHECK: we consider *any* client that has sent this first message to be a pre-partner *)
+       (exists m2o, get_trace val = Some (fst t, m2o))                  (* Partners share the same (partial) trace *)
     /\ get_ir_test val = false                                          (* Partner is not tested *)
     /\ get_ir_eph val = false                                           (* Partner is not trivially broken *)
   )
   fmap
 ).
 
-op untested_partner_c (t: trace option) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
+op untested_partner_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
 if 1 <= card (get_partners_c t fmap) then Some (1 <= card (get_untested_partners_c t fmap)) else None.
 
-op fresh_partner_c (t: trace option) (fmap1: (s_id * int, pr_st_server instance_state) fmap) (fmap2: (s_id, server_state) fmap) : bool option =
+op fresh_partner_c (t: trace) (fmap1: (s_id * int, pr_st_server instance_state) fmap) (fmap2: (s_id, server_state) fmap) : bool option =
 if 1 <= card (get_partners_c t fmap1) then Some (1 <= card (get_fresh_partners_c t fmap1 fmap2)) else None.
 
-op untested_partner_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
+op untested_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
 if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_untested_partners_s t fmap)) else None.
 
-op fresh_partner_s (t: trace option) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
+op fresh_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
 if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_fresh_partners_s t fmap)) else None.
 
 
@@ -235,7 +230,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
           resp <@ C.new_session(m1, pk_b);
           if (resp is Some r') {
             (st', m2) <- r';
-            c_smap.[i] <- Pending st' (Some m2) (false, false, false);
+            c_smap.[i] <- Pending st' m2 (false, false, false);
             r <- Some m2;
           } else {
             c_smap.[i] <- Aborted None None (false, false, false);
@@ -243,7 +238,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
         }
       | Some st => {
           match st with
-          | Pending st _ ir => c_smap.[i] <- Aborted (Some st) None ir;
+          | Pending st pt ir => c_smap.[i] <- Aborted (Some st) (Some (pt, None)) ir;
           | Accepted _ _ _ _ => { }
           | Aborted _ _ _ => { }
           end;
@@ -267,7 +262,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             s_smap.[(b, j)] <- Accepted st' (m2, Some m3) k (false, false, false);
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted None None (*partial trace instead?*) (false, false, false);
+            s_smap.[(b, j)] <- Aborted None (Some (m2, None)) (false, false, false);
           }
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -289,10 +284,10 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
             resp <@ C.complete_session(st, m3);
             if (resp is Some r') {
               (st', k) <- r';
-              c_smap.[i] <- Accepted st' (oget pt, Some m3) k ir;
+              c_smap.[i] <- Accepted st' (pt, Some m3) k ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some st) (Some (oget pt, Some m3)) ir;
+              c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
             }
           }
         | Accepted _ _ _ _ => { }
@@ -312,7 +307,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c (Some t') s_smap <> Some false) {
+          if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c t' s_smap <> Some false) {
             k <- Some k';
             c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
           }
@@ -329,7 +324,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          if (!get_ir_test (oget s_smap.[b, j]) /\ untested_partner_s (Some t') c_smap <> Some false) {
+          if (!get_ir_test (oget s_smap.[b, j]) /\ untested_partner_s t' c_smap <> Some false) {
             k <- Some k';
             s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
           }
@@ -346,9 +341,12 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | None => { }
     | Some _ => {
         if (oget servers.[b] is Honest kp) {
-          if (forall j, !((   get_ir_test (oget s_smap.[b, j]) 
-                           \/ untested_partner_s (get_trace (oget s_smap.[b, j])) c_smap = Some false)
-                          /\ get_ir_eph (oget s_smap.[b,j]))) {
+          if (forall j,
+                (b, j) \in s_smap
+                => !(   (   get_ir_test (oget s_smap.[b, j])
+                            (* This is always OK (get_trace always Some on server side *)
+                         \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
+                     /\ get_ir_eph (oget s_smap.[b,j]))) {
             ltk <- Some kp.`2; 
             servers.[b] <- Corrupt kp; 
           }
@@ -366,13 +364,13 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | Some _ => {
         match oget c_smap.[i] with
         | Pending st pk_e ir => {
-            if (untested_partner_c (Some (oget pk_e, None)) s_smap <> Some false) {
+            if (untested_partner_c (pk_e, None) s_smap <> Some false) {
               ek <- Some (get_eph_c st);
               c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
             }
           }
         | Accepted st t k ir => {
-            if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c (Some t) s_smap <> Some false) {
+            if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c t s_smap <> Some false) {
               ek <- Some (get_eph_c st);
               c_smap.[i] <- set_ir_eph (Accepted st t k ir);
             }
@@ -392,7 +390,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | Some _ => {
         if (oget s_smap.[b, j] is Accepted st t k ir) { (* No Pending on Server side *)
           if (!((   get_ir_test (oget s_smap.[b, j])
-                 \/ untested_partner_s (Some t) c_smap = Some false)
+                 \/ untested_partner_s t c_smap = Some false)
                 /\ get_sr_ltk (oget servers.[b]))) {
             ek <- Some (get_eph_s st);
             s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
@@ -411,7 +409,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
     | Some _ => {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
           if (   !get_ir_sess (oget c_smap.[i]) /\ !get_ir_eph (oget c_smap.[i]) 
-              /\ fresh_partner_c (Some t') s_smap servers <> Some false) {
+              /\ fresh_partner_c t' s_smap servers <> Some false) {
             k <- Some k';
             c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
           }
@@ -430,7 +428,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out = {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
           if (   !get_ir_sess (oget s_smap.[b, j]) 
               /\ !(get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
-              /\ fresh_partner_s (Some t') c_smap <> Some false) {
+              /\ fresh_partner_s t' c_smap <> Some false) {
             k <- Some k';
             s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
           }
