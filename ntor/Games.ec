@@ -1,0 +1,256 @@
+(* Intermediate Games *)
+require import AllCore FMap FSet Distr NTOR.
+import GAKEc.
+
+(* Removing key collisions *)
+module Game1 = {
+  var servers : (s_id, server_state) fmap
+
+  var c_smap: (int, pr_st_client instance_state) fmap
+  var s_smap: (s_id * int, pr_st_server instance_state) fmap
+
+  proc init_mem() : unit = {
+    servers <- empty;
+    c_smap <- empty;
+    s_smap <- empty;
+  }
+  
+  proc set_cert(b: s_id, pk: pkey) : unit option = {
+    var r <- None;
+
+    if (b \notin servers) {
+      servers.[b] <- Dishonest pk;
+      r <- Some ();
+    }
+    return r;
+  }
+
+
+  proc init_s(b: s_id) : pkey option = {
+    var kp;
+
+    if (b \notin servers) {
+      kp <@ S.keygen();
+      servers.[b] <- Honest kp;
+    }
+    return omap get_pkey servers.[b];
+  }
+
+  proc send_msg1(i: int, m1: s_id) : pkey option = {
+    var st, pk_b, resp, st', m2;
+    var r <- None;
+
+    st <- c_smap.[i];
+    if (m1 \in servers) {
+      pk_b <- get_pkey (oget servers.[m1]);
+      match st with
+      | None => {
+          resp <@ C.new_session(m1, pk_b);
+          if (resp is Some r') {
+            (st', m2) <- r';
+            c_smap.[i] <- Pending st' (Some m2) (false, false, false);
+            r <- Some m2;
+          } else {
+            c_smap.[i] <- Aborted None None (false, false, false);
+          }
+        }
+      | Some st => {
+          match st with
+          | Pending st _ ir => c_smap.[i] <- Aborted (Some st) None ir;
+          | Accepted _ _ _ _ => { }
+          | Aborted _ _ _ => { }
+          end;
+        }
+      end;
+    }
+    return r;
+  }
+
+  proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
+    var sko, resp, st', k, m3;
+    var r <- None;
+
+    sko <- obind get_skey servers.[b];
+    if (sko is Some sk) (* Server was initialised as honest *) {
+      match s_smap.[b, j] with
+      | None => {
+          resp <@ S.respond_session(Some (b, sk, None), m2);
+          if (resp is Some r') {
+            (st', m3, k) <- r';
+            s_smap.[(b, j)] <- Accepted st' (m2, Some m3) k (false, false, false);
+            r <- Some m3;
+          } else {
+            s_smap.[(b, j)] <- Aborted None None (*partial trace instead?*) (false, false, false);
+          }
+        }
+      | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
+      end;
+    }
+
+    return r;
+  }
+
+  proc send_msg3(i: int, m3: pkey * tag) : unit option = {
+    var resp, st', k;
+    var r <- None;
+
+    match c_smap.[i] with
+    | None => { } (* Abort? *)
+    | Some _ => {
+        match oget c_smap.[i] with
+        | Pending st pt ir => {
+            resp <@ C.complete_session(st, m3);
+            if (resp is Some r') {
+              (st', k) <- r';
+              c_smap.[i] <- Accepted st' (oget pt, Some m3) k ir;
+              r <- Some ();
+            } else {
+              c_smap.[i] <- Aborted (Some st) (Some (oget pt, Some m3)) ir;
+            }
+          }
+        | Accepted _ _ _ _ => { }
+        | Aborted _ _ _ => { }
+        end;
+      }
+    end;
+    return r;
+  }
+
+
+  (* reveal and test *)
+  proc c_rev_skey(i: int) : key option = {
+    var k <- None;
+
+    match c_smap.[i] with
+    | None => { }
+    | Some _ => {
+        if (oget c_smap.[i] is Accepted st' t' k' ir') {
+          if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c (Some t') s_smap <> Some false) {
+            k <- Some k';
+            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+
+  proc s_rev_skey(b: s_id, j: int) : key option = {
+    var k <- None;
+
+    match s_smap.[(b, j)] with
+    | None => { }
+    | Some _ => {
+        if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
+          if (!get_ir_test (oget s_smap.[b, j]) /\ untested_partner_s (Some t') c_smap <> Some false) {
+            k <- Some k';
+            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+
+  proc rev_ltkey(b: s_id) : skey option = {
+    var ltk <- None;
+
+    match servers.[b] with
+    | None => { }
+    | Some _ => {
+        if (oget servers.[b] is Honest kp) {
+          if (forall j, !((   get_ir_test (oget s_smap.[b, j]) 
+                           \/ untested_partner_s (get_trace (oget s_smap.[b, j])) c_smap = Some false)
+                          /\ get_ir_eph (oget s_smap.[b,j]))) {
+            ltk <- Some kp.`2; 
+            servers.[b] <- Corrupt kp; 
+          }
+        }
+      }
+    end;
+    return ltk;
+  }
+
+  proc c_rev_ephkey(i: int) : skey option = {
+    var ek <- None;
+
+    match c_smap.[i] with
+    | None => { }
+    | Some _ => {
+        match oget c_smap.[i] with
+        | Pending st pk_e ir => {
+            if (untested_partner_c (Some (oget pk_e, None)) s_smap <> Some false) {
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
+            }
+          }
+        | Accepted st t k ir => {
+            if (!get_ir_test (oget c_smap.[i]) /\ untested_partner_c (Some t) s_smap <> Some false) {
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- set_ir_eph (Accepted st t k ir);
+            }
+          }
+        | Aborted _ _ _ => {  }
+        end;
+      }
+    end;
+    return ek;
+  }
+
+  proc s_rev_ephkey(b: s_id, j: int) : skey option = {
+    var ek <- None;
+
+    match s_smap.[b, j] with
+    | None => { }
+    | Some _ => {
+        if (oget s_smap.[b, j] is Accepted st t k ir) { (* No Pending on Server side *)
+          if (!((   get_ir_test (oget s_smap.[b, j])
+                 \/ untested_partner_s (Some t) c_smap = Some false)
+                /\ get_sr_ltk (oget servers.[b]))) {
+            ek <- Some (get_eph_s st);
+            s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+          }
+        }
+      }
+    end;
+    return ek;
+  }
+
+  proc c_test(i: int) : key option = {
+    var k <- None;
+
+    match c_smap.[i] with
+    | None => { }
+    | Some _ => {
+        if (oget c_smap.[i] is Accepted st' t' k' ir') {
+          if (   !get_ir_sess (oget c_smap.[i]) /\ !get_ir_eph (oget c_smap.[i]) 
+              /\ fresh_partner_c (Some t') s_smap servers <> Some false) {
+            k <- Some k';
+            c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+
+  proc s_test(b: s_id, j: int) : key option = {
+    var k <- None;
+
+    match s_smap.[(b, j)] with
+    | None => { }
+    | Some _ => {
+        if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
+          if (   !get_ir_sess (oget s_smap.[b, j]) 
+              /\ !(get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
+              /\ fresh_partner_s (Some t') c_smap <> Some false) {
+            k <- Some k';
+            s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+}.
+

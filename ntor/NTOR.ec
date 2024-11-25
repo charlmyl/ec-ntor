@@ -1,7 +1,7 @@
 require import AllCore Distr List.
+require GAKE.
 
-
-type s_id, state, pkey, skey.
+type s_id, pkey, skey.
 op dkp : (pkey * skey) distr.
 
 op (^) : pkey -> skey -> pkey.
@@ -11,20 +11,17 @@ type trace = pkey * (pkey * tag).
 type sid = (s_id * pkey) * trace.
 
 type pr_st_client = s_id * pkey * pkey * skey.
-type pr_st_server = s_id * skey.
+type pr_st_server = s_id * skey * skey option.
 
-op get_eph_c: pr_st_client -> skey.
-op get_eph_s: pr_st_server -> skey.
+clone import GAKE as GAKEc with
+  type s_id <- s_id,
+  type pkey <- pkey,
+  type skey <- skey,
+  type key <- key,
+  type pr_st_client <- pr_st_client,
+  type pr_st_server <- pr_st_server,
+  op dkp <- dkp.
 
-module type Server = {
-  proc keygen() : pkey * skey
-  proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
-}.
-
-module type Client = {
-  proc new_session(b: s_id, pk: pkey) : (pr_st_client * pkey) option
-  proc complete_session(st: pr_st_client, m: pkey * tag) : (pr_st_client * key) option
-}.
 
 op hash_ntor: pkey -> pkey -> s_id -> pkey -> pkey -> key_mac * key.
 op hash_mac: key_mac -> s_id -> pkey -> pkey -> tag.
@@ -39,19 +36,19 @@ module Server : Server = {
   }
 
   proc respond_session(st : pr_st_server option, m2: pkey) : (pr_st_server * (pkey * tag) * key) option = {
-    var b, sk_b, pk_se, sk_se;
+    var b, sk_b, pk_se, sk_se, sko;
     var sk', sk, t_B, tr;
     var r <- None;
     
     match st with 
     | None => {}
     | Some st => {
-       (b, sk_b) <- st;
+       (b, sk_b, sko) <- st;
        (pk_se, sk_se) <$ dkp;
         (sk', sk) <- hash_ntor (m2 ^ sk_se) (m2 ^ sk_b) b m2 pk_se;
         t_B <- hash_mac sk' b pk_se m2;
         tr <- (m2, (pk_se, t_B));
-        r <- Some (st, (pk_se, t_B), sk);
+        r <- Some ((b, sk_b, Some sk_se), (pk_se, t_B), sk);
       }
     end;
     return r;
