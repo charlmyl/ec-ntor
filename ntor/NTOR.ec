@@ -23,8 +23,7 @@ clone import GAKE as GAKEc with
   op dkp <- dkp.
 
 
-op hash_ntor: pkey -> pkey -> s_id -> pkey -> pkey -> key_mac * key.
-op hash_mac: key_mac -> s_id -> pkey -> pkey -> tag.
+op hash_ntor: pkey -> pkey -> s_id -> pkey -> pkey -> tag * key.
 
 module Server : Server = {
   proc keygen() : (pkey * skey) = {
@@ -37,7 +36,7 @@ module Server : Server = {
 
   proc respond_session(st : pr_st_server option, m2: pkey) : (pr_st_server * (pkey * tag) * key) option = {
     var b, sk_b, pk_se, sk_se, sko;
-    var sk', sk, t_B, tr;
+    var sk, t_B;
     var r <- None;
     
     match st with 
@@ -45,9 +44,7 @@ module Server : Server = {
     | Some st => {
        (b, sk_b, sko) <- st;
        (pk_se, sk_se) <$ dkp;
-        (sk', sk) <- hash_ntor (m2 ^ sk_se) (m2 ^ sk_b) b m2 pk_se;
-        t_B <- hash_mac sk' b pk_se m2;
-        tr <- (m2, (pk_se, t_B));
+        (t_B, sk) <- hash_ntor (m2 ^ sk_se) (m2 ^ sk_b) b m2 pk_se;
         r <- Some ((b, sk_b, Some sk_se), (pk_se, t_B), sk);
       }
     end;
@@ -68,13 +65,11 @@ module Client : Client = {
 
   proc complete_session(st: pr_st_client, m3: pkey * tag) : (pr_st_client * key) option = {
     var r <- None;
-    var b, pk_b, pk_ce, sk_ce, sk', sk, t_A, tr;
+    var b, pk_b, pk_ce, sk_ce, sk, t_A;
 
     (b, pk_b, pk_ce, sk_ce) <- st;
-    (sk', sk) <- hash_ntor (m3.`1 ^ sk_ce) (pk_b ^ sk_ce) b pk_ce m3.`1;
-    t_A <- hash_mac sk' b m3.`1 pk_ce;
+    (t_A, sk) <- hash_ntor (m3.`1 ^ sk_ce) (pk_b ^ sk_ce) b pk_ce m3.`1;
     if (t_A = m3.`2) {
-      tr <- (pk_ce, m3);
       r <- Some (st, sk);
     }
     return r;
