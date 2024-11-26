@@ -53,14 +53,12 @@ module Server : Server = {
 }.
 
 module Client : Client = {
-  proc new_session(b, pk) : (pr_st_client * pkey) option = {
-    var r;
+  proc new_session(b, pk) : pr_st_client * pkey = {
     var pk_ce, sk_ce;
 
     (pk_ce, sk_ce) <$ dkp;
-    r <- Some ((b, pk, pk_ce, sk_ce), pk_ce);
 
-    return r;
+    return ((b, pk, pk_ce, sk_ce), pk_ce);
   }
 
   proc complete_session(st: pr_st_client, m3: pkey * tag) : (pr_st_client * key) option = {

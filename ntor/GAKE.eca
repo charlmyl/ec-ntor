@@ -200,7 +200,7 @@ module type Server = {
 }.
 
 module type Client = {
-  proc new_session(b: s_id, pk: pkey) : (pr_st_client * pkey) option
+  proc new_session(b: s_id, pk: pkey) : pr_st_client * pkey
   proc complete_session(st: pr_st_client, m: pkey * tag) : (pr_st_client * key) option
 }.
 
@@ -278,7 +278,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out_i = {
   }
 
   proc send_msg1(i: int, m1: s_id) : pkey option = {
-    var st, pk_b, resp, st', m2;
+    var st, pk_b, st', m2;
     var r <- None;
 
     st <- c_smap.[i];
@@ -286,14 +286,9 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out_i = {
       pk_b <- get_pkey (oget servers.[m1]);
       match st with
       | None => {
-          resp <@ C.new_session(m1, pk_b);
-          if (resp is Some r') {
-            (st', m2) <- r';
-            c_smap.[i] <- Pending st' m2 (false, false, false);
-            r <- Some m2;
-          } else {
-            c_smap.[i] <- Aborted None None (false, false, false);
-          }
+          (st', m2) <@ C.new_session(m1, pk_b);
+           c_smap.[i] <- Pending st' m2 (false, false, false);
+          r <- Some m2;
         }
       | Some st => {
           match st with
