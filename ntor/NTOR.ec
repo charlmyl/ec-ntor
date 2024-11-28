@@ -2,7 +2,7 @@ require import AllCore Distr List.
 require GAKE.
 
 type s_id, pkey, skey.
-op dkp : (pkey * skey) distr.
+op [lossless] dkp : (pkey * skey) distr.
 
 op (^) : pkey -> skey -> pkey.
 
@@ -22,10 +22,7 @@ clone import GAKE as GAKEc with
   type pr_st_server <- pr_st_server,
   op dkp <- dkp.
 
-
-op hash_ntor: pkey -> pkey -> s_id -> pkey -> pkey -> tag * key.
-
-module Server : Server = {
+module NTOR_S : Server = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
 
@@ -52,7 +49,7 @@ module Server : Server = {
   }
 }.
 
-module Client : Client = {
+module NTOR_C : Client = {
   proc new_session(b, pk) : pr_st_client * pkey = {
     var pk_ce, sk_ce;
 
