@@ -22,7 +22,12 @@ clone import GAKE as GAKEc with
   type pr_st_server <- pr_st_server,
   op dkp <- dkp.
 
-module NTOR_S : Server = {
+module type RO = {
+  proc init(): unit
+  proc get(_: pkey * pkey * s_id * pkey * pkey) : tag * key
+}.
+
+module NTOR_S (H : RO) : Server = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
 
@@ -41,7 +46,7 @@ module NTOR_S : Server = {
     | Some st => {
        (b, sk_b, sko) <- st;
        (pk_se, sk_se) <$ dkp;
-        (t_B, sk) <- hash_ntor (m2 ^ sk_se) (m2 ^ sk_b) b m2 pk_se;
+        (t_B, sk) <@ H.get(m2 ^ sk_se, m2 ^ sk_b, b, m2, pk_se);
         r <- Some ((b, sk_b, Some sk_se), (pk_se, t_B), sk);
       }
     end;
@@ -49,7 +54,7 @@ module NTOR_S : Server = {
   }
 }.
 
-module NTOR_C : Client = {
+module NTOR_C (H : RO) : Client = {
   proc new_session(b, pk) : pr_st_client * pkey = {
     var pk_ce, sk_ce;
 
@@ -63,7 +68,7 @@ module NTOR_C : Client = {
     var b, pk_b, pk_ce, sk_ce, sk, t_A;
 
     (b, pk_b, pk_ce, sk_ce) <- st;
-    (t_A, sk) <- hash_ntor (m3.`1 ^ sk_ce) (pk_b ^ sk_ce) b pk_ce m3.`1;
+    (t_A, sk) <@ H.get(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
     if (t_A = m3.`2) {
       r <- Some (st, sk);
     }

@@ -3,7 +3,8 @@ require import AllCore FMap FSet.
 type s_id, tag, state, key, pkey, skey, key_sess.
 op [lossless] dkp : (pkey * skey) distr.
 
-op hash_ntor: pkey -> pkey -> s_id -> pkey -> pkey -> tag * key.
+op [lossless] dtag : tag distr.
+op [lossless] dkey : key distr.
 
 type trace = pkey * (pkey * tag) option.
 type sid = (s_id * pkey) * trace.
@@ -240,8 +241,13 @@ module type GAKE_out_i = {
   proc init_mem() : unit
 }.
 
+module type RO = {
+  proc init(): unit
+  proc get(_: pkey * pkey * s_id * pkey * pkey) : tag * key
+}.
+
 (* real AKE game *)
-module GAKE0 (S: Server) (C: Client) : GAKE_out_i = {
+module GAKE0 (S: Server) (C: Client) (H : RO): GAKE_out_i = {
   var servers : (s_id, server_state) fmap
 
   var c_smap: (int, pr_st_client instance_state) fmap
@@ -254,9 +260,7 @@ module GAKE0 (S: Server) (C: Client) : GAKE_out_i = {
   }
 
   (* random oracle *)
-  proc h(input: pkey * pkey * s_id * pkey * pkey) : tag * key = {
-    return hash_ntor input.`1 input.`2 input.`3 input.`4 input.`5;
-  }
+  proc h = H.get
   
   (* server management *)
   proc init_s(b: s_id) : pkey option = {

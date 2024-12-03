@@ -8,11 +8,15 @@ import GAKEc.
   keys;
 - Step 2: prevent collisions in random oracle output;
   + IN THEORY: "at most one partner" is possible here; consider it?
-- Step 3: "reduction" if the adversary wins, it must be because they
+- Step 3: split the random oracle so that tag and key are sampled
+  separately;
+- Step 3.5: delay the sampling of the session key to reveal or test;
+  (use Eager/Lazy, replacing the RO call in msg2 + msg3 with sample)
+- Step 4: "reduction" if the adversary wins, it must be because they
   directly queried H on the right input before the test session;
   + Question: do we want to first hybrid over the instance the
     adversary tests? Francois thinks yes.
-- Step 4: case split: is the test session a client or a server?
+- Step 5: case split: is the test session a client or a server?
   + Client: case split: (check Stebila et al)
     * is the server's long-term key compromised? => Gap-DH one way;
     * if not => Gap-DH another way.
@@ -23,6 +27,11 @@ import GAKEc.
 
 (* Step0 inlining everything and adding bad event *)
 module Game0 : GAKE_out_i = {
+  (* This is not aligned with the sequence above *)
+  var h1m : (pkey * pkey * s_id * pkey * pkey, tag) fmap
+  var h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap
+  var outs_h : (tag * key) fset
+
   var servers : (s_id, server_state) fmap
 
   var c_smap : (int, pr_st_client instance_state) fmap
@@ -30,18 +39,53 @@ module Game0 : GAKE_out_i = {
   
   var kp_set : ((pkey * skey)) fset
   var bad : bool
+  var bad_ro : bool
 
   proc init_mem() : unit = {
+    h1m <- empty;
+    h2m <- empty;
+    outs_h <- fset0;
     servers <- empty;
     c_smap <- empty;
     s_smap <- empty;
     kp_set <- fset0;
     bad <- false;
+    bad_ro <- false;
   }
   
   (* random oracle *)
-  proc h(input: pkey * pkey * s_id * pkey * pkey) : tag * key = {
-    return hash_ntor input.`1 input.`2 input.`3 input.`4 input.`5;
+  proc h1(x: pkey * pkey * s_id * pkey * pkey) : tag = {
+    var r;
+
+    r <$ dtag;
+    if (x \notin h1m) {
+      h1m.[x] <- r;
+    }
+    return oget h1m.[x];
+  }
+
+  proc h2(x: pkey * pkey * s_id * pkey * pkey) : key = {
+    var r;
+
+    r <$ dkey;
+    if (x \notin h2m) {
+      h2m.[x] <- r;
+    }
+    return oget h2m.[x];
+  }
+
+  proc h(x: pkey * pkey * s_id * pkey * pkey) : tag * key = {
+    var t, k;
+
+    t <@ h1(x);
+    k <@ h2(x);
+    (* Because this does not prevent state update, we probably want to
+    silence *all* oracles once bad happens. We also want to prevent
+    the query that triggered it from returning useful information to
+    the baddie. *)
+    bad_ro <- bad_ro \/ (t, k) \in outs_h;
+    outs_h <- outs_h `|` fset1 (t, k);
+    return (t, k);
   }
 
   (* server management *)
@@ -105,7 +149,7 @@ module Game0 : GAKE_out_i = {
           kp <$ dkp;
           bad <- bad \/ kp \in kp_set;
           kp_set <- kp_set `|` fset1 kp;
-          (t_B, sk) <- hash_ntor (m2 ^ kp.`2) (m2 ^ sk_b) b m2 kp.`1;
+          (t_B, sk) <@ h(m2 ^ kp.`2, m2 ^ sk_b, b, m2, kp.`1);
           s_smap.[(b, j)] <- Accepted (b, sk_b, Some kp.`2) (m2, Some (kp.`1, t_B)) sk (false, false, false);
           r <- Some (kp.`1, t_B);
         }
@@ -126,7 +170,7 @@ module Game0 : GAKE_out_i = {
         match oget c_smap.[i] with
         | Pending st pt ir => {
             (b, pk_b, pk_ce, sk_ce) <- st;
-            (t_A, sk) <- hash_ntor (m3.`1 ^ sk_ce) (pk_b ^ sk_ce) b pk_ce m3.`1;
+            (t_A, sk) <@ h(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
             if (t_A = m3.`2) {
               c_smap.[i] <- Accepted st (pt, Some m3) sk ir;
               r <- Some ();
@@ -318,3 +362,4 @@ module Game1 = Game0 with {
 
 print Game1.
 
+(* Step2: Removing RO collisions *)

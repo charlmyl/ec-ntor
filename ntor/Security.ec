@@ -13,8 +13,7 @@ section.
 
 declare module A <: A_GAKE {-GAKE0, -Game0, -Game1}.
 
-declare axiom A_ll:
-forall (G <: GAKE_out{-A}),
+declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
   islossless G.init_s =>
   islossless G.set_cert =>
@@ -26,8 +25,9 @@ forall (G <: GAKE_out{-A}),
   islossless G.rev_ltkey =>
   islossless G.c_rev_ephkey =>
   islossless G.s_rev_ephkey =>
-  islossless G.c_test => islossless G.s_test => islossless A(G).run.
-
+  islossless G.c_test =>
+  islossless G.s_test =>
+  islossless A(G).run.
 
 lemma Step0 &m :
   Pr[E_GAKE(GAKE0(NTOR_S, NTOR_C), A).run() @ &m : res] = Pr[E_GAKE(Game0, A).run() @ &m : res].
@@ -36,47 +36,39 @@ byequiv => //.
 proc; inline*.
 sim (: ={servers, c_smap, s_smap}(GAKE0, Game0)).
 
-- proc; inline*; by auto => /#.
+- proc; inline*; auto=> /> &2.
+  by case: (Game0.c_smap.[i]{2})=> /> [] />.
 
 - proc; inline*.
-  sp; match = => //.
-  move => sk.
+  sp; match = => // sk.
   match = => //.
   match Some {1} 4.
-   + by auto; smt(mem_set).
-  match Some {1} 10.
-  + by auto; smt().
-  auto => />.
+  + by auto=> /> _ _ _ _; exists (b{m0}, sk, None).
+  match Some {1} 10=> //; 1: by auto=> /> /#.
+  by auto.
 
 - proc; inline*. 
   sp; if => //.
-  sp; match = => //.
-  auto => />. 
-  move => st.
-  match = => //.
-  move => st' pt' ir'.
-  auto => />.
+  sp; match = => // [|st]; 1:by auto.
+  by match = => // st' pt' ir'; auto.
 
-- proc; inline*.
-  if => //.
-  auto => /#.
+- by proc; inline*; if => //; auto=> /#.
 qed.
 
 lemma Step1 &m: `| Pr[E_GAKE(Game0, A).run() @ &m : res] - Pr[E_GAKE(Game1, A).run() @ &m : res] | <= Pr[E_GAKE(Game1, A).run() @ &m : Game1.bad].
 proof.
 byequiv (: _ ==> _) : Game0.bad => //; first last.
-+ move=> &1 &2.
-  by case: (Game1.bad{2}).
++ by rewrite eq_iff.
 proc; inline*.
-call (: Game1.bad, ={servers, c_smap, s_smap, kp_set, bad}(Game0, Game1), ={bad}(Game0, Game1)) => //. 
+call (: Game1.bad
+      , ={servers, c_smap, s_smap, kp_set, bad}(Game0, Game1)
+      , ={bad}(Game0, Game1)) => //. 
 
 - exact A_ll.
 
-- proc; auto => />.
-- move => &2 bad.
-  proc; auto => />. 
-- move => &1. 
-  proc; auto => />.
+- by proc; auto.
+- by move => &2 bad; proc; auto.
+- by move => &1; proc; auto.
 
 - proc.
   if => //.
