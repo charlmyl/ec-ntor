@@ -3,6 +3,8 @@ import GAKEc.
 require Birthday.
 
 
+print mem_set.
+
 (* ------------------------------------------------------------------------------------------ *)
 (* Reductions *)
 (* ------------------------------------------------------------------------------------------ *)
@@ -353,15 +355,20 @@ proc; inline.
 call (:
  ={hm, outs_h, servers, c_smap, s_smap, kp_set, bad, bad_ro}(Game0, Red_Coll_O_AKE(BB.Sample))
  /\ (Game0.bad{1} => !uniq BB.Sample.l{2})
- /\ (forall kp, kp \in Game0.kp_set{1} <=> kp \in BB.Sample.l{2})
+ /\ (forall kp, kp \in Game0.kp_set{1} => kp \in BB.Sample.l{2})
 ) => //; 1,3,6,7,8,9,10,11,12,13: by sim />.
 + proc; inline; sp 0 2; if => //; auto => />. 
-  move => &2 H I J K L.
-  split. smt(mem_set).
-  
-  admit.
-+ admit. 
-+ admit. 
+  smt(mem_set in_fsetU1).
++ proc; inline; sp 2 4; if => //; auto.
+  sp; match = => // [|st].
+  + auto => />.
+    smt(mem_set in_fsetU1).
+  match = => // st' pt ir. 
+  auto => />.
++ proc; inline; sp 2 4; match = => // [|st]; 1: auto.
+  match = => // [|st']; 2: auto.
+  auto => />.
+  smt(mem_set in_fsetU1).
 auto => />.
 smt(in_fset0).
 qed.
