@@ -343,7 +343,7 @@ print Game1.
 (* Step2: Removing RO collisions *)
 module Game2 = Game1 with {
   proc h [
-    ^bad_ro<- + (!bad)
+    ^bad_ro<- + (!bad_ro)
   ]
 }.
 

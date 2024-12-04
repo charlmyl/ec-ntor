@@ -103,7 +103,7 @@ module (Red_Coll (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKE0, -RO_h, -Game0, -Game1, -Red_Coll, -BB.Sample }.
+declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -RO_h, -Red_Coll, -BB.Sample }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -124,6 +124,151 @@ declare axiom A_ll (G <: GAKE_out{-A}):
 declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis <= q_is /\ Counter.cm1 <= q_m1 /\ Counter.cm2 <= q_m2].
 
 
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 2: Remove collisions in the random oracle output. *)
+lemma Step2 &m: `| Pr[E_GAKE(Game1, A).run() @ &m : res] - Pr[E_GAKE(Game2, A).run() @ &m : res] | <= Pr[E_GAKE(Game1, A).run() @ &m : Game1.bad_ro].
+proof.
+rewrite StdOrder.RealOrder.distrC.
+byequiv (: _ ==> _) : Game2.bad_ro => //; first last.
++ by rewrite eq_iff.
+symmetry; proc; inline*.
+call (: Game2.bad_ro
+      , ={servers, c_smap, s_smap, kp_set, hm, outs_h, bad, bad_ro}(Game1, Game2)
+      , ={bad_ro}(Game1, Game2)) => //. 
+
+- exact A_ll.
+
+- proc. 
+  seq 2 2: (#pre /\ ={t, k}); 1: by auto.
+  sp 0 1; if{2}.
+  + by sp 2 1; if => //; auto => />.
+  by auto => />.
+- move => &2 bad; proc; auto => />. 
+  rewrite dkey_ll dtag_ll. smt().
+- move => &1; proc; auto => />.
+  by rewrite dkey_ll dtag_ll.
+
+- proc; if => //; auto => />.
+- move => &2 bad.
+  proc; if; auto => />.
+  by rewrite dkp_ll.
+- move => &1. 
+  proc; if; auto => />. 
+  by rewrite dkp_ll.  
+
+- proc; auto => />.
+- move => &2 bad.
+  proc; auto => />.
+- move => &1. 
+  proc; auto => />. 
+
+- proc; sp; if => //; sp; match = => // [|st]. 
+  + sim />. 
+  match =; auto => />.
+- move => &2 bad.
+  proc; sp; if; auto => />.
+  sp; match.
+  + auto => />.  
+    by rewrite dkp_ll.
+  match; auto => />.
+- move => &1. 
+  proc; sp; if; auto => />.
+  sp; match. 
+  + auto => />.
+    by rewrite dkp_ll. 
+  match; auto => />.
+
+- proc; inline; sp; match = => // sk. 
+  match = => //.
+  admit.
+- move => &2 bad.
+  proc; inline; sp; match; auto => />.
+  match.
+  admit.
+  skip => />.
+- move => &1. 
+  proc; inline; sp; match; auto => />.
+  match. 
+  admit. 
+  skip => />.
+
+- proc; inline. admit.
+- move => &2 bad.
+  proc; inline*.
+  sp; match; auto => />. 
+  match; auto => />.
+  rewrite dkey_ll dtag_ll. smt().
+- move => &1.
+  proc; inline*; auto => />.
+  sp; match; auto => />.
+  match; auto => />.
+  by rewrite dkey_ll dtag_ll.
+
+- sim />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- sim />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- sim />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- sim />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- sim />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- sim />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- sim />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+auto => />.
+move => rl rr al bl brl csl hml kpl hsl ssl sl ar br brr csr hmr kpr hsr ssr sr. 
+by case : (!brr) => />.
+qed.
+
+
+
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 0: Inlining everything. *)
 lemma Step0 &m :
   Pr[E_GAKE(GAKE0(NTOR_S(RO_h), NTOR_C(RO_h), RO_h), A).run() @ &m : res] = Pr[E_GAKE(Game0, A).run() @ &m : res].
 proof. 
@@ -153,6 +298,8 @@ call (: ={servers, c_smap, s_smap}(GAKE0, Game0) /\ RO_h.cache{1} = Game0.hm{2})
 by auto.
 qed.
 
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 1: Remove collisions in ephemeral and long-term keys. *)
 lemma Step1 &m: `| Pr[E_GAKE(Game0, A).run() @ &m : res] - Pr[E_GAKE(Game1, A).run() @ &m : res] | <= Pr[E_GAKE(Game0, A).run() @ &m : Game0.bad].
 proof.
 rewrite StdOrder.RealOrder.distrC.
