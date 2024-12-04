@@ -28,8 +28,7 @@ import GAKEc.
 (* Step0 inlining everything and adding bad event *)
 module Game0 : GAKE_out_i = {
   (* This is not aligned with the sequence above *)
-  var h1m : (pkey * pkey * s_id * pkey * pkey, tag) fmap
-  var h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap
+  var hm : (pkey * pkey * s_id * pkey * pkey, tag * key) fmap
   var outs_h : (tag * key) fset
 
   var servers : (s_id, server_state) fmap
@@ -42,8 +41,7 @@ module Game0 : GAKE_out_i = {
   var bad_ro : bool
 
   proc init_mem() : unit = {
-    h1m <- empty;
-    h2m <- empty;
+    hm <- empty;
     outs_h <- fset0;
     servers <- empty;
     c_smap <- empty;
@@ -54,38 +52,18 @@ module Game0 : GAKE_out_i = {
   }
   
   (* random oracle *)
-  proc h1(x: pkey * pkey * s_id * pkey * pkey) : tag = {
-    var r;
-
-    r <$ dtag;
-    if (x \notin h1m) {
-      h1m.[x] <- r;
-    }
-    return oget h1m.[x];
-  }
-
-  proc h2(x: pkey * pkey * s_id * pkey * pkey) : key = {
-    var r;
-
-    r <$ dkey;
-    if (x \notin h2m) {
-      h2m.[x] <- r;
-    }
-    return oget h2m.[x];
-  }
-
   proc h(x: pkey * pkey * s_id * pkey * pkey) : tag * key = {
     var t, k;
 
-    t <@ h1(x);
-    k <@ h2(x);
-    (* Because this does not prevent state update, we probably want to
-    silence *all* oracles once bad happens. We also want to prevent
-    the query that triggered it from returning useful information to
-    the baddie. *)
+    t <$ dtag;
+    k <$ dkey;
     bad_ro <- bad_ro \/ (t, k) \in outs_h;
     outs_h <- outs_h `|` fset1 (t, k);
-    return (t, k);
+    if (x \notin hm) {
+      hm.[x] <- (t, k);
+    }
+    
+    return oget hm.[x];
   }
 
   (* server management *)
@@ -363,3 +341,14 @@ module Game1 = Game0 with {
 print Game1.
 
 (* Step2: Removing RO collisions *)
+module Game2 = Game1 with {
+  proc h [
+    ^bad_ro<- + (!bad)
+  ]
+}.
+
+print Game2.
+
+
+
+

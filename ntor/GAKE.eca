@@ -254,6 +254,7 @@ module GAKE0 (S: Server) (C: Client) (H : RO): GAKE_out_i = {
   var s_smap: (s_id * int, pr_st_server instance_state) fmap
 
   proc init_mem() : unit = {
+    H.init();
     servers <- empty;
     c_smap <- empty;
     s_smap <- empty;
