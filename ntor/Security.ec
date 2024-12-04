@@ -180,11 +180,17 @@ call (: Game2.bad_ro
 
 - proc; inline; sp; match = => // sk. 
   match = => //.
-  admit.
+  seq 1 1: (#pre /\ ={kp}); 1: by auto.
+  sp; if => //.  
+  sp.
+  seq 2 2: (#pre /\ ={t, k}); 1: by auto => />.
+  sp 2 1; if{2}.
+  + auto => />.
+  auto => />.
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
   match.
-  admit.
+  + admit.
   skip => />.
 - move => &1. 
   proc; inline; sp; match; auto => />.
@@ -192,7 +198,12 @@ call (: Game2.bad_ro
   admit. 
   skip => />.
 
-- proc; inline. admit.
+- proc; inline; sp; match = => // prr.
+  match = => // st pt ir.
+  sp; seq 2 2: (#pre /\ ={t, k}); 1: by auto => />.
+  sp 0 1; if{2}.
+  + auto => />.
+  auto => />.
 - move => &2 bad.
   proc; inline*.
   sp; match; auto => />. 
@@ -274,7 +285,7 @@ lemma Step0 &m :
 proof. 
 byequiv => //.
 proc; inline*.
-call (: ={servers, c_smap, s_smap}(GAKE0, Game0) /\ RO_h.cache{1} = Game0.hm{2}); 1,3,7,8,9,10,11,12,13: by sim />.
+call (: ={servers, c_smap, s_smap}(GAKE0, Game0) /\ RO_h.cache{1} = Game0.hm{2}); try sim />.
 
 - proc; inline*; auto; if => //; auto => /#.
 
@@ -294,8 +305,6 @@ call (: ={servers, c_smap, s_smap}(GAKE0, Game0) /\ RO_h.cache{1} = Game0.hm{2})
 - proc; inline*; auto=> />.
   sp; match = => //; 1: auto.
   by match = => //; 1: auto.
-
-by auto.
 qed.
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -503,7 +512,7 @@ call (:
  ={hm, outs_h, servers, c_smap, s_smap, kp_set, bad, bad_ro}(Game0, Red_Coll_O_AKE(BB.Sample))
  /\ (Game0.bad{1} => !uniq BB.Sample.l{2})
  /\ (forall kp, kp \in Game0.kp_set{1} => kp \in BB.Sample.l{2})
-) => //; 1,3,6,7,8,9,10,11,12,13: by sim />.
+) => //; try sim />.
 + proc; inline; sp 0 2; if => //; auto => />. 
   smt(mem_set in_fsetU1).
 + proc; inline; sp 2 4; if => //; auto.

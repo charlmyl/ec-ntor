@@ -347,7 +347,9 @@ module Game2 = Game1 with {
   ]
 }.
 
-print Game2.
+
+(* Step3: Splitting the RO *)
+
 
 
 

@@ -1,4 +1,5 @@
-require import AllCore FMap FSet.
+require import AllCore FMap FSet Distr.
+require PROM.
 
 type s_id, tag, state, key, pkey, skey, key_sess.
 op [lossless] dkp : (pkey * skey) distr.
@@ -234,16 +235,22 @@ module type GAKE_out = {
   proc s_test(b: s_id, j: int) : key option
 }.
 
+
+(* Rondom oracle *)
+clone import PROM.FullRO as HROc with
+  type in_t    <= pkey * pkey * s_id * pkey * pkey,
+  type out_t   <= tag * key,
+  op   dout _  <= dtag `*` dkey,
+  type d_in_t  <= unit,
+  type d_out_t <= bool
+proof *.
+
+
 (* oracles that are exposed to the experiment *)
 module type GAKE_out_i = {
   include GAKE_out
 
   proc init_mem() : unit
-}.
-
-module type RO = {
-  proc init(): unit
-  proc get(_: pkey * pkey * s_id * pkey * pkey) : tag * key
 }.
 
 (* real AKE game *)
