@@ -187,89 +187,100 @@ call (: Game2.bad_ro
   sp 2 1; if{2}.
   + auto => />.
   auto => />.
-- move => &2 bad.
+- move => &2 bad_ro.
   proc; inline; sp; match; auto => />.
   match.
-  + admit.
-  skip => />.
+  + seq 1: (#pre) (1%r) (1%r) (0%r) (1%r) (kp \in dkp) => //. auto.
+    - by auto; rewrite dkp_ll.
+    - sp; if => //.
+      auto => />.
+      by rewrite dkey_ll dtag_ll /#.
+    - by rnd pred0; skip => />; rewrite mu0.
+  by skip => />.
 - move => &1. 
   proc; inline; sp; match; auto => />.
   match. 
-  admit. 
-  skip => />.
+  + seq 1: (#pre) (1%r) (1%r) (0%r) (1%r) (kp \in dkp) => //. auto.
+    - by auto; rewrite dkp_ll.
+    - sp; if => //.
+      + auto => />.
+        by rewrite dkey_ll dtag_ll /#.
+      by skip => />.
+    - by rnd pred0; skip => />; rewrite mu0.
+  by skip => />.
 
 - proc; inline; sp; match = => // prr.
   match = => // st pt ir.
   sp; seq 2 2: (#pre /\ ={t, k}); 1: by auto => />.
   sp 0 1; if{2}.
   + auto => />.
-  auto => />.
-- move => &2 bad.
+  by auto => />.
+- move => &2 bad_ro.
   proc; inline*.
   sp; match; auto => />. 
   match; auto => />.
-  rewrite dkey_ll dtag_ll. smt().
+  by rewrite dkey_ll dtag_ll /#.
 - move => &1.
   proc; inline*; auto => />.
   sp; match; auto => />.
   match; auto => />.
   by rewrite dkey_ll dtag_ll.
 
-- sim />.
+- by sim />.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 - move => &1.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 
-- sim />.
+- by sim />.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 - move => &1.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 
-- sim />.
+- by sim />.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 - move => &1.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 
-- sim />.
+- by sim />.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 - move => &1.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 
-- sim />.
+- by sim />.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 - move => &1.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 
-- sim />.
+- by sim />.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 - move => &1.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 
-- sim />.
+- by sim />.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 - move => &1.
   proc; sp; match; 1: by auto. 
-  match; auto => />.
+  by match; auto => />.
 
 auto => />.
 move => rl rr al bl brl csl hml kpl hsl ssl sl ar br brr csr hmr kpr hsr ssr sr. 
