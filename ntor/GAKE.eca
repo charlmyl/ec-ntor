@@ -254,7 +254,7 @@ module type GAKE_out_i = {
 }.
 
 (* real AKE game *)
-module GAKE0 (S: Server) (C: Client) (H : RO): GAKE_out_i = {
+module GAKEb (S: Server) (C: Client) (H : RO) = {
   var servers : (s_id, server_state) fmap
 
   var c_smap: (int, pr_st_client instance_state) fmap
@@ -480,20 +480,25 @@ module GAKE0 (S: Server) (C: Client) (H : RO): GAKE_out_i = {
     end;
     return ek;
   }
+}.
+
+
+module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
+  include GAKEb(S, C, H)
 
   proc c_test(i: int) : key option = {
     var k <- None;
 
-    match c_smap.[i] with
+    match GAKEb.c_smap.[i] with
     | None => { }
     | Some _ => {
         (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
            and not all partner instances are unfresh can be tested *)
-        if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
-                \/ fresh_partner_c t' s_smap servers = Some false)) {
+        if (oget GAKEb.c_smap.[i] is Accepted st' t' k' ir') {
+          if (!(   get_ir_sess (oget GAKEb.c_smap.[i]) \/ get_ir_eph (oget GAKEb.c_smap.[i]) 
+                \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false)) {
             k <- Some k';
-            c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+            GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
           }
         }
       }
@@ -504,17 +509,66 @@ module GAKE0 (S: Server) (C: Client) (H : RO): GAKE_out_i = {
   proc s_test(b: s_id, j: int) : key option = {
     var k <- None;
 
-    match s_smap.[(b, j)] with
+    match GAKEb.s_smap.[(b, j)] with
     | None => { }
     | Some _ => {
         (* only accepted server instances that are not sesskey revealed, not trivially broken
            and not all partner instances are unfresh can be tested *)
-        if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          if (!(   get_ir_sess (oget s_smap.[b, j]) 
-                \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
-                \/ fresh_partner_s t' c_smap = Some false)) {
+        if (oget GAKEb.s_smap.[b, j] is Accepted st' t' k' ir') {
+          if (!(   get_ir_sess (oget GAKEb.s_smap.[b, j]) 
+                \/ (get_ir_eph (oget GAKEb.s_smap.[b, j]) /\ get_sr_ltk (oget GAKEb.servers.[b]))
+                \/ fresh_partner_s t' GAKEb.c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+            GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+}.
+
+module GAKE1 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
+  include GAKEb(S, C, H)
+
+  proc c_test(i: int) : key option = {
+    var k <- None;
+    var ks;
+
+    match GAKEb.c_smap.[i] with
+    | None => { }
+    | Some _ => {
+        (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
+           and not all partner instances are unfresh can be tested *)
+        if (oget GAKEb.c_smap.[i] is Accepted st' t' k' ir') {
+          if (!(   get_ir_sess (oget GAKEb.c_smap.[i]) \/ get_ir_eph (oget GAKEb.c_smap.[i]) 
+                \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false)) {
+            ks <$ dkey;
+            k <- Some ks;
+            GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+
+  proc s_test(b: s_id, j: int) : key option = {
+    var k <- None;
+    var ks;
+
+    match GAKEb.s_smap.[(b, j)] with
+    | None => { }
+    | Some _ => {
+        (* only accepted server instances that are not sesskey revealed, not trivially broken
+           and not all partner instances are unfresh can be tested *)
+        if (oget GAKEb.s_smap.[b, j] is Accepted st' t' k' ir') {
+          if (!(   get_ir_sess (oget GAKEb.s_smap.[b, j]) 
+                \/ (get_ir_eph (oget GAKEb.s_smap.[b, j]) /\ get_sr_ltk (oget GAKEb.servers.[b]))
+                \/ fresh_partner_s t' GAKEb.c_smap = Some false)) {
+            ks <$ dkey;
+            k <- Some ks;
+            GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');
           }
         }
       }
