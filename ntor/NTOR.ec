@@ -10,6 +10,9 @@ type key_mac, key, tag.
 type trace = pkey * (pkey * tag).
 type sid = (s_id * pkey) * trace.
 
+op [lossless] dtag : tag distr.
+op [lossless] dkey : key distr.
+
 type pr_st_client = s_id * pkey * pkey * skey.
 type pr_st_server = s_id * skey * skey option.
 
@@ -18,14 +21,14 @@ clone import GAKE as GAKEc with
   type pkey <- pkey,
   type skey <- skey,
   type key <- key,
+  type tag <- tag,
   type pr_st_client <- pr_st_client,
   type pr_st_server <- pr_st_server,
-  op dkp <- dkp.
+  op dkp <- dkp,
+  op dkey <- dkey,
+  op dtag <- dtag.
 
-module type RO = {
-  proc init(): unit
-  proc get(_: pkey * pkey * s_id * pkey * pkey) : tag * key
-}.
+import HROc.
 
 module NTOR_S (H : RO) : Server = {
   proc keygen() : (pkey * skey) = {

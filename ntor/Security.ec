@@ -1,38 +1,13 @@
-require import AllCore FSet FMap Distr List NTOR Games.
-import GAKEc.
-require Birthday.
-
-
-print mem_set.
+require import AllCore FSet FMap Distr List SplitRO NTOR Games.
+import GAKEc HROc.
+require Birthday SplitRO.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Reductions *)
 (* ------------------------------------------------------------------------------------------ *)
 
- module RO_h = {
-  var cache : (pkey * pkey * s_id * pkey * pkey, tag * key) fmap 
-
-  proc init(): unit = {
-    cache <- empty;
-  }
-
-  proc get(x: pkey * pkey * s_id * pkey * pkey) : tag * key = {
-    var t, k;
-
-    t <$ dtag;
-    k <$ dkey;
-    if (x \notin cache) {
-      cache.[x] <- (t, k);
-    }
-    
-    return oget cache.[x];
-  }
-}.
-
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Ctxt Collision Reduction *)
-
 op q_is : { int | 0 <= q_is } as ge0_q_is.
 op q_m1 : { int | 0 <= q_m1 } as ge0_q_m1.
 op q_m2 : { int | 0 <= q_m2 } as ge0_q_m2.
@@ -95,7 +70,42 @@ module (Red_Coll (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
   }
 }.
 
+(* ------------------------------------------------------------------------------------------ *)
+(* ROM Reduction *)
+clone import Split as ROc with
+  type from    <= pkey * pkey * s_id * pkey * pkey,
+  type to   <= tag * key,
+  op   sampleto  _ <= dtag `*` dkey,
+  type input  <= unit,
+  type output <= bool
+proof *.
 
+clone import ROc.SplitCodom as ROSc with 
+  type to1 <- tag,
+  type to2 <- key,
+  op topair = fun (tk: tag * key) => tk,
+  op ofpair = fun (tk: tag * key) => tk,
+  op sampleto1 _ <- dtag,
+  op sampleto2 _ <- dkey
+  proof *.
+realize topairK by rewrite /topair /ofpair.
+realize ofpairK by rewrite /topair /ofpair.
+realize sample_spec by rewrite /ofpair dprodC dmap_comp //=.
+
+module (Red_ROM (D : A_GAKE) : RO_Distinguisher) (O : RO) = {
+  module AKE_O : GAKE_out = Game1 with {
+    proc h [
+      ^tk<$ + {O.sample(x);}
+    ]
+  }
+
+  proc distinguish() = {
+    var b;
+    AKE_O.init_mem();
+    b <@ D(AKE_O).run();
+    return b;
+  }
+}.
 
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -103,7 +113,7 @@ module (Red_Coll (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -RO_h, -Red_Coll, -BB.Sample }.
+declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -RO, -I1.RO, -I2.RO, -Red_Coll, -BB.Sample, -Red_ROM, -RO_Pair }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -125,178 +135,78 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Step 2: Remove collisions in the random oracle output. *)
-lemma Step2 &m: `| Pr[E_GAKE(Game1, A).run() @ &m : res] - Pr[E_GAKE(Game2, A).run() @ &m : res] | <= Pr[E_GAKE(Game1, A).run() @ &m : Game1.bad_ro].
-proof.
-rewrite StdOrder.RealOrder.distrC.
-byequiv (: _ ==> _) : Game2.bad_ro => //; first last.
-+ by rewrite eq_iff.
-symmetry; proc; inline*.
-call (: Game2.bad_ro
-      , ={servers, c_smap, s_smap, kp_set, hm, outs_h, bad, bad_ro}(Game1, Game2)
-      , ={bad_ro}(Game1, Game2)) => //. 
+(* Step 2: Splitting the random oracle. *)
+lemma Step2 &m: Pr[E_GAKE(Game1, A).run() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
+byequiv => //.
+proc*.
+transitivity* {1} { r <@ MainD(Red_ROM(A), RO).distinguish(); } => //.
++ smt().
 
-- exact A_ll.
++ inline; wp.
+  call (: ={hm, servers, c_smap, s_smap, kp_set, bad}(Game1, Red_ROM.AKE_O)); 
+    try sim />.
 
-- proc. 
-  seq 2 2: (#pre /\ ={t, k}); 1: by auto.
-  sp 0 1; if{2}.
-  + by sp 2 1; if => //; auto => />.
-  by auto => />.
-- move => &2 bad; proc; auto => />. 
-  rewrite dkey_ll dtag_ll. smt().
-- move => &1; proc; auto => />.
-  by rewrite dkey_ll dtag_ll.
+  + proc; inline.
+    case ((x \in Game1.hm){1}).
+    - auto => />.
+    seq 1 1: (#pre /\ ={tk}); 1: by auto.
+    auto => />.
 
-- proc; if => //; auto => />.
-- move => &2 bad.
-  proc; if; auto => />.
-  by rewrite dkp_ll.
-- move => &1. 
-  proc; if; auto => />. 
-  by rewrite dkp_ll.  
+  + proc; inline.
+    sp 2 2; match = => // sk.
+    match = => //.
+    seq 1 1: (#pre /\ ={kp}); 1: by auto.
+    sp 1 1; if => //.
+    sp. seq 1 1: (#pre /\ ={tk}); 1: by auto => />.
+    auto => />.
 
-- proc; auto => />.
-- move => &2 bad.
-  proc; auto => />.
-- move => &1. 
-  proc; auto => />. 
+  + proc; inline.
+    sp 1 1; match = => // st.
+    match = => // st' pt ir.
+    sp. seq 1 1: (#pre /\ ={tk}); 1: by auto.
+    auto => />.
 
-- proc; sp; if => //; sp; match = => // [|st]. 
-  + sim />. 
-  match =; auto => />.
-- move => &2 bad.
-  proc; sp; if; auto => />.
-  sp; match.
-  + auto => />.  
-    by rewrite dkp_ll.
-  match; auto => />.
-- move => &1. 
-  proc; sp; if; auto => />.
-  sp; match. 
-  + auto => />.
-    by rewrite dkp_ll. 
-  match; auto => />.
+rewrite equiv [{1} 1 (pr_RO_split (Red_ROM(A)) (fun _ r => r))].
 
-- proc; inline; sp; match = => // sk. 
-  match = => //.
-  seq 1 1: (#pre /\ ={kp}); 1: by auto.
-  sp; if => //.  
-  sp.
-  seq 2 2: (#pre /\ ={t, k}); 1: by auto => />.
-  sp 2 1; if{2}.
-  + auto => />.
-  auto => />.
-- move => &2 bad_ro.
-  proc; inline; sp; match; auto => />.
-  match.
-  + seq 1: (#pre) (1%r) (1%r) (0%r) (1%r) (kp \in dkp) => //. auto.
-    - by auto; rewrite dkp_ll.
-    - sp; if => //.
-      auto => />.
-      by rewrite dkey_ll dtag_ll /#.
-    - by rnd pred0; skip => />; rewrite mu0.
-  by skip => />.
-- move => &1. 
-  proc; inline; sp; match; auto => />.
-  match. 
-  + seq 1: (#pre) (1%r) (1%r) (0%r) (1%r) (kp \in dkp) => //. auto.
-    - by auto; rewrite dkp_ll.
-    - sp; if => //.
-      + auto => />.
-        by rewrite dkey_ll dtag_ll /#.
-      by skip => />.
-    - by rnd pred0; skip => />; rewrite mu0.
-  by skip => />.
+(* other side 
++ inline; wp.
+  call (: ={hm, servers, c_smap, s_smap, kp_set, bad}(Red_ROM.AKE_O, Game2)
+         /\ I1.RO.m{1} = Game2.h1m{2} /\ I2.RO.m{1} = Game2.h2m{2}
+         /\ forall x, x \in I1.RO.m{1} <=> x \in I2.RO.m{1}); 
+    try sim />.
 
-- proc; inline; sp; match = => // prr.
-  match = => // st pt ir.
-  sp; seq 2 2: (#pre /\ ={t, k}); 1: by auto => />.
-  sp 0 1; if{2}.
-  + auto => />.
-  by auto => />.
-- move => &2 bad_ro.
-  proc; inline*.
-  sp; match; auto => />. 
-  match; auto => />.
-  by rewrite dkey_ll dtag_ll /#.
-- move => &1.
-  proc; inline*; auto => />.
-  sp; match; auto => />.
-  match; auto => />.
-  by rewrite dkey_ll dtag_ll.
+  + proc; inline.
+    admit.
 
-- by sim />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
+  + proc; inline.
+    sp 2 2; match = => // sk.
+    match = => //.
+    seq 1 1: (#pre /\ ={kp}); 1: by auto.
+    sp 1 1; if => //.
+    sp 2 0. seq 1 0: (#pre); 1: by auto => />.
+    sp; seq 1 1: (#pre /\ r0{1} =t{2} ); 1: by auto => />.
+    admit.
 
-- by sim />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-
-- by sim />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-
-- by sim />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-
-- by sim />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-
-- by sim />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-
-- by sim />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  by match; auto => />.
+  + proc; inline.
+    sp 1 1; match = => // st.
+    match = => // st' pt ir.
+    sp. seq 1 0: (#pre); 1: by auto.
+    sp; seq 1 1: (#pre /\ r0{1} =t{2} ); 1: by auto => />.
+    admit.
 
 auto => />.
-move => rl rr al bl brl csl hml kpl hsl ssl sl ar br brr csr hmr kpr hsr ssr sr. 
-by case : (!brr) => />.
+smt(emptyE).*)
 qed.
-
 
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 0: Inlining everything. *)
 lemma Step0 &m :
-  Pr[E_GAKE(GAKE0(NTOR_S(RO_h), NTOR_C(RO_h), RO_h), A).run() @ &m : res] = Pr[E_GAKE(Game0, A).run() @ &m : res].
+  Pr[E_GAKE(GAKE0(NTOR_S(RO), NTOR_C(RO), RO), A).run() @ &m : res] = Pr[E_GAKE(Game0, A).run() @ &m : res].
 proof. 
 byequiv => //.
 proc; inline*.
-call (: ={servers, c_smap, s_smap}(GAKE0, Game0) /\ RO_h.cache{1} = Game0.hm{2}); try sim />.
+call (: ={servers, c_smap, s_smap}(GAKEb, Game0) /\ RO.m{1} = Game0.hm{2}); try sim />.
 
 - proc; inline*; auto; if => //; auto => /#.
 
@@ -310,7 +220,7 @@ call (: ={servers, c_smap, s_smap}(GAKE0, Game0) /\ RO_h.cache{1} = Game0.hm{2})
   match = => //.
   match Some {1} 4.
   + by auto=> /> _ _ _ _; exists (b{m0}, sk, None).
-  match Some {1} 14=> //; 1: by auto=> /> /#.
+  match Some {1} ^match=> //; 1: by auto=> /> /#.
   by auto => />.
 
 - proc; inline*; auto=> />.
@@ -327,16 +237,16 @@ byequiv (: _ ==> _) : Game1.bad => //; first last.
 + by rewrite eq_iff.
 symmetry; proc; inline*.
 call (: Game1.bad
-      , ={servers, c_smap, s_smap, kp_set, hm, outs_h, bad, bad_ro}(Game0, Game1)
+      , ={servers, c_smap, s_smap, kp_set, hm, bad}(Game0, Game1)
       , ={bad}(Game0, Game1)) => //. 
 
 - exact A_ll.
 
 - by proc; auto.
 - move => &2 bad; proc; auto => />. 
-  by rewrite dkey_ll dtag_ll.
+  by rewrite weight_dprod dkey_ll dtag_ll.
 - move => &1; proc; auto.
-  by rewrite dkey_ll dtag_ll.
+  by rewrite weight_dprod dkey_ll dtag_ll.
 
 - proc.
   if => //.
@@ -387,7 +297,7 @@ call (: Game1.bad
 - move => &2 bad.
   proc; inline*; sp; match; auto => />.
   match; auto => />.
-  rewrite dkp_ll dkey_ll dtag_ll. 
+  rewrite dkp_ll weight_dprod dkey_ll dtag_ll. 
   by smt().
 - move => &1. 
   proc; sp; match; auto => />.
@@ -401,12 +311,12 @@ call (: Game1.bad
   proc; inline*.
   sp; match; auto. 
   match; auto => />.
-  by rewrite dkey_ll dtag_ll.
+  by rewrite weight_dprod dkey_ll dtag_ll.
 - move => &1.
   proc; inline*; auto => />.
   sp; match; auto.
   match; auto.
-  by rewrite dkey_ll dtag_ll.
+  by rewrite weight_dprod dkey_ll dtag_ll.
 
 - sim />.
 - move => &2 bad.
@@ -465,7 +375,7 @@ call (: Game1.bad
   match; auto => />.
 
 auto => />.
-move => rl rr al bl brl csl hml kpl hsl ssl sl ar br brr csr hmr kpr hsr ssr sr. 
+move => rl rr al bl csl hml kpl ssl sl ar br csr hmr kpr ssr sr. 
 by case : (!br) => />.
 qed.
 

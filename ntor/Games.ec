@@ -1,6 +1,6 @@
 (* Intermediate Games *)
 require import AllCore FMap FSet Distr NTOR.
-import GAKEc.
+import GAKEc HROc.
 
 (* Proof:
 - Step 0: inline everathing;
@@ -29,7 +29,6 @@ import GAKEc.
 module Game0 : GAKE_out_i = {
   (* This is not aligned with the sequence above *)
   var hm : (pkey * pkey * s_id * pkey * pkey, tag * key) fmap
-  var outs_h : (tag * key) fset
 
   var servers : (s_id, server_state) fmap
 
@@ -38,29 +37,24 @@ module Game0 : GAKE_out_i = {
   
   var kp_set : ((pkey * skey)) fset
   var bad : bool
-  var bad_ro : bool
+
 
   proc init_mem() : unit = {
     hm <- empty;
-    outs_h <- fset0;
     servers <- empty;
     c_smap <- empty;
     s_smap <- empty;
     kp_set <- fset0;
     bad <- false;
-    bad_ro <- false;
   }
   
   (* random oracle *)
   proc h(x: pkey * pkey * s_id * pkey * pkey) : tag * key = {
-    var t, k;
+    var tk;
 
-    t <$ dtag;
-    k <$ dkey;
-    bad_ro <- bad_ro \/ (t, k) \in outs_h;
-    outs_h <- outs_h `|` fset1 (t, k);
+    tk <$ dtag `*` dkey;
     if (x \notin hm) {
-      hm.[x] <- (t, k);
+      hm.[x] <- tk;
     }
     
     return oget hm.[x];
@@ -340,17 +334,22 @@ module Game1 = Game0 with {
 
 print Game1.
 
-(* Step2: Removing RO collisions *)
+
+(* Step2: Splitting the random oracle *)
 module Game2 = Game1 with {
-  proc h [
-    ^bad_ro<- + (!bad_ro)
+  var h1m : (pkey * pkey * s_id * pkey * pkey, tag) fmap
+  var h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap
+
+  proc init_mem [
+    -1 + { h1m <- empty; h2m <- empty; }
   ]
+
+  proc h [
+    var t : tag
+    var k : key
+    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} tk <- (t, k);}
+    ^if -
+  ] res ~ ((oget h1m.[x], oget h2m.[x]))
 }.
 
-
-(* Step3: Splitting the RO *)
-
-
-
-
-
+print Game2. 

@@ -245,6 +245,8 @@ clone import PROM.FullRO as HROc with
   type d_out_t <= bool
 proof *.
 
+print RO.
+
 
 (* oracles that are exposed to the experiment *)
 module type GAKE_out_i = {
