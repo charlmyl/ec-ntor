@@ -1,4 +1,4 @@
-require import AllCore FSet FMap Distr List SplitRO NTOR Games.
+require import AllCore FSet FMap Distr DProd List SplitRO NTOR Games.
 import GAKEc HROc.
 require Birthday SplitRO.
 
@@ -72,7 +72,7 @@ module (Red_Coll (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
 
 (* ------------------------------------------------------------------------------------------ *)
 (* ROM Reduction *)
-clone import Split as ROc with
+clone Split as ROc with
   type from    <= pkey * pkey * s_id * pkey * pkey,
   type to   <= tag * key,
   op   sampleto  _ <= dtag `*` dkey,
@@ -80,7 +80,7 @@ clone import Split as ROc with
   type output <= bool
 proof *.
 
-clone import ROc.SplitCodom as ROSc with 
+clone ROc.SplitCodom as ROSc with 
   type to1 <- tag,
   type to2 <- key,
   op topair = fun (tk: tag * key) => tk,
@@ -93,8 +93,10 @@ realize ofpairK by rewrite /topair /ofpair.
 realize sample_spec by rewrite /ofpair dprodC dmap_comp //=.
 
 print Game1.
+print ROc.
 
-module (Red_ROM (D : A_GAKE) : RO_Distinguisher) (O : RO) = {
+
+module (Red_ROM (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.IdealAll.RO) = {
   module AKE_O : GAKE_out = Game1 with {
     proc h [ 
       ^tk<$ ~ {tk <@ O.get(x);}
@@ -116,7 +118,7 @@ module (Red_ROM (D : A_GAKE) : RO_Distinguisher) (O : RO) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -RO, -FRO, -I1.RO, -I2.RO, -Red_Coll, -BB.Sample, -Red_ROM }.
+declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -Red_Coll, -BB.Sample, -Red_ROM }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -139,14 +141,18 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Splitting the random oracle. *)
-lemma Step2 &m: Pr[E_GAKE(Game1, A).run() @ &m : res] = Pr[MainD(Red_ROM(A), RO_Pair(I1.RO,I2.RO)).distinguish() @ &m : res].
+local clone import DProd.ProdSampling with
+  type t1 <- tag,
+  type t2 <- key
+proof *.
+
+lemma Step2 &m: Pr[E_GAKE(Game1, A).run() @ &m : res] = Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res].
 byequiv => //.
 proc*.
-transitivity* {1} { r <@ MainD(Red_ROM(A), RO).distinguish(); } => //.
-+ smt().
+outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM(A), ROc.IdealAll.RO).distinguish(); }.
 
 + inline; wp.
-  call (: ={servers, c_smap, s_smap, kp_set, bad}(Game1, Red_ROM.AKE_O) /\ Game1.hm{1} = RO.m{2}); 
+  call (: ={servers, c_smap, s_smap, kp_set, bad}(Game1, Red_ROM.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2}); 
     try sim />.
 
   + proc; inline.
@@ -169,9 +175,53 @@ transitivity* {1} { r <@ MainD(Red_ROM(A), RO).distinguish(); } => //.
     sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto.
     auto => />.
 
-admit. (* apply pr_RO_split 
+print ROSc.RO_split.
 
-rewrite equiv [{1} 1 (pr_RO_split (Red_ROM(A)) (fun _ r => r))]. *)
+inline. wp.
+call (: ={hm, servers, s_smap, c_smap, kp_set, bad}(Red_ROM.AKE_O, Red_ROM.AKE_O) /\ ROc.IdealAll.RO.m{1} = map (fun _ => ROSc.ofpair) (pair_map ROSc.I1.RO.m{2} ROSc.I2.RO.m{2}) /\
+    forall x, x \in ROc.IdealAll.RO.m{1} = x \in ROSc.I1.RO.m{2} /\ x \in ROc.IdealAll.RO.m{1} = x \in ROSc.I2.RO.m{2}
+); try sim />.
+proc.
+call (ROSc.RO_get).
+skip => />.
+
+  + proc.
+    sp; match = => // sk.
+    match = => //.
+    seq 1 1: (#pre /\ ={kp}); 1: by auto.
+    sp; if => //.
+    inline h.
+    wp; call (ROSc.RO_get).
+    auto => />.
+
+  + proc; inline.
+    sp 1 1; match = => // st.
+    match = => // st' pt ir.
+    sp. swap {2} 5 -3. 
+    seq 1 2: (#pre /\ r0{1} = (r0{2}, r3{2})). 
+    + outline {1} [1] (r0) <@ S.sample. 
+      rewrite equiv [{1} 1 sample_sample2].
+      inline; auto => />.
+    if => //.
+    + auto => /#.
+    + rcondt {2} ^if; 1: by auto => /#.
+      sp 3 7. if => //.
+      + auto => /> &1 &2 H I J _ _ _ _ _ _.
+        smt(get_setE).
+      + auto => /> &1 &2 H I J _ _ _ _ K L.
+        smt (get_setE map_set set_pair_map mem_map mem_pair_map mem_set).
+      auto => /> &1 &2 H I J _ _ _ _ K L M.  
+      smt (map_set set_pair_map mem_map mem_pair_map mem_set).
+    rcondf {2} ^if; 1: by auto => /#.
+    sp 2 5; if => //.
+    + auto => /> &1 &2 H I J K L M N.
+      smt (get_setE map_set set_pair_map mem_map mem_pair_map mem_set mapE mergeE).
+    + auto => /> &1 &2 H I J K L M N.  
+      smt (map_set set_pair_map mem_map mem_pair_map mem_set mapE mergeE).
+    auto => />.  
+
+auto => />. 
+smt(merge_empty map_empty emptyE).
 qed.
 
 
