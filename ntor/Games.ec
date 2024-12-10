@@ -348,7 +348,6 @@ module Game2 = Game1 with {
     var t : tag
     var k : key
     ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} tk <- (t, k);}
-    ^if -
   ] res ~ ((oget h1m.[x], oget h2m.[x]))
 }.
 

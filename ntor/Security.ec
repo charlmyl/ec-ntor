@@ -92,11 +92,14 @@ realize topairK by rewrite /topair /ofpair.
 realize ofpairK by rewrite /topair /ofpair.
 realize sample_spec by rewrite /ofpair dprodC dmap_comp //=.
 
+print Game1.
+
 module (Red_ROM (D : A_GAKE) : RO_Distinguisher) (O : RO) = {
   module AKE_O : GAKE_out = Game1 with {
-    proc h [
-      ^tk<$ + {O.sample(x);}
-    ]
+    proc h [ 
+      ^tk<$ ~ {tk <@ O.get(x);}
+      ^if -
+    ] res ~ (tk)
   }
 
   proc distinguish() = {
@@ -113,7 +116,7 @@ module (Red_ROM (D : A_GAKE) : RO_Distinguisher) (O : RO) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -RO, -I1.RO, -I2.RO, -Red_Coll, -BB.Sample, -Red_ROM, -RO_Pair }.
+declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -RO, -FRO, -I1.RO, -I2.RO, -Red_Coll, -BB.Sample, -Red_ROM }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -136,20 +139,20 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Splitting the random oracle. *)
-lemma Step2 &m: Pr[E_GAKE(Game1, A).run() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
+lemma Step2 &m: Pr[E_GAKE(Game1, A).run() @ &m : res] = Pr[MainD(Red_ROM(A), RO_Pair(I1.RO,I2.RO)).distinguish() @ &m : res].
 byequiv => //.
 proc*.
 transitivity* {1} { r <@ MainD(Red_ROM(A), RO).distinguish(); } => //.
 + smt().
 
 + inline; wp.
-  call (: ={hm, servers, c_smap, s_smap, kp_set, bad}(Game1, Red_ROM.AKE_O)); 
+  call (: ={servers, c_smap, s_smap, kp_set, bad}(Game1, Red_ROM.AKE_O) /\ Game1.hm{1} = RO.m{2}); 
     try sim />.
 
   + proc; inline.
     case ((x \in Game1.hm){1}).
     - auto => />.
-    seq 1 1: (#pre /\ ={tk}); 1: by auto.
+    sp; seq 1 1: (#pre /\ tk{1} = r{2}); 1: by auto.
     auto => />.
 
   + proc; inline.
@@ -157,45 +160,18 @@ transitivity* {1} { r <@ MainD(Red_ROM(A), RO).distinguish(); } => //.
     match = => //.
     seq 1 1: (#pre /\ ={kp}); 1: by auto.
     sp 1 1; if => //.
-    sp. seq 1 1: (#pre /\ ={tk}); 1: by auto => />.
+    sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto => />.
     auto => />.
 
   + proc; inline.
     sp 1 1; match = => // st.
     match = => // st' pt ir.
-    sp. seq 1 1: (#pre /\ ={tk}); 1: by auto.
+    sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto.
     auto => />.
 
-rewrite equiv [{1} 1 (pr_RO_split (Red_ROM(A)) (fun _ r => r))].
+admit. (* apply pr_RO_split 
 
-(* other side 
-+ inline; wp.
-  call (: ={hm, servers, c_smap, s_smap, kp_set, bad}(Red_ROM.AKE_O, Game2)
-         /\ I1.RO.m{1} = Game2.h1m{2} /\ I2.RO.m{1} = Game2.h2m{2}
-         /\ forall x, x \in I1.RO.m{1} <=> x \in I2.RO.m{1}); 
-    try sim />.
-
-  + proc; inline.
-    admit.
-
-  + proc; inline.
-    sp 2 2; match = => // sk.
-    match = => //.
-    seq 1 1: (#pre /\ ={kp}); 1: by auto.
-    sp 1 1; if => //.
-    sp 2 0. seq 1 0: (#pre); 1: by auto => />.
-    sp; seq 1 1: (#pre /\ r0{1} =t{2} ); 1: by auto => />.
-    admit.
-
-  + proc; inline.
-    sp 1 1; match = => // st.
-    match = => // st' pt ir.
-    sp. seq 1 0: (#pre); 1: by auto.
-    sp; seq 1 1: (#pre /\ r0{1} =t{2} ); 1: by auto => />.
-    admit.
-
-auto => />.
-smt(emptyE).*)
+rewrite equiv [{1} 1 (pr_RO_split (Red_ROM(A)) (fun _ r => r))]. *)
 qed.
 
 
