@@ -71,7 +71,7 @@ module (Red_Coll (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
 }.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* ROM Reduction *)
+(* ROM Reductions *)
 clone Split as ROc with
   type from    <= pkey * pkey * s_id * pkey * pkey,
   type to   <= tag * key,
@@ -113,6 +113,51 @@ module (Red_ROM (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.IdealAll.
 }.
 
 
+module (Red_ROM2 (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O1 : ROSc.I1.RO) (O2 : ROSc.I2.RO) = {
+  module AKE_O : GAKE_out = Game1 with {
+    proc h [ 
+      var t : tag
+      var k : key
+      ^tk<$ ~ {t <@ O1.get(x); k <- witness; O2.sample(x); tk <- (t, k);}
+      ^if -
+    ] res ~ (tk)
+
+    proc c_rev_skey [
+    var x : pkey * pkey * s_id * pkey * pkey
+    var ks : key
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
+  ]
+
+  proc s_rev_skey [
+    var x : pkey * pkey * s_id * pkey * pkey
+    var ks : key
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
+  ]
+
+  proc c_test [
+    var x : pkey * pkey * s_id * pkey * pkey
+    var ks : key
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
+  ]
+
+  proc s_test [
+    var x : pkey * pkey * s_id * pkey * pkey
+    var ks : key
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
+  ]
+
+  }
+
+  proc distinguish() = {
+    var b;
+    AKE_O.init_mem();
+    b <@ D(AKE_O).run();
+    return b;
+  }
+}.
+
+
+
 (* ------------------------------------------------------------------------------------------ *)
 (* Security Proof *)
 (* ------------------------------------------------------------------------------------------ *)
@@ -137,6 +182,13 @@ declare axiom A_ll (G <: GAKE_out{-A}):
   islossless A(G).run.
 
 declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis <= q_is /\ Counter.cm1 <= q_m1 /\ Counter.cm2 <= q_m2].
+
+
+
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 3: Moving sampling of the shared key. *)
+
+
 
 
 (* ------------------------------------------------------------------------------------------ *)

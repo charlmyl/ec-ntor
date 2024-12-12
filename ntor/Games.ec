@@ -171,7 +171,7 @@ module Game0 : GAKE_out_i = {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
             k <- Some k';
-            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+            c_smap.[i] <- set_ir_sess (Accepted st' t' (oget k) ir');
           }
         }
       }
@@ -190,7 +190,7 @@ module Game0 : GAKE_out_i = {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' (oget k) ir');
           }
         }
       }
@@ -347,8 +347,34 @@ module Game2 = Game1 with {
   proc h [
     var t : tag
     var k : key
-    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} tk <- (t, k);}
-  ] res ~ ((oget h1m.[x], oget h2m.[x]))
+    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <- witness;}
+    ^if -
+  ] res ~ ((oget h1m.[x], k))
+
+  proc c_rev_skey [
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+  ]
+
+  proc s_rev_skey [
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+  ]
+
+  proc c_test [
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+  ]
+
+  proc s_test [
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+  ]
+
 }.
 
 print Game2. 
