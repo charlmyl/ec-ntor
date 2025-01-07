@@ -112,40 +112,52 @@ module (Red_ROM (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.IdealAll.
   }
 }.
 
+print Game2.
 
-module (Red_ROM2 (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O1 : ROSc.I1.RO) (O2 : ROSc.I2.RO) = {
-  module AKE_O : GAKE_out = Game1 with {
+module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
+  module AKE_O : GAKE_out = Game2 with {
     proc h [ 
-      var t : tag
-      var k : key
-      ^tk<$ ~ {t <@ O1.get(x); k <- witness; O2.sample(x); tk <- (t, k);}
+      ^t<$ ~ {t <@ O1.get(x); k <@ O2.get(x);}
       ^if -
-    ] res ~ (tk)
+      ^k<$ -
+      ^if -
+    ] res ~ ((t, k))
+
+    proc send_msg2 [
+      ^match#Some.^match#None.^if.^ts<$ -
+      ^match#Some.^match#None.^if.^if -
+      ^match#Some.^match#None.^if.^t_B<- ~ {t_B <@ O1.get(x); O2.sample(x);}
+    ]
+
+    proc send_msg3 [
+      ^match#Some.^match#Pending.^ts<$ -
+      ^match#Some.^match#Pending.^if -
+      ^match#Some.^match#Pending.^t_A<- ~ {t_A <@ O1.get(x); O2.sample(x);}
+    ]
 
     proc c_rev_skey [
-    var x : pkey * pkey * s_id * pkey * pkey
-    var ks : key
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
-  ]
+      ^match#Some.^match#Accepted.^if.^ks<$ -
+      ^match#Some.^match#Accepted.^if.^if -
+      ^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+    ]
 
-  proc s_rev_skey [
-    var x : pkey * pkey * s_id * pkey * pkey
-    var ks : key
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
-  ]
+    proc s_rev_skey [
+      ^match#Some.^match#Accepted.^if.^ks<$ -
+      ^match#Some.^match#Accepted.^if.^if -
+      ^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+    ]
 
-  proc c_test [
-    var x : pkey * pkey * s_id * pkey * pkey
-    var ks : key
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
-  ]
+    proc c_test [
+      ^match#Some.^match#Accepted.^if.^ks<$ -
+      ^match#Some.^match#Accepted.^if.^if -
+      ^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+    ]
 
-  proc s_test [
-    var x : pkey * pkey * s_id * pkey * pkey
-    var ks : key
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
-  ]
-
+    proc s_test [
+      ^match#Some.^match#Accepted.^if.^ks<$ -
+      ^match#Some.^match#Accepted.^if.^if -
+      ^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+    ]  
   }
 
   proc distinguish() = {
@@ -156,14 +168,12 @@ module (Red_ROM2 (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O1 : ROSc.I1.RO)
   }
 }.
 
-
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Security Proof *)
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -Red_Coll, -BB.Sample, -Red_ROM }.
+declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll, -BB.Sample, -Red_ROM, -Red_ROM2 }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -187,9 +197,23 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 3: Moving sampling of the shared key. *)
+print ROSc.
 
 
+lemma Step3 &m: Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
+proof.
+byequiv (: ={glob A, glob Red_ROM2} ==> _)  => //.
+proc*.
 
+outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distinguish(); }.
+
+inline*. admit.
+
+have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
+rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) ll)].
+
+admit. 
+qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Splitting the random oracle. *)
@@ -199,7 +223,8 @@ local clone import DProd.ProdSampling with
 proof *.
 
 lemma Step2 &m: Pr[E_GAKE(Game1, A).run() @ &m : res] = Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res].
-byequiv => //.
+proof.
+byequiv (: ={glob A, glob Red_ROM} ==> _)  => //.
 proc*.
 outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM(A), ROc.IdealAll.RO).distinguish(); }.
 
@@ -227,53 +252,7 @@ outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM(A), ROc.IdealAll.RO).distingui
     sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto.
     auto => />.
 
-print ROSc.RO_split.
-
-inline. wp.
-call (: ={hm, servers, s_smap, c_smap, kp_set, bad}(Red_ROM.AKE_O, Red_ROM.AKE_O) /\ ROc.IdealAll.RO.m{1} = map (fun _ => ROSc.ofpair) (pair_map ROSc.I1.RO.m{2} ROSc.I2.RO.m{2}) /\
-    forall x, x \in ROc.IdealAll.RO.m{1} = x \in ROSc.I1.RO.m{2} /\ x \in ROc.IdealAll.RO.m{1} = x \in ROSc.I2.RO.m{2}
-); try sim />.
-proc.
-call (ROSc.RO_get).
-skip => />.
-
-  + proc.
-    sp; match = => // sk.
-    match = => //.
-    seq 1 1: (#pre /\ ={kp}); 1: by auto.
-    sp; if => //.
-    inline h.
-    wp; call (ROSc.RO_get).
-    auto => />.
-
-  + proc; inline.
-    sp 1 1; match = => // st.
-    match = => // st' pt ir.
-    sp. swap {2} 5 -3. 
-    seq 1 2: (#pre /\ r0{1} = (r0{2}, r3{2})). 
-    + outline {1} [1] (r0) <@ S.sample. 
-      rewrite equiv [{1} 1 sample_sample2].
-      inline; auto => />.
-    if => //.
-    + auto => /#.
-    + rcondt {2} ^if; 1: by auto => /#.
-      sp 3 7. if => //.
-      + auto => /> &1 &2 H I J _ _ _ _ _ _.
-        smt(get_setE).
-      + auto => /> &1 &2 H I J _ _ _ _ K L.
-        smt (get_setE map_set set_pair_map mem_map mem_pair_map mem_set).
-      auto => /> &1 &2 H I J _ _ _ _ K L M.  
-      smt (map_set set_pair_map mem_map mem_pair_map mem_set).
-    rcondf {2} ^if; 1: by auto => /#.
-    sp 2 5; if => //.
-    + auto => /> &1 &2 H I J K L M N.
-      smt (get_setE map_set set_pair_map mem_map mem_pair_map mem_set mapE mergeE).
-    + auto => /> &1 &2 H I J K L M N.  
-      smt (map_set set_pair_map mem_map mem_pair_map mem_set mapE mergeE).
-    auto => />.  
-
-auto => />. 
-smt(merge_empty map_empty emptyE).
+by call (ROSc.RO_split (Red_ROM(A))).
 qed.
 
 

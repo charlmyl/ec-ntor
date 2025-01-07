@@ -347,9 +347,28 @@ module Game2 = Game1 with {
   proc h [
     var t : tag
     var k : key
-    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <- witness;}
+    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
     ^if -
-  ] res ~ ((oget h1m.[x], k))
+  ] res ~ ((oget h1m.[x], oget h2m.[x]))
+
+  proc send_msg2 [
+    var ts : tag
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ kp.`2, m2 ^ sk_b, b, m2, kp.`1);
+                                      ts <$ dtag;
+                                      if (x \notin h1m) {h1m.[x] <- ts;} 
+                                      t_B <- oget h1m.[x]; sk <- witness;}
+  ]
+
+  proc send_msg3 [
+    var ts : tag
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
+                                      ts <$ dtag;
+                                      if (x \notin h1m) {h1m.[x] <- ts;} 
+                                      t_A <- oget h1m.[x]; sk <- witness;}
+
+  ]
 
   proc c_rev_skey [
     var ks : key
