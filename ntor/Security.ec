@@ -288,7 +288,7 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     seq 1 1: (#pre /\ ={kp}); 1:by auto.
     sp 1 1; if => //.
     by auto=> />; smt(get_setE mem_set).
-  
+
   - proc; inline.
     sp; match => //.
     + smt().
@@ -300,13 +300,48 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     if {1} => //.
     + rcondt {1} ^if; 1: by auto => /#.
       rcondt {2} ^if; 1: by auto => /#.
-      rcondt {2} ^if; 1: by auto => /#. 
-      auto=> />. rewrite get_setE => //=. admit. (** TODO: Invariant needs to capture that at this point none or both revealed **)
+      rcondt {2} ^if; 1: by auto => /#.
+      swap {1} 4 -3; swap {2} 5 -4.
+      seq  1  1: (#pre /\ r3{1} = r1{2}); 1:by auto.
+      sp 7 6; if.
+      + move=> /> &1 &2 mL mR.
+        case: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> />.
+        case: (Red_ROM2.AKE_O.c_smap.[i]{2})=> />.
+        move=> c_clear s_clear eq_dom handle_notin_mR.
+        by rewrite !get_setE.
+      + auto=> /> &1 &2 mL mR.
+        case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
+        case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
+        move=> c_clear s_clear eq_dom handle_notin_mR.
+        move: c_smap2_i; rewrite -c_clear.
+        rewrite c_smap1_i=> />.
+        rewrite !get_setE=> />.
+        split; [2:smt(mem_set)].
+        move=> h; rewrite !get_setE; case: (h = i{2})=> />; [2:move=> _; exact: c_clear].
+        (** TODO: invariant => pending instances cannot be session revealed **) admit.
+      + auto=> /> &1 &2 mL mR. (* Doing this one once, then not doing it again *)
+        case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
+        case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
+        move=> c_clear s_clear eq_dom handle_notin_mR.
+        move: c_smap2_i; rewrite -c_clear.
+        rewrite c_smap1_i=> />.
+        rewrite !get_setE=> /> r0_neq_m3_2.
+        split; [2:smt(mem_set)].
+        by move=> h; rewrite !get_setE; case: (h = i{2})=> /> _; exact: c_clear.
     rcondf {1} ^if; 1: by auto => /#.
     rcondf {2} ^if; 1: by auto => /#.
     rcondf {2} ^if; 1: by auto => /#.
-    auto=> /> &1 &2 penl penr _ _ c_inv s_inv inv h_in _ _. 
-    admit. (** TODO: Invariant needs to capture that at this point none or both revealed **)
+    swap {1} 3 -2; swap {2} 4 -3.
+    seq  1  1: (#pre /\ r3{1} = r1{2}); 1:by auto.
+    sp 5 4; if.
+    + move=> /> &1 &2.
+      case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
+      case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
+      move=> c_clear s_clear eq_dom handle_notin_mR.
+      move: c_smap2_i; rewrite -c_clear.
+      by rewrite c_smap1_i=> />.
+    + by auto; admit. (** TODO: invariant (see above) **)
+    + by auto; smt(get_setE mem_set).
 
   - proc; inline.
     sp; match=> //.

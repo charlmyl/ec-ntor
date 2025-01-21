@@ -120,7 +120,7 @@ op get_origins_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : in
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-q       (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
+       (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
   )
   fmap
 ).
