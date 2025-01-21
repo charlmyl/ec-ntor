@@ -11,11 +11,12 @@ require Birthday SplitRO.
 op q_is : { int | 0 <= q_is } as ge0_q_is.
 op q_m1 : { int | 0 <= q_m1 } as ge0_q_m1.
 op q_m2 : { int | 0 <= q_m2 } as ge0_q_m2.
+
 clone Birthday as BB with
   type T  <- (pkey * skey),
   op   uT <- dkp,
-  op q <- q_is + q_m1 + q_m2
-  proof*.
+  op   q  <- q_is + q_m1 + q_m2
+  proof *.
 realize ge0_q by smt(ge0_q_is ge0_q_m1 ge0_q_m2).
 
 module Counter (G : GAKE_out) : GAKE_out_i = {
@@ -64,6 +65,7 @@ module Red_Coll_O_AKE (S : BB.ASampler) = Game0 with {
 module (Red_Coll (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
   proc a() = {
     var b;
+
     Red_Coll_O_AKE(S).init_mem();
     Counter(Red_Coll_O_AKE(S)).init_mem();
     b <@ A(Counter(Red_Coll_O_AKE(S))).run();
@@ -73,18 +75,18 @@ module (Red_Coll (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
 (* ------------------------------------------------------------------------------------------ *)
 (* ROM Reductions *)
 clone Split as ROc with
-  type from    <= pkey * pkey * s_id * pkey * pkey,
-  type to   <= tag * key,
+  type from        <= pkey * pkey * s_id * pkey * pkey,
+  type to          <= tag * key,
   op   sampleto  _ <= dtag `*` dkey,
-  type input  <= unit,
-  type output <= bool
+  type input       <= unit,
+  type output      <= bool
 proof *.
 
 clone ROc.SplitCodom as ROSc with 
-  type to1 <- tag,
-  type to2 <- key,
-  op topair = fun (tk: tag * key) => tk,
-  op ofpair = fun (tk: tag * key) => tk,
+  type to1       <- tag,
+  type to2       <- key,
+  op topair tk   <- tk,
+  op ofpair tk   <- tk,
   op sampleto1 _ <- dtag,
   op sampleto2 _ <- dkey
   proof *.
@@ -219,18 +221,19 @@ match s with
 | Aborted _ _ _ => s
 end.
 
-
-
 local lemma c_eq_partners_ck tr sml smr: 
   (forall h, omap (fun (v: pr_st_server instance_state) => s_clear_k v) sml.[h] = smr.[h]) =>
 untested_partner_c tr sml = untested_partner_c tr smr.
 proof.
-move=> eqsm.
-rewrite /untested_partner_c.
-have: get_partners_c tr sml = get_partners_c tr smr.
-rewrite /get_partners_c.
-admit.
-admit.
+move=> eqsm; rewrite /untested_partner_c.
+have ->: get_partners_c tr sml = get_partners_c tr smr.
++ rewrite /get_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
+  rewrite !mem_filter !domE -eqsm.
+  by case: (sml.[x])=> /> [] @/s_clear_k />.
+have -> //: get_untested_partners_c tr sml = get_untested_partners_c tr smr.
+rewrite /get_untested_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
+rewrite !mem_filter !domE -eqsm.
+by case: (sml.[x])=> /> [] @/s_clear_k />.
 qed.
 
 local lemma s_eq_partners_ck tr sml smr: 
