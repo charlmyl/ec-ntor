@@ -116,6 +116,11 @@ print Game2.
 
 module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
   module AKE_O : GAKE_out = Game2 with {
+    proc init_mem [
+      ^h1m<- ~ {O1.init();}
+      ^h2m<- -
+    ]
+
     proc h [ 
       ^t<$ ~ {t <@ O1.get(x); k <@ O2.get(x);}
       ^if -
@@ -200,6 +205,45 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 print ROSc.
 
 
+local op s_clear_k (s : pr_st_server instance_state) =
+match s with
+| Pending _ _ _ => s
+| Accepted st t k ir => Accepted st t witness ir
+| Aborted _ _ _ => s
+end.
+
+local op c_clear_k (s : pr_st_client instance_state) =
+match s with
+| Pending _ _ _ => s
+| Accepted st t k ir => Accepted st t witness ir
+| Aborted _ _ _ => s
+end.
+
+
+
+local lemma c_eq_partners_ck tr sml smr: 
+  (forall h, omap (fun (v: pr_st_server instance_state) => s_clear_k v) sml.[h] = smr.[h]) =>
+untested_partner_c tr sml = untested_partner_c tr smr.
+proof.
+move=> eqsm.
+rewrite /untested_partner_c.
+have: get_partners_c tr sml = get_partners_c tr smr.
+rewrite /get_partners_c.
+admit.
+admit.
+qed.
+
+local lemma s_eq_partners_ck tr sml smr: 
+  (forall h, omap (fun (v: pr_st_client instance_state) => c_clear_k v) sml.[h] = smr.[h]) =>
+untested_partner_s tr sml = untested_partner_s tr smr.
+proof.
+move=> eqsm.
+rewrite /untested_partner_s.
+congr. 
++ admit.
+admit.
+qed.
+
 lemma Step3 &m: Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
 proof.
 byequiv (: ={glob A, glob Red_ROM2} ==> _)  => //.
@@ -207,13 +251,178 @@ proc*.
 
 outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distinguish(); }.
 
-inline*. admit.
+inline*; wp.  
+call (: ={hm, servers, kp_set, bad}(Red_ROM.AKE_O, Red_ROM2.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
+        /\ (forall h, omap (fun v => c_clear_k v) Red_ROM.AKE_O.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
+        /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
+        /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}).
+
+- by proc; inline; auto => />; smt(mem_set).
+
+- sim />. 
+
+- sim />.
+
+- proc; inline.
+  sp; if => //.
+  sp; match.
+  + smt().
+  + smt().
+  + auto => />. smt(get_setE).
+  move => stl str.
+  auto => />.
+  smt(get_setE).
+
+- proc; inline.
+  sp; match = => // sk.
+  match => //.
+  smt(). smt(). 
+  seq 1 1: (#pre /\ ={kp}); 1: by auto.
+  sp 1 1; if => //.
+  auto => />. smt(get_setE mem_set).
+
+- proc; inline.
+  sp; match => //.
+  + smt(). smt().
+  move => stl str.
+  match => //; 1..3: smt().
+  move => st'l ptl irl st'r ptr irr.
+  sp; seq 1 1: (#pre /\ ={r0}); 1: by auto.
+  auto => />. smt(get_setE mem_set).
+
+
+- proc; inline.
+  sp; match => //.
+  + smt().
+  + smt().
+  move => stl str.
+  match => //; 1..3: smt().
+  move => st'l ptl kl irl st'r ptr kr irr.
+  if => //.
+  + auto => />. smt(c_eq_partners_ck).
+  auto => />.
+  move => &1 &2 H1 H2 H3 H4 H5 H6 H7 H8 k _.
+  rewrite get_setE //=. 
+  admit. (* invariant updated state *)
+
+- proc; inline.
+  sp; match => //.
+  + smt().
+  + smt().
+  move => stl str.
+  match => //; 1..3: smt().
+  move => st'l ptl kl irl st'r ptr kr irr.
+  if => //.
+  + auto => />. smt(s_eq_partners_ck).
+  auto => />.
+  admit. (* invariant updated state *)
+
+- proc; inline.
+  sp; match => //.
+  move => stl str.
+  match = => // kp.
+  auto => />.
+  admit.
+
+- proc; inline.
+  sp; match => //.
+  + smt().
+  + smt().
+  move => stl str.
+  match => //; 1..3: smt().
+  + move => st'l ptl irl st'r ptr irr.
+    auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7.
+    admit. 
+  move => st'l ptl kl irl st'r ptr kr irr.
+  auto => />.
+  admit.
+
+- proc; inline.
+  sp; match => //.
+  + smt().
+  + smt().
+  move => stl str.
+  match => //; 1..3: smt().
+  move => st'l ptl kl irl st'r ptr kr irr.
+  auto => />.
+  admit.
+
+- proc; inline.
+  sp; match => //.
+  + smt().
+  + smt().
+  move => stl str.
+  match => //; 1..3: smt().
+  move => st'l ptl kl irl st'r ptr kr irr.
+  if => //.
+  + auto => />. admit.
+  auto => />.
+  admit.
+
+- proc; inline.
+  sp; match => //.
+  + smt().
+  + smt().
+  move => stl str.
+  match => //; 1..3: smt().
+  move => st'l ptl kl irl st'r ptr kr irr.
+  if => //.
+  + auto => />. admit.
+  auto => />.
+  admit.
+
+auto => />.
+smt(emptyE).
 
 have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
 rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) ll)].
 
-admit. 
+inline*; wp.
+call (: ={hm, servers, c_smap, s_smap, kp_set, bad}(Red_ROM2.AKE_O, Game2) /\ ROSc.I1.RO.m{1} = Game2.h1m{2} /\ ROSc.I2.RO.m{1} = Game2.h2m{2});
+ try sim />.
+
+- by proc; inline; auto => />.
+
+- proc; inline.
+  sp; match = => // sk.
+  match = => //.
+  seq 1 1: (#pre /\ ={kp}); 1: by auto.
+  sp 1 1; if => //.
+  auto => />.
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt' ir'.
+  sp; seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
+  auto => />.
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt' k' ir'.
+  if => //. auto => />.
+  smt(get_setE mem_set).
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt' k' ir'.
+  if => //. auto => />.
+  smt(get_setE mem_set).
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt' k' ir'.
+  if => //. auto => />.
+  smt(get_setE mem_set).
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt' k' ir'.
+  if => //. auto => />.
+  smt(get_setE mem_set).
+
+auto => />.
 qed.
+
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Splitting the random oracle. *)
