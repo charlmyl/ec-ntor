@@ -46,26 +46,26 @@ with s = Pending _ _ ir    => ir.`1
 with s = Accepted _ _ _ ir => ir.`1
 with s = Aborted _ _ ir    => ir.`1.
 
+op get_ir_sess (s: 'a instance_state) : bool =
+with s = Pending _ _ ir    => ir.`2
+with s = Accepted _ _ _ ir => ir.`2
+with s = Aborted _ _ ir    => ir.`2.
+
+op get_ir_test (s: 'a instance_state) : bool =
+with s = Pending _ _ ir    => ir.`3
+with s = Accepted _ _ _ ir => ir.`3
+with s = Aborted _ _ ir    => ir.`3.
+
 (* operators for getting or setting the revealed status of an instance *)
 op set_ir_eph (s: 'a instance_state) : 'a instance_state =
 with s = Pending s t ir    => Pending s t (true, ir.`2, ir.`3)
 with s = Accepted s t k ir => Accepted s t k (true, ir.`2, ir.`3)
 with s = Aborted s t ir    => Aborted s t (true, ir.`2, ir.`3).
 
-op get_ir_sess (s: 'a instance_state) : bool =
-with s = Pending _ _ ir    => ir.`2
-with s = Accepted _ _ _ ir => ir.`2
-with s = Aborted _ _ ir    => ir.`2.
-
 op set_ir_sess (s: 'a instance_state) : 'a instance_state =
 with s = Pending s t ir    => Pending s t (ir.`1, true, ir.`3)
 with s = Accepted s t k ir => Accepted s t k (ir.`1, true, ir.`3)
 with s = Aborted s t ir    => Aborted s t (ir.`1, true, ir.`3).
-
-op get_ir_test (s: 'a instance_state) : bool =
-with s = Pending _ _ ir    => ir.`3
-with s = Accepted _ _ _ ir => ir.`3
-with s = Aborted _ _ ir    => ir.`3.
 
 op set_ir_test (s: 'a instance_state) : 'a instance_state =
 with s = Pending s t ir    => Pending s t (ir.`1, ir.`2, true)
@@ -120,7 +120,7 @@ op get_origins_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : in
 fdom (
   filter
   (fun i (val: pr_st_client instance_state) =>
-       (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
+q       (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
   )
   fmap
 ).

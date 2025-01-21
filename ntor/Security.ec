@@ -210,14 +210,14 @@ print ROSc.
 local op s_clear_k (s : pr_st_server instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => Accepted st t witness ir
+| Accepted st t k ir => if ir.`2 then s else Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
 local op c_clear_k (s : pr_st_client instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => Accepted st t witness ir
+| Accepted st t k ir => if ir.`2 then s else Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
@@ -229,22 +229,26 @@ move=> eqsm; rewrite /untested_partner_c.
 have ->: get_partners_c tr sml = get_partners_c tr smr.
 + rewrite /get_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
   rewrite !mem_filter !domE -eqsm.
-  by case: (sml.[x])=> /> [] @/s_clear_k />.
+  by case: (sml.[x])=> /> [] @/s_clear_k /#.
 have -> //: get_untested_partners_c tr sml = get_untested_partners_c tr smr.
 rewrite /get_untested_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
 rewrite !mem_filter !domE -eqsm.
-by case: (sml.[x])=> /> [] @/s_clear_k />.
+by case: (sml.[x])=> /> [] @/s_clear_k /#.
 qed.
 
 local lemma s_eq_partners_ck tr sml smr: 
   (forall h, omap (fun (v: pr_st_client instance_state) => c_clear_k v) sml.[h] = smr.[h]) =>
 untested_partner_s tr sml = untested_partner_s tr smr.
 proof.
-move=> eqsm.
-rewrite /untested_partner_s.
-congr. 
-+ admit.
-admit.
+move=> eqsm; rewrite /untested_partner_s.
+have ->: get_partners_s tr sml = get_partners_s tr smr.
++ rewrite /get_partners_s; apply: fsetP=> x; rewrite !mem_fdom.
+  rewrite !mem_filter !domE -eqsm.
+  by case: (sml.[x])=> /> [] @/c_clear_k /#.
+have -> //: get_untested_partners_s tr sml = get_untested_partners_s tr smr.
+rewrite /get_untested_partners_s; apply: fsetP=> x; rewrite !mem_fdom.
+rewrite !mem_filter !domE -eqsm.
+by case: (sml.[x])=> /> [] @/c_clear_k /#.
 qed.
 
 lemma Step3 &m: Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
@@ -256,8 +260,8 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
 
 + inline*; wp.
   call (: ={hm, servers, kp_set, bad}(Red_ROM.AKE_O, Red_ROM2.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
-          /\ (map (fun _ v => c_clear_k v) Red_ROM.AKE_O.c_smap{1} = Red_ROM2.AKE_O.c_smap{2})
-          /\ (map (fun _ v => s_clear_k v) Red_ROM.AKE_O.s_smap{1} = Red_ROM2.AKE_O.s_smap{2})
+          /\ (forall h, omap (fun v => c_clear_k v) Red_ROM.AKE_O.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
+          /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
           /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.
   - by auto => />; smt(map_empty emptyE).
 
@@ -270,50 +274,58 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
   - proc; inline.
     sp; if => //.
     sp; match.
-    + smt(mapE).
-    + smt(mapE).
-    + by auto=> />; smt(map_set).
+    + smt().
+    + smt().
+    + by auto=> />; smt(get_setE).
     move=> stl str; auto=> />.
-    smt(mapE map_set).
+    smt(get_setE).
   
   - proc; inline.
     sp; match = => // sk.
     match => //.
-    + smt(mapE).
-    + smt(mapE).
+    + smt().
+    + smt().
     seq 1 1: (#pre /\ ={kp}); 1:by auto.
     sp 1 1; if => //.
-    by auto=> />; smt(mapE map_set mem_set).
+    by auto=> />; smt(get_setE mem_set).
   
   - proc; inline.
     sp; match => //.
-    + smt(mapE).
-    + smt(mapE).
+    + smt().
+    + smt().
     move=> stl str.
-    match => //; 1..3: smt(mapE).
+    match => //; 1..3: smt().
     move => st'l ptl irl st'r ptr irr.
     sp; seq 1 1: (#pre /\ ={r0}); 1: by auto.
-    auto=> />. smt(mapE map_set mem_set).
+    if {1} => //.
+    + rcondt {1} ^if; 1: by auto => /#.
+      rcondt {2} ^if; 1: by auto => /#.
+      rcondt {2} ^if; 1: by auto => /#. 
+      auto=> />. rewrite get_setE => //=. admit. (** TODO: Invariant needs to capture that at this point none or both revealed **)
+    rcondf {1} ^if; 1: by auto => /#.
+    rcondf {2} ^if; 1: by auto => /#.
+    rcondf {2} ^if; 1: by auto => /#.
+    auto=> /> &1 &2 penl penr _ _ c_inv s_inv inv h_in _ _. 
+    admit. (** TODO: Invariant needs to capture that at this point none or both revealed **)
 
   - proc; inline.
     sp; match=> //.
-    + smt(mapE).
-    + smt(mapE).
+    + smt().
+    + smt().
     move => stl str.
-    match => //; 1..3: smt(mapE).
+    match => //; 1..3: smt().
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
     + auto=> />; admit. (* smt(c_eq_partners_ck). *)
     rcondf {2} ^if; 1:admit. (** TODO: missing invariant. an accepted session will have queried the RO on its trace-ish thing **)
-    auto => /> &1 &2; rewrite mapE.
+    auto => /> &1 &2.
     case: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> />.
-    move=> _ _ _ _; rewrite -andaE; split.
+    case: (Red_ROM2.AKE_O.c_smap{2}.[i{2}])=> />.
+    move=> _ _ _ _ _ _. rewrite -andaE; split.
     + admit. (** TODO: missing invariant. an accepted session with kl as session key on the left will be such that the RO contains kl on the right (with the right input) **)
-    move=> <-; rewrite !map_set /= {2}/c_clear_k /=.
+    admit.
     (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
     (** The right way is probably for clear_k to not clear keys that have already been revealed **)
-    admit.
-
   
   - proc; inline.
     sp; match => //.
