@@ -254,128 +254,133 @@ proc*.
 
 outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distinguish(); }.
 
-inline*; wp.  
-call (: ={hm, servers, kp_set, bad}(Red_ROM.AKE_O, Red_ROM2.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
-        /\ (forall h, omap (fun v => c_clear_k v) Red_ROM.AKE_O.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
-        /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
-        /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}).
++ inline*; wp.
+  call (: ={hm, servers, kp_set, bad}(Red_ROM.AKE_O, Red_ROM2.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
+          /\ (map (fun _ v => c_clear_k v) Red_ROM.AKE_O.c_smap{1} = Red_ROM2.AKE_O.c_smap{2})
+          /\ (map (fun _ v => s_clear_k v) Red_ROM.AKE_O.s_smap{1} = Red_ROM2.AKE_O.s_smap{2})
+          /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.
+  - by auto => />; smt(map_empty emptyE).
 
-- by proc; inline; auto => />; smt(mem_set).
+  - by proc; inline; auto => />; smt(mem_set).
 
-- sim />. 
+  - by sim />. 
+  
+  - by sim />.
 
-- sim />.
+  - proc; inline.
+    sp; if => //.
+    sp; match.
+    + smt(mapE).
+    + smt(mapE).
+    + by auto=> />; smt(map_set).
+    move=> stl str; auto=> />.
+    smt(mapE map_set).
+  
+  - proc; inline.
+    sp; match = => // sk.
+    match => //.
+    + smt(mapE).
+    + smt(mapE).
+    seq 1 1: (#pre /\ ={kp}); 1:by auto.
+    sp 1 1; if => //.
+    by auto=> />; smt(mapE map_set mem_set).
+  
+  - proc; inline.
+    sp; match => //.
+    + smt(mapE).
+    + smt(mapE).
+    move=> stl str.
+    match => //; 1..3: smt(mapE).
+    move => st'l ptl irl st'r ptr irr.
+    sp; seq 1 1: (#pre /\ ={r0}); 1: by auto.
+    auto=> />. smt(mapE map_set mem_set).
 
-- proc; inline.
-  sp; if => //.
-  sp; match.
-  + smt().
-  + smt().
-  + auto => />. smt(get_setE).
-  move => stl str.
-  auto => />.
-  smt(get_setE).
+  - proc; inline.
+    sp; match=> //.
+    + smt(mapE).
+    + smt(mapE).
+    move => stl str.
+    match => //; 1..3: smt(mapE).
+    move => st'l ptl kl irl st'r ptr kr irr.
+    if => //.
+    + auto=> />; admit. (* smt(c_eq_partners_ck). *)
+    rcondf {2} ^if; 1:admit. (** TODO: missing invariant. an accepted session will have queried the RO on its trace-ish thing **)
+    auto => /> &1 &2; rewrite mapE.
+    case: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> />.
+    move=> _ _ _ _; rewrite -andaE; split.
+    + admit. (** TODO: missing invariant. an accepted session with kl as session key on the left will be such that the RO contains kl on the right (with the right input) **)
+    move=> <-; rewrite !map_set /= {2}/c_clear_k /=.
+    (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
+    (** The right way is probably for clear_k to not clear keys that have already been revealed **)
+    admit.
 
-- proc; inline.
-  sp; match = => // sk.
-  match => //.
-  smt(). smt(). 
-  seq 1 1: (#pre /\ ={kp}); 1: by auto.
-  sp 1 1; if => //.
-  auto => />. smt(get_setE mem_set).
-
-- proc; inline.
-  sp; match => //.
-  + smt(). smt().
-  move => stl str.
-  match => //; 1..3: smt().
-  move => st'l ptl irl st'r ptr irr.
-  sp; seq 1 1: (#pre /\ ={r0}); 1: by auto.
-  auto => />. smt(get_setE mem_set).
-
-
-- proc; inline.
-  sp; match => //.
-  + smt().
-  + smt().
-  move => stl str.
-  match => //; 1..3: smt().
-  move => st'l ptl kl irl st'r ptr kr irr.
-  if => //.
-  + auto => />. smt(c_eq_partners_ck).
-  auto => />.
-  move => &1 &2 H1 H2 H3 H4 H5 H6 H7 H8 k _.
-  rewrite get_setE //=. 
-  admit. (* invariant updated state *)
-
-- proc; inline.
-  sp; match => //.
-  + smt().
-  + smt().
-  move => stl str.
-  match => //; 1..3: smt().
-  move => st'l ptl kl irl st'r ptr kr irr.
-  if => //.
-  + auto => />. smt(s_eq_partners_ck).
-  auto => />.
-  admit. (* invariant updated state *)
-
-- proc; inline.
-  sp; match => //.
-  move => stl str.
-  match = => // kp.
-  auto => />.
-  admit.
-
-- proc; inline.
-  sp; match => //.
-  + smt().
-  + smt().
-  move => stl str.
-  match => //; 1..3: smt().
-  + move => st'l ptl irl st'r ptr irr.
-    auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7.
-    admit. 
-  move => st'l ptl kl irl st'r ptr kr irr.
-  auto => />.
-  admit.
-
-- proc; inline.
-  sp; match => //.
-  + smt().
-  + smt().
-  move => stl str.
-  match => //; 1..3: smt().
-  move => st'l ptl kl irl st'r ptr kr irr.
-  auto => />.
-  admit.
-
-- proc; inline.
-  sp; match => //.
-  + smt().
-  + smt().
-  move => stl str.
-  match => //; 1..3: smt().
-  move => st'l ptl kl irl st'r ptr kr irr.
-  if => //.
-  + auto => />. admit.
-  auto => />.
-  admit.
-
-- proc; inline.
-  sp; match => //.
-  + smt().
-  + smt().
-  move => stl str.
-  match => //; 1..3: smt().
-  move => st'l ptl kl irl st'r ptr kr irr.
-  if => //.
-  + auto => />. admit.
-  auto => />.
-  admit.
-
-auto => />.
-smt(emptyE).
+  
+  - proc; inline.
+    sp; match => //.
+    + smt().
+    + smt().
+    move => stl str.
+    match => //; 1..3: smt().
+    move => st'l ptl kl irl st'r ptr kr irr.
+    if => //.
+    + auto => />. smt(s_eq_partners_ck).
+    auto => />.
+    admit. (* invariant updated state *)
+  
+  - proc; inline.
+    sp; match => //.
+    move => stl str.
+    match = => // kp.
+    auto => />.
+    admit.
+  
+  - proc; inline.
+    sp; match => //.
+    + smt().
+    + smt().
+    move => stl str.
+    match => //; 1..3: smt().
+    + move => st'l ptl irl st'r ptr irr.
+      auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7.
+      admit. 
+    move => st'l ptl kl irl st'r ptr kr irr.
+    auto => />.
+    admit.
+  
+  - proc; inline.
+    sp; match => //.
+    + smt().
+    + smt().
+    move => stl str.
+    match => //; 1..3: smt().
+    move => st'l ptl kl irl st'r ptr kr irr.
+    auto => />.
+    admit.
+  
+  - proc; inline.
+    sp; match => //.
+    + smt().
+    + smt().
+    move => stl str.
+    match => //; 1..3: smt().
+    move => st'l ptl kl irl st'r ptr kr irr.
+    if => //.
+    + auto => />. admit.
+    auto => />.
+    admit.
+  
+  - proc; inline.
+    sp; match => //.
+    + smt().
+    + smt().
+    move => stl str.
+    match => //; 1..3: smt().
+    move => st'l ptl kl irl st'r ptr kr irr.
+    if => //.
+    + auto => />. admit.
+    auto => />.
+    admit.
+  
 
 have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
 rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) ll)].
