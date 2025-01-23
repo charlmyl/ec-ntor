@@ -262,6 +262,12 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
   call (: ={hm, servers, kp_set, bad}(Red_ROM.AKE_O, Red_ROM2.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
           /\ (forall h, omap (fun v => c_clear_k v) Red_ROM.AKE_O.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
           /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
+          /\ (forall i b pk1 pk2 sk pt ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Pending (b, pk1, pk2, sk) pt ir)
+                => ir.`2 = false)
+          /\ (forall i st pt k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k ir)
+                => ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2})
+          /\ (forall i st pt k ir, Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k ir)
+                => (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2})
           /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.
   - by auto => />; smt(map_empty emptyE).
 
@@ -300,7 +306,7 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2.
     seq  2  2: (#pre /\ ={r0} /\ r3{1} = r1{2}); 1: by auto.
     sp ^if & -1   ^if & -1.
-    seq  ^if{3} & -1   ^if{3} & -1: (#pre /\ ={t_A} /\ sk{2} = witness).
+    seq  ^if{3} & -1   ^if{3} & -1: (#pre /\ ={t_A} /\ sk{2} = witness /\ (x0{2} \in ROSc.I1.RO.m{2})).
     + if {1} => //.
       + rcondt {1} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
@@ -314,18 +320,17 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-      move=> c_clear s_clear eq_dom.
+      move=> c_clear s_clear inv1 inv2 inv3 eq_dom mem_ro.
       move: c_smap2_i; rewrite -c_clear.
-      rewrite c_smap1_i=> />.
-      move=> h; rewrite !get_setE; case: (h = i{2})=> />; [2:move=> _; exact: c_clear].
-      (** TODO: invariant => pending instances cannot be session revealed **) admit.
+      rewrite c_smap1_i=> />. 
+      by smt(get_setE).
     + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-      move=> c_clear s_clear eq_dom handle_notin_mR.
+      move=> c_clear s_clear inv1 inv2 inv3 eq_dom mem_ro.
       move: c_smap2_i; rewrite -c_clear.
       rewrite c_smap1_i=> />.
-      by move=> h; rewrite !get_setE; case: (h = i{2})=> /> _; exact: c_clear.
+      by smt(get_setE).
 
   - proc; inline.
     sp; match=> //.
@@ -335,28 +340,36 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     match => //; 1..3: smt().
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
-    + auto=> />; admit. (* smt(c_eq_partners_ck). *)
-    rcondf {2} ^if; 1:admit. (** TODO: missing invariant. an accepted session will have queried the RO on its trace-ish thing **)
+    + auto=> />. smt(c_eq_partners_ck).
+    rcondf{2} ^if; 1: by auto => /#.
     auto => /> &1 &2.
-    case: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> />.
-    case: (Red_ROM2.AKE_O.c_smap{2}.[i{2}])=> />.
-    move=> _ _ _ _ _ _. rewrite -andaE; split.
-    + admit. (** TODO: missing invariant. an accepted session with kl as session key on the left will be such that the RO contains kl on the right (with the right input) **)
-    admit.
-    (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
+    case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
+    case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
+    move=> c_clear s_clear inv1 inv2 inv3 eq_dom _ k _.
+    split. admit. (** TODO: missing invariant. an accepted session with kl as session key on the left will be such that the RO contains kl on the right (with the right input) **)
+    split. admit. (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
     (** The right way is probably for clear_k to not clear keys that have already been revealed **)
+    split. smt(get_setE).
+    smt(get_setE).
 
   - proc; inline.
-    sp; match => //.
+    sp; match=> //.
     + smt().
     + smt().
     move => stl str.
     match => //; 1..3: smt().
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
-    + auto => />. smt(s_eq_partners_ck).
-    auto => />.
-    admit. (* invariant updated state *)
+    + auto=> />. smt(s_eq_partners_ck).
+    rcondf{2} ^if; 1: by auto => /#.
+    auto => /> &1 &2.
+    case _: (Red_ROM.AKE_O.s_smap{1}.[(b, j){2}])=> /> s_smap1_i.
+    case _: (Red_ROM2.AKE_O.s_smap.[(b, j)]{2})=> /> s_smap2_i.
+    move=> c_clear s_clear inv1 inv2 inv3 eq_dom _ k _.
+    split. admit. (** TODO: missing invariant. an accepted session with kl as session key on the left will be such that the RO contains kl on the right (with the right input) **)
+    split. admit. (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
+    (** The right way is probably for clear_k to not clear keys that have already been revealed **)
+    smt(get_setE).
   
   - proc; inline.
     sp; match => //.
