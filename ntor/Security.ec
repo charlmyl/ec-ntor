@@ -296,52 +296,36 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     move=> stl str.
     match => //; 1..3: smt().
     move => st'l ptl irl st'r ptr irr.
-    sp; seq 1 1: (#pre /\ ={r0}); 1: by auto.
-    if {1} => //.
-    + rcondt {1} ^if; 1: by auto => /#.
-      rcondt {2} ^if; 1: by auto => /#.
-      rcondt {2} ^if; 1: by auto => /#.
-      swap {1} 4 -3; swap {2} 5 -4.
-      seq  1  1: (#pre /\ r3{1} = r1{2}); 1:by auto.
-      sp 7 6; if.
-      + move=> /> &1 &2 mL mR.
-        case: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> />.
-        case: (Red_ROM2.AKE_O.c_smap.[i]{2})=> />.
-        move=> c_clear s_clear eq_dom handle_notin_mR.
-        by rewrite !get_setE.
-      + auto=> /> &1 &2 mL mR.
-        case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
-        case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-        move=> c_clear s_clear eq_dom handle_notin_mR.
-        move: c_smap2_i; rewrite -c_clear.
-        rewrite c_smap1_i=> />.
-        rewrite !get_setE=> />.
-        split; [2:smt(mem_set)].
-        move=> h; rewrite !get_setE; case: (h = i{2})=> />; [2:move=> _; exact: c_clear].
-        (** TODO: invariant => pending instances cannot be session revealed **) admit.
-      + auto=> /> &1 &2 mL mR. (* Doing this one once, then not doing it again *)
-        case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
-        case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-        move=> c_clear s_clear eq_dom handle_notin_mR.
-        move: c_smap2_i; rewrite -c_clear.
-        rewrite c_smap1_i=> />.
-        rewrite !get_setE=> /> r0_neq_m3_2.
-        split; [2:smt(mem_set)].
-        by move=> h; rewrite !get_setE; case: (h = i{2})=> /> _; exact: c_clear.
-    rcondf {1} ^if; 1: by auto => /#.
-    rcondf {2} ^if; 1: by auto => /#.
-    rcondf {2} ^if; 1: by auto => /#.
-    swap {1} 3 -2; swap {2} 4 -3.
-    seq  1  1: (#pre /\ r3{1} = r1{2}); 1:by auto.
-    sp 5 4; if.
-    + move=> /> &1 &2.
+    swap {1} ^r0<$ @ 1; swap {1} ^r3<$ @ 2.
+    swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2.
+    seq  2  2: (#pre /\ ={r0} /\ r3{1} = r1{2}); 1: by auto.
+    sp ^if & -1   ^if & -1.
+    seq  ^if{3} & -1   ^if{3} & -1: (#pre /\ ={t_A} /\ sk{2} = witness).
+    + if {1} => //.
+      + rcondt {1} ^if; 1: by auto => /#.
+        rcondt {2} ^if; 1: by auto => /#.
+        rcondt {2} ^if; 1: by auto => /#.
+        by auto=> />; smt(mem_set).
+      + rcondf {1} ^if; 1: by auto => /#.
+        rcondf {2} ^if; 1: by auto => /#.
+        rcondf {2} ^if; 1: by auto => /#.
+        by auto=> />; smt(mem_set).
+    if=> //. 
+    + auto=> /> &1 &2.
+      case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
+      case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
+      move=> c_clear s_clear eq_dom.
+      move: c_smap2_i; rewrite -c_clear.
+      rewrite c_smap1_i=> />.
+      move=> h; rewrite !get_setE; case: (h = i{2})=> />; [2:move=> _; exact: c_clear].
+      (** TODO: invariant => pending instances cannot be session revealed **) admit.
+    + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
       move=> c_clear s_clear eq_dom handle_notin_mR.
       move: c_smap2_i; rewrite -c_clear.
-      by rewrite c_smap1_i=> />.
-    + by auto; admit. (** TODO: invariant (see above) **)
-    + by auto; smt(get_setE mem_set).
+      rewrite c_smap1_i=> />.
+      by move=> h; rewrite !get_setE; case: (h = i{2})=> /> _; exact: c_clear.
 
   - proc; inline.
     sp; match=> //.
@@ -361,7 +345,7 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     admit.
     (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
     (** The right way is probably for clear_k to not clear keys that have already been revealed **)
-  
+
   - proc; inline.
     sp; match => //.
     + smt().
