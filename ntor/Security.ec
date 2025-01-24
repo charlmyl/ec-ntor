@@ -264,14 +264,18 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
           /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
           /\ (forall i b pk1 pk2 sk pt ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Pending (b, pk1, pk2, sk) pt ir)
                 => ir.`2 = false)
-          /\ (forall i st pt k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k ir)
-                => ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2})
-          /\ (forall i st pt k ir, Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k ir)
-                => (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2})
+          /\ (forall i stl ptl kl irl st pt k ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Accepted stl ptl kl irl)
+                => Red_ROM.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k ir)
+                   /\ ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
+                   /\ kl = oget ROSc.I2.RO.m{2}.[((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1)])
+          /\ (forall i stl ptl kl irl st pt k ir, Red_ROM.AKE_O.s_smap{1}.[i] = Some (Accepted stl ptl kl irl)
+                => Red_ROM.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k ir)
+                   /\ (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
+                   /\ kl = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
           /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.
   - by auto => />; smt(map_empty emptyE).
 
-  - by proc; inline; auto => />; smt(mem_set).
+  - proc; inline; auto => />; smt(mem_set get_setE).
 
   - by sim />. 
   
@@ -293,7 +297,26 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     + smt().
     seq 1 1: (#pre /\ ={kp}); 1:by auto.
     sp 1 1; if => //.
-    by auto=> />; smt(get_setE mem_set).
+    swap {1} ^r0<$ @ 1; swap {1} ^r3<$ @ 2.
+    swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2.
+    seq  2  2: (#pre /\ ={r0} /\ r3{1} = r1{2}); 1: by auto=> />.
+    sp 4 3; if {1} => //.
+      + rcondt {1} ^if; 1: by auto => /#.
+        rcondt {2} ^if; 1: by auto => /#.
+        rcondt {2} ^if; 1: by auto => /#. 
+        auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14.
+        split. smt(mem_set get_setE).
+        split.  smt(mem_set get_setE).
+        split. move => q w e r t y u i o p. 
+        admit. (** Updated value does not change invariant? **)
+        smt(mem_set get_setE).
+      + rcondf {1} ^if; 1: by auto => /#.
+        rcondf {2} ^if; 1: by auto => /#.
+        rcondf {2} ^if; 1: by auto => /#.
+        auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14.
+        split. smt(mem_set get_setE).
+        move => q w e r t y u i o p. 
+        admit. (** Updated value does not change invariant? **)
 
   - proc; inline.
     sp; match => //.
@@ -311,11 +334,11 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
       + rcondt {1} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
-        by auto=> />; smt(mem_set).
+        by auto=> />; smt(mem_set get_setE).
       + rcondf {1} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
-        by auto=> />; smt(mem_set).
+        by auto=> />; smt(mem_set get_setE).
     if=> //. 
     + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
@@ -323,7 +346,7 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
       move=> c_clear s_clear inv1 inv2 inv3 eq_dom mem_ro.
       move: c_smap2_i; rewrite -c_clear.
       rewrite c_smap1_i=> />. 
-      by smt(get_setE).
+      admit.
     + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
@@ -345,11 +368,7 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     auto => /> &1 &2.
     case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
     case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-    move=> c_clear s_clear inv1 inv2 inv3 eq_dom _ k _.
-    split. admit. (** TODO: missing invariant. an accepted session with kl as session key on the left will be such that the RO contains kl on the right (with the right input) **)
-    split. admit. (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
-    (** The right way is probably for clear_k to not clear keys that have already been revealed **)
-    split. smt(get_setE).
+    move=> c_clear s_clear inv1 inv2 inv3 eq_dom H k _. 
     smt(get_setE).
 
   - proc; inline.
@@ -366,9 +385,6 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     case _: (Red_ROM.AKE_O.s_smap{1}.[(b, j){2}])=> /> s_smap1_i.
     case _: (Red_ROM2.AKE_O.s_smap.[(b, j)]{2})=> /> s_smap2_i.
     move=> c_clear s_clear inv1 inv2 inv3 eq_dom _ k _.
-    split. admit. (** TODO: missing invariant. an accepted session with kl as session key on the left will be such that the RO contains kl on the right (with the right input) **)
-    split. admit. (** TODO: This is false-either the invariant should apply only to non-revealed instances (and an additional invariant for revealed instances should be added) or we should not store revealed keys in the game state, and look them up every time **)
-    (** The right way is probably for clear_k to not clear keys that have already been revealed **)
     smt(get_setE).
   
   - proc; inline.
