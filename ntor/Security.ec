@@ -210,14 +210,14 @@ print ROSc.
 local op s_clear_k (s : pr_st_server instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => if ir.`2 then s else Accepted st t witness ir
+| Accepted st t k ir => Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
 local op c_clear_k (s : pr_st_client instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => if ir.`2 then s else Accepted st t witness ir
+| Accepted st t k ir => Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
@@ -229,11 +229,11 @@ move=> eqsm; rewrite /untested_partner_c.
 have ->: get_partners_c tr sml = get_partners_c tr smr.
 + rewrite /get_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
   rewrite !mem_filter !domE -eqsm.
-  by case: (sml.[x])=> /> [] @/s_clear_k /#.
+  by case: (sml.[x])=> /> [] @/s_clear_k /=.
 have -> //: get_untested_partners_c tr sml = get_untested_partners_c tr smr.
 rewrite /get_untested_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
 rewrite !mem_filter !domE -eqsm.
-by case: (sml.[x])=> /> [] @/s_clear_k /#.
+by case: (sml.[x])=> /> [] @/s_clear_k /=.
 qed.
 
 local lemma s_eq_partners_ck tr sml smr: 
@@ -244,11 +244,11 @@ move=> eqsm; rewrite /untested_partner_s.
 have ->: get_partners_s tr sml = get_partners_s tr smr.
 + rewrite /get_partners_s; apply: fsetP=> x; rewrite !mem_fdom.
   rewrite !mem_filter !domE -eqsm.
-  by case: (sml.[x])=> /> [] @/c_clear_k /#.
+  by case: (sml.[x])=> /> [] @/c_clear_k /=.
 have -> //: get_untested_partners_s tr sml = get_untested_partners_s tr smr.
 rewrite /get_untested_partners_s; apply: fsetP=> x; rewrite !mem_fdom.
 rewrite !mem_filter !domE -eqsm.
-by case: (sml.[x])=> /> [] @/c_clear_k /#.
+by case: (sml.[x])=> /> [] @/c_clear_k /=.
 qed.
 
 lemma Step3 &m: Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
@@ -264,14 +264,14 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
           /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
           /\ (forall i b pk1 pk2 sk pt ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Pending (b, pk1, pk2, sk) pt ir)
                 => ir.`2 = false)
-          /\ (forall i stl ptl kl irl st pt k ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Accepted stl ptl kl irl)
-                => Red_ROM.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k ir)
+          /\ (forall i st pt k ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Accepted st pt k ir)
+                => Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt witness ir)
                    /\ ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
-                   /\ kl = oget ROSc.I2.RO.m{2}.[((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1)])
-          /\ (forall i stl ptl kl irl st pt k ir, Red_ROM.AKE_O.s_smap{1}.[i] = Some (Accepted stl ptl kl irl)
-                => Red_ROM.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k ir)
+                   /\ k = oget ROSc.I2.RO.m{2}.[((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1)])
+          /\ (forall i st pt k ir, Red_ROM.AKE_O.s_smap{1}.[i] = Some (Accepted st pt k ir)
+                => Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt witness ir)
                    /\ (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
-                   /\ kl = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
+                   /\ k = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
           /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.
   - by auto => />; smt(map_empty emptyE).
 
@@ -304,19 +304,13 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
       + rcondt {1} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#. 
-        auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14.
-        split. smt(mem_set get_setE).
-        split.  smt(mem_set get_setE).
-        split. move => q w e r t y u i o p. 
-        admit. (** Updated value does not change invariant? **)
+        auto => /> &1 &2.
         smt(mem_set get_setE).
       + rcondf {1} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
-        auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14.
-        split. smt(mem_set get_setE).
-        move => q w e r t y u i o p. 
-        admit. (** Updated value does not change invariant? **)
+        auto => /> &1 &2.
+        smt(mem_set get_setE).
 
   - proc; inline.
     sp; match => //.
@@ -329,7 +323,8 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2.
     seq  2  2: (#pre /\ ={r0} /\ r3{1} = r1{2}); 1: by auto.
     sp ^if & -1   ^if & -1.
-    seq  ^if{3} & -1   ^if{3} & -1: (#pre /\ ={t_A} /\ sk{2} = witness /\ (x0{2} \in ROSc.I1.RO.m{2})).
+    seq  ^if{3} & -1   ^if{3} & -1: (#pre /\ ={t_A} /\ sk{2} = witness /\ (x0{2} \in ROSc.I1.RO.m{2}) /\ sk{1} =
+oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m3{2}.`1]).
     + if {1} => //.
       + rcondt {1} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
@@ -346,7 +341,7 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
       move=> c_clear s_clear inv1 inv2 inv3 eq_dom mem_ro.
       move: c_smap2_i; rewrite -c_clear.
       rewrite c_smap1_i=> />. 
-      admit.
+      smt(mem_set get_setE).
     + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
@@ -369,7 +364,8 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
     case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
     move=> c_clear s_clear inv1 inv2 inv3 eq_dom H k _. 
-    smt(get_setE).
+    smt(get_setE mem_set).
+
 
   - proc; inline.
     sp; match=> //.
@@ -391,8 +387,10 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     sp; match => //.
     move => stl str.
     match = => // kp.
+    if => //.
+    + move => &1 &2 pre.
+      admit. (* TODO: Equivalence for untested_partner_s *)
     auto => />.
-    admit.
   
   - proc; inline.
     sp; match => //.
@@ -402,11 +400,14 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     match => //; 1..3: smt().
     + move => st'l ptl irl st'r ptr irr.
       auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7.
-      admit. 
+      admit. (* TODO: Equivalence for untested_origins_c *)
     move => st'l ptl kl irl st'r ptr kr irr.
-    auto => />.
-    admit.
-  
+    if => //.
+    + move => &1 &2 pre.
+      admit. (* TODO: Equivalence for untested_partner_c *)
+    auto => /> &1 &2.
+    smt(get_setE).
+
   - proc; inline.
     sp; match => //.
     + smt().
@@ -414,8 +415,11 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     move => stl str.
     match => //; 1..3: smt().
     move => st'l ptl kl irl st'r ptr kr irr.
-    auto => />.
-    admit.
+    if => //.
+    + move => &1 &2 pre.
+      admit. (* TODO: Equivalence for untested_partner_s *)
+    auto => /> &1 &2.
+    smt(get_setE).
   
   - proc; inline.
     sp; match => //.
@@ -425,10 +429,11 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     match => //; 1..3: smt().
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
-    + auto => />. admit.
+    + auto => />.
+      admit. (* TODO: Equivalence of fresh_partner_c *)
     auto => />.
-    admit.
-  
+    smt(get_setE).
+
   - proc; inline.
     sp; match => //.
     + smt().
@@ -437,10 +442,10 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
     match => //; 1..3: smt().
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
-    + auto => />. admit.
+    + auto => />.
+      admit. (* TODO: Equivalence of fresh_partner_s *)
     auto => />.
-    admit.
-  
+    smt(get_setE).
 
 have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
 rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) ll)].
