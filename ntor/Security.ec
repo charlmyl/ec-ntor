@@ -251,6 +251,52 @@ rewrite !mem_filter !domE -eqsm.
 by case: (sml.[x])=> /> [] @/c_clear_k /=.
 qed.
 
+local lemma c_eq_origins_ck tr sml smr: 
+  (forall h, omap (fun (v: pr_st_server instance_state) => s_clear_k v) sml.[h] = smr.[h]) =>
+untested_origins_c tr sml = untested_origins_c tr smr.
+proof.
+move=> eqsm; rewrite /untested_origins_c.
+have ->: get_origins_c tr sml = get_origins_c tr smr.
++ rewrite /get_origins_c; apply: fsetP=> x; rewrite !mem_fdom.
+  rewrite !mem_filter !domE -eqsm.
+  by case: (sml.[x])=> /> [] @/s_clear_k /#.
+have -> //: get_untested_origins_c tr sml = get_untested_origins_c tr smr.
+rewrite /get_untested_origins_c; apply: fsetP=> x; rewrite !mem_fdom.
+rewrite !mem_filter !domE -eqsm.
+by case: (sml.[x])=> /> [] @/s_clear_k /#.
+qed.
+
+local lemma c_eq_fresh_ck tr sm1l sm1r sm2: 
+  (forall h, omap (fun (v: pr_st_server instance_state) => s_clear_k v) sm1l.[h] = sm1r.[h]) =>
+fresh_partner_c tr sm1l sm2 = fresh_partner_c tr sm1r sm2.
+proof.
+move=> eqsm; rewrite /fresh_partner_c.
+have ->: get_fresh_partners_c tr sm1l sm2 = get_fresh_partners_c tr sm1r sm2.
++ rewrite /get_fresh_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
+  rewrite !mem_filter !domE -eqsm.
+  by case: (sm1l.[x])=> /> [] @/s_clear_k /#.
+have -> //: get_origins_c tr sm1l = get_origins_c tr sm1r.
+rewrite /get_origins_c; apply: fsetP=> x; rewrite !mem_fdom.
+rewrite !mem_filter !domE -eqsm.
+by case: (sm1l.[x])=> /> [] @/s_clear_k /#.
+qed.
+
+local lemma s_eq_fresh_ck tr sml smr: 
+  (forall h, omap (fun (v: pr_st_client instance_state) => c_clear_k v) sml.[h] = smr.[h]) =>
+fresh_partner_s tr sml = fresh_partner_s tr smr.
+proof.
+move=> eqsm; rewrite /fresh_partner_s.
+have ->: get_fresh_partners_s tr sml = get_fresh_partners_s tr smr.
++ rewrite /get_fresh_partners_s; apply: fsetP=> x; rewrite !mem_fdom.
+  rewrite !mem_filter !domE -eqsm.
+  by case: (sml.[x])=> /> [] @/c_clear_k /#.
+have -> //: get_origins_s tr sml = get_origins_s tr smr.
+rewrite /get_origins_s; apply: fsetP=> x; rewrite !mem_fdom.
+rewrite !mem_filter !domE -eqsm.
+by case: (sml.[x])=> /> [] @/c_clear_k /#.
+qed.
+
+
 lemma Step3 &m: Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
 proof.
 byequiv (: ={glob A, glob Red_ROM2} ==> _)  => //.
@@ -366,7 +412,6 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     move=> c_clear s_clear inv1 inv2 inv3 eq_dom H k _. 
     smt(get_setE mem_set).
 
-
   - proc; inline.
     sp; match=> //.
     + smt().
@@ -388,8 +433,9 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     move => stl str.
     match = => // kp.
     if => //.
-    + move => &1 &2 pre.
-      admit. (* TODO: Equivalence for untested_partner_s *)
+    + move => &1 &2 pre. print mem_set.
+      (* smt(c_eq_partners_ck). *)
+      admit. 
     auto => />.
   
   - proc; inline.
@@ -399,12 +445,11 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     move => stl str.
     match => //; 1..3: smt().
     + move => st'l ptl irl st'r ptr irr.
-      auto => /> &1 &2 H1 H2 H3 H4 H5 H6 H7.
-      admit. (* TODO: Equivalence for untested_origins_c *)
+      auto => /> &1 &2. 
+      smt(c_eq_origins_ck get_setE mem_set).
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
-    + move => &1 &2 pre.
-      admit. (* TODO: Equivalence for untested_partner_c *)
+    + smt(c_eq_partners_ck).
     auto => /> &1 &2.
     smt(get_setE).
 
@@ -416,8 +461,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     match => //; 1..3: smt().
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
-    + move => &1 &2 pre.
-      admit. (* TODO: Equivalence for untested_partner_s *)
+    + smt(s_eq_partners_ck).
     auto => /> &1 &2.
     smt(get_setE).
   
@@ -430,7 +474,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
     + auto => />.
-      admit. (* TODO: Equivalence of fresh_partner_c *)
+      smt(c_eq_fresh_ck).
     auto => />.
     smt(get_setE).
 
@@ -443,7 +487,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
     + auto => />.
-      admit. (* TODO: Equivalence of fresh_partner_s *)
+      smt(s_eq_fresh_ck).
     auto => />.
     smt(get_setE).
 
