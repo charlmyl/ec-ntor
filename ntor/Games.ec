@@ -23,6 +23,17 @@ import GAKEc HROc.
   + Server: case split:
     * is the server's long-term key compromised? => Gap-DH one way;
     * if not => Gap-DH another way.
+  
+Steps done:
+- Step 0: inline everathing;
+- Step 1: prevent collisions in and between long-term and ephemeral
+  keys;
+- Step 2: split the random oracle so that tag and key are sampled
+  separately;
+- Step 3: delay the sampling of the session key to reveal or test;
+  (use Eager/Lazy, replacing the RO call in msg2 + msg3 with sample)
+- Step 4: 
+
 *)
 
 (* Step0 inlining everything and adding bad event *)
@@ -35,6 +46,8 @@ module Game0 : GAKE_out_i = {
   var c_smap : (int, pr_st_client instance_state) fmap
   var s_smap : (s_id * int, pr_st_server instance_state) fmap
   
+  var tested : bool
+  
   var kp_set : ((pkey * skey)) fset
   var bad : bool
 
@@ -44,6 +57,7 @@ module Game0 : GAKE_out_i = {
     servers <- empty;
     c_smap <- empty;
     s_smap <- empty;
+    tested <- false;
     kp_set <- fset0;
     bad <- false;
   }
@@ -276,41 +290,47 @@ module Game0 : GAKE_out_i = {
   proc c_test(i: int) : key option = {
     var k <- None;
 
-    match c_smap.[i] with
-    | None => { }
-    | Some _ => {
-        (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
-           and not all partner instances are unfresh can be tested *)
-        if (oget c_smap.[i] is Accepted st' t' k' ir') {
-          if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
-                \/ fresh_partner_c t' s_smap servers = Some false)) {
-            k <- Some k';
-            c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+    if (!tested) {
+      tested <- true;
+      match c_smap.[i] with
+      | None => { }
+      | Some _ => {
+          (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
+             and not all partner instances are unfresh can be tested *)
+          if (oget c_smap.[i] is Accepted st' t' k' ir') {
+            if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
+                  \/ fresh_partner_c t' s_smap servers = Some false)) {
+              k <- Some k';
+              c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+            }
           }
         }
-      }
-    end;
+      end;
+    }
     return k;
   }
 
   proc s_test(b: s_id, j: int) : key option = {
     var k <- None;
 
-    match s_smap.[(b, j)] with
-    | None => { }
-    | Some _ => {
-        (* only accepted server instances that are not sesskey revealed, not trivially broken
-           and not all partner instances are unfresh can be tested *)
-        if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
-          if (!(   get_ir_sess (oget s_smap.[b, j]) 
-                \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
-                \/ fresh_partner_s t' c_smap = Some false)) {
-            k <- Some k';
-            s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+    if (!tested) {
+      tested <- true;
+      match s_smap.[(b, j)] with
+      | None => { }
+      | Some _ => {
+          (* only accepted server instances that are not sesskey revealed, not trivially broken
+             and not all partner instances are unfresh can be tested *)
+          if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
+            if (!(   get_ir_sess (oget s_smap.[b, j]) 
+                  \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
+                  \/ fresh_partner_s t' c_smap = Some false)) {
+              k <- Some k';
+              s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+            }
           }
         }
-      }
-    end;
+      end;
+    }
     return k;
   }
 }.
@@ -387,17 +407,60 @@ module Game2 = Game1 with {
   proc c_test [
     var ks : key
     var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^match#Some.^match#Accepted.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' witness ir');}
+    ^if.^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+    ^if.^match#Some.^match#Accepted.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' witness ir');}
   ]
 
   proc s_test [
     var ks : key
     var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^match#Some.^match#Accepted.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' witness ir');}
+    ^if.^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+    ^if.^match#Some.^match#Accepted.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' witness ir');}
   ]
 
 }.
 
 print Game2. 
+
+
+module Game3 = Game2 with {
+  var hq : (pkey * pkey * s_id * pkey * pkey) fset
+  var tq : (pkey * pkey * s_id * pkey * pkey) option
+
+  proc init_mem [
+    -1 + { hq <- fset0; tq <- None; }
+  ]
+
+  proc h [
+    1 - {hq <- hq `|` fset1 x;}
+  ]
+
+  proc c_test [
+    ^if.^match#Some.^match#Accepted.^if.^x<- + {tq <- Some x;}
+  ]
+
+  proc s_test [
+    ^if.^match#Some.^match#Accepted.^if.^x<- + {tq <- Some x;}
+  ]
+}.
+
+
+print Game3.
+(* bad event is oget tq /in hq *)
+
+module Game4 = Game3 with {
+
+  proc c_test [
+    ^if.^match#Some.^match#Accepted.^if.^if -
+    ^if.^match#Some.^match#Accepted.^if.^k<- ~ {k <- Some ks;}
+  ]
+
+  proc s_test [
+    ^if.^match#Some.^match#Accepted.^if.^if -
+    ^if.^match#Some.^match#Accepted.^if.^k<- ~ {k <- Some ks;}
+  ]
+
+}.
+
+
+print Game4.
