@@ -176,11 +176,72 @@ module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 
 }.
 
 (* ------------------------------------------------------------------------------------------ *)
+(* Intermediate Bad Game Wrapper *)
+
+print Game3.
+
+module No_Bad_Game = Game3 with {
+
+  proc h [
+    1 + ^ (!badq)
+  ]
+
+  proc init_s [
+    1 + ^ (!badq)
+  ]
+
+  proc set_cert [
+    ^r<- + (!badq)
+  ]
+
+  proc send_msg1 [
+    ^r<- + (!badq)
+  ]
+
+  proc send_msg2 [
+    ^r<- + (!badq)
+  ]
+
+  proc send_msg3 [
+    ^r<- + (!badq)
+  ]
+
+  proc c_rev_skey [
+    ^k<- + (!badq)
+  ]
+
+  proc s_rev_skey [
+    ^k<- + (!badq)
+  ]
+
+  proc rev_ltkey [
+    ^ltk<- + (!badq)
+  ]
+
+  proc c_rev_ephkey [
+    ^ek<- + (!badq)
+  ]
+
+  proc s_rev_ephkey [
+    ^ek<- + (!badq)
+  ]
+
+  proc c_test [
+    ^k<- + (!badq)
+  ]
+
+  proc s_test [
+    ^k<- + (!badq)
+  ]
+}.
+
+
+(* ------------------------------------------------------------------------------------------ *)
 (* Security Proof *)
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -Game3, -Game4, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll, -BB.Sample, -Red_ROM, -Red_ROM2 }.
+declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -Game3, -Game4, -No_Bad_Game, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll, -BB.Sample, -Red_ROM, -Red_ROM2 }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -213,30 +274,38 @@ qed.
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 5a:  Removing RO for storing keys *)
 lemma Step5a &m :
-  Pr[E_GAKE(Game3, A).run() @ &m : res /\ (oget Game3.tq \notin Game3.hq) ]
+  Pr[E_GAKE(Game3, A).run() @ &m : res /\ (!Game3.badq)]
   =
-  Pr[E_GAKE(Game4, A).run() @ &m : res /\ (oget Game4.tq \notin Game4.hq)].
+  Pr[E_GAKE(No_Bad_Game, A).run() @ &m : res].
 proof. 
-byequiv => //. 
+rewrite eq_sym.
+byequiv => //.
 proc; inline.
-call (: ={servers, c_smap, s_smap, tested, kp_set, bad, hm, h1m, hq, tq}(Game3, Game4)
-  /\ (forall x, x <> oget Game3.tq{1} => Game3.h2m{1}.[x] = Game4.h2m{2}.[x])). (* TODO : add the badq event *)
+call (: Game3.badq, ={servers, c_smap, s_smap, tested, kp_set, bad, hm, h1m, h2m, hq, tq, badq} (No_Bad_Game, Game3)); last first.
 
-- proc. admit.
+auto => />.
+move => *.
+split. 
 
-- sim />.
 
-- sim />.
+- exact A_ll.
 
-- sim />.
+- proc; inline.
+  rcondt{2} ^if; 1: by auto.
+  sp ^Game3.badq<- ^No_Bad_Game.badq<-.
+  by case (No_Bad_Game.badq{2}); auto => />.
+- move => &2 bad. islossless.
+- move => _.
+  by proc; if; auto.
 
-- sim />.
+- proc; inline.
+  rcondt{2} ^if; 1: by auto. 
+  if => //; auto => />. 
+- move => &2 bad. islossless.
+- move => _.
+  by proc; if; auto; if; auto.
 
-- sim />.
-
-- proc. sp; match = => // st. match = => // st' t' k' ir'. if => //.
-
-- sim />.
+- admit.
 
 - proc.
   sp; if => //.
@@ -257,7 +326,6 @@ call (: ={servers, c_smap, s_smap, tested, kp_set, bad, hm, h1m, hq, tq}(Game3, 
   - auto => />. admit. (* TODO: Invariant! *)
   auto => /> &1 &2 *. rewrite get_setE => /=.
   admit. (* TODO: h2m not equal! *)
-
 qed. 
 
 

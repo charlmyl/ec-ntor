@@ -426,21 +426,22 @@ print Game2.
 module Game3 = Game2 with {
   var hq : (pkey * pkey * s_id * pkey * pkey) fset
   var tq : (pkey * pkey * s_id * pkey * pkey) option
+  var badq : bool
 
   proc init_mem [
-    -1 + { hq <- fset0; tq <- None; }
+    -1 + { hq <- fset0; tq <- None; badq <- false;}
   ]
 
   proc h [
-    1 - {hq <- hq `|` fset1 x;}
+    1 + ^ {hq <- hq `|` fset1 x; badq <- (tq <> None /\ oget tq \in hq);}
   ]
 
   proc c_test [
-    ^if.^match#Some.^match#Accepted.^if.^x<- + {tq <- Some x;}
+    ^if.^match#Some.^match#Accepted.^if.^x<- + {tq <- Some x; badq <- (oget tq \in hq);}
   ]
 
   proc s_test [
-    ^if.^match#Some.^match#Accepted.^if.^x<- + {tq <- Some x;}
+    ^if.^match#Some.^match#Accepted.^if.^x<- + {tq <- Some x; badq <- (oget tq \in hq);}
   ]
 }.
 
