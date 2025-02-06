@@ -495,7 +495,6 @@ module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
     var k <- None;
 
     if (!GAKEb.tested) {
-      GAKEb.tested <- true;
       match GAKEb.c_smap.[i] with
       | None => { }
       | Some _ => {
@@ -506,7 +505,8 @@ module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
                   \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false)) {
               k <- Some k';
               GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
-            }
+              GAKEb.tested <- true;
+           }
           }
         }
       end;
@@ -518,7 +518,6 @@ module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
     var k <- None;
 
     if (!GAKEb.tested) {
-      GAKEb.tested <- true;
       match GAKEb.s_smap.[(b, j)] with
       | None => { }
       | Some _ => {
@@ -530,6 +529,7 @@ module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
                   \/ fresh_partner_s t' GAKEb.c_smap = Some false)) {
               k <- Some k';
               GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+              GAKEb.tested <- true;
             }
           }
         }
@@ -547,7 +547,6 @@ module GAKE1 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
     var ks;
 
     if (!GAKEb.tested) {
-      GAKEb.tested <- true;
       match GAKEb.c_smap.[i] with
       | None => { }
       | Some _ => {
@@ -559,6 +558,7 @@ module GAKE1 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
               ks <$ dkey;
               k <- Some ks;
               GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');
+              GAKEb.tested <- true;
             }
           }
         }
@@ -572,7 +572,6 @@ module GAKE1 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
     var ks;
 
     if (!GAKEb.tested) {
-      GAKEb.tested <- true;
       match GAKEb.s_smap.[(b, j)] with
       | None => { }
       | Some _ => {
@@ -585,6 +584,7 @@ module GAKE1 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
               ks <$ dkey;
               k <- Some ks;
               GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');
+              GAKEb.tested <- true;
             }
           }
         }

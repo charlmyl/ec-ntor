@@ -206,7 +206,7 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 lemma Step4 &m :
   Pr[E_GAKE(Game2, A).run() @ &m : res] = Pr[E_GAKE(Game3, A).run() @ &m : res].
 proof. 
-byequiv => //; sim.
+by byequiv => //; sim.
 qed. 
 
 
@@ -219,7 +219,24 @@ lemma Step5a &m :
 proof. 
 byequiv => //. 
 proc; inline.
-call (: ={servers, c_smap, s_smap, tested, kp_set, bad, hm, h1m, h2m, hq, tq}(Game3, Game4)); try sim />. (* TODO : add the badq event *)
+call (: ={servers, c_smap, s_smap, tested, kp_set, bad, hm, h1m, hq, tq}(Game3, Game4)
+  /\ (forall x, x <> oget Game3.tq{1} => Game3.h2m{1}.[x] = Game4.h2m{2}.[x])). (* TODO : add the badq event *)
+
+- proc. admit.
+
+- sim />.
+
+- sim />.
+
+- sim />.
+
+- sim />.
+
+- sim />.
+
+- proc. sp; match = => // st. match = => // st' t' k' ir'. if => //.
+
+- sim />.
 
 - proc.
   sp; if => //.
@@ -260,7 +277,6 @@ qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 5b: Starting the crypto part  *)
-
 
 
 
@@ -416,18 +432,18 @@ call (: Game1.bad
   match; auto => />.
 
 - move => &2 bad.
-  proc; sp; if => //. sp. admit. (*match. 1: by auto. 
-  match; auto => />.*)
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto => />.
 - move => &1.
-  proc; sp; if => //. sp. admit. (*match; 1: by auto. 
-  match; auto => />.*)
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto => />.
 
 - move => &2 bad.
-  proc; sp; if => //. sp. admit. (*match. 1: by auto. 
-  match; auto => />.*)
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto => />.
 - move => &1.
-  proc; sp; if => //. sp. admit. (*match; 1: by auto. 
-  match; auto => />.*)
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto => />.
 
 auto => />.
 move => rl rr al bl csl hml kpl ssl sl tl ar br csr hmr kpr ssr sr tr. 
@@ -479,8 +495,8 @@ apply (StdOrder.RealOrder.ler_trans Pr[BB.Exp(BB.Sample, Red_Coll(A)).main() @ &
   + by proc; sp; match; 1: auto; match; auto => /#.
   + by proc; sp; match; 1: auto; match; auto => /#.
   + by proc; sp; match; 1: auto; match; auto => /#.
-  + admit.
-  + admit.
+  + by proc; sp; if => //; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; if => //; sp; match; 1: auto; match; auto => /#.
   auto => /#.
 byequiv => //.
 proc. inline.
@@ -547,7 +563,6 @@ by call (ROSc.RO_split (Red_ROM(A))).
 qed.
 
 
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 3: Moving sampling of the shared key. *)
 print ROSc.
@@ -556,14 +571,14 @@ print ROSc.
 local op s_clear_k (s : pr_st_server instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => Accepted st t witness ir
+| Accepted st t k ir => if ir.`2 \/ ir.`3 then s else Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
 local op c_clear_k (s : pr_st_client instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => Accepted st t witness ir
+| Accepted st t k ir => if ir.`2 \/ ir.`3 then s else Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
@@ -576,11 +591,11 @@ move=> eqsm @/untested_partner_c.
 have ->: get_partners_c tr sml = get_partners_c tr smr.
 + rewrite /get_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
   rewrite !mem_filter !domE -eqsm.
-  by case: (sml.[x])=> /> [] @/s_clear_k /=.
+  by case: (sml.[x])=> /> [] @/s_clear_k /#.
 have -> //: get_untested_partners_c tr sml = get_untested_partners_c tr smr.
 rewrite /get_untested_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
 rewrite !mem_filter !domE -eqsm.
-by case: (sml.[x])=> /> [] @/s_clear_k /=.
+by case: (sml.[x])=> /> [] @/s_clear_k /#.
 qed.
 
 local lemma s_eq_partners_ck tr sml smr: 
@@ -591,11 +606,11 @@ move=> eqsm @/untested_partner_s.
 have ->: get_partners_s tr sml = get_partners_s tr smr.
 + rewrite /get_partners_s; apply: fsetP=> x; rewrite !mem_fdom.
   rewrite !mem_filter !domE -eqsm.
-  by case: (sml.[x])=> /> [] @/c_clear_k /=.
+  by case: (sml.[x])=> /> [] @/c_clear_k /#.
 have -> //: get_untested_partners_s tr sml = get_untested_partners_s tr smr.
 rewrite /get_untested_partners_s; apply: fsetP=> x; rewrite !mem_fdom.
 rewrite !mem_filter !domE -eqsm.
-by case: (sml.[x])=> /> [] @/c_clear_k /=.
+by case: (sml.[x])=> /> [] @/c_clear_k /#.
 qed.
 
 local lemma c_eq_origins_ck tr sml smr: 
@@ -655,12 +670,16 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distin
   call (: ={hm, servers, tested, kp_set, bad}(Red_ROM.AKE_O, Red_ROM2.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
           /\ (forall h, omap (fun v => c_clear_k v) Red_ROM.AKE_O.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
           /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
+          /\ (forall i st pt ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Pending st pt ir) 
+                => (exists b, ir = (b, false, false)))
+          /\ (forall i st pt ir, Red_ROM.AKE_O.s_smap{1}.[i] = Some (Pending st pt ir) 
+                => ir = (false, false, false))
           /\ (forall i st pt k ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Accepted st pt k ir)
-                => Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt witness ir)
+                => (exists k', Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k' ir))
                    /\ ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
                    /\ k = oget ROSc.I2.RO.m{2}.[((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1)])
           /\ (forall i st pt k ir, Red_ROM.AKE_O.s_smap{1}.[i] = Some (Accepted st pt k ir)
-                => Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt witness ir)
+                => (exists k', Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k' ir))
                    /\ (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
                    /\ k = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
           /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.
@@ -729,10 +748,10 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-      move=> c_clear s_clear inv1 inv2 eq_dom mem_ro.
+      move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom mem_ro.
       move: c_smap2_i; rewrite -c_clear.
       rewrite c_smap1_i=> />. 
-      smt(mem_set get_setE).
+      smt(get_setE).
     + auto=> /> &1 &2.
       case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
@@ -754,7 +773,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     auto => /> &1 &2.
     case _: (Red_ROM.AKE_O.c_smap{1}.[i{2}])=> /> c_smap1_i.
     case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-    move=> c_clear s_clear inv1 inv2 eq_dom H k _. 
+    move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom _ k _. 
     smt(get_setE mem_set).
 
   - proc; inline.
@@ -770,23 +789,22 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     auto => /> &1 &2.
     case _: (Red_ROM.AKE_O.s_smap{1}.[(b, j){2}])=> /> s_smap1_i.
     case _: (Red_ROM2.AKE_O.s_smap.[(b, j)]{2})=> /> s_smap2_i.
-    move=> c_clear s_clear inv1 inv2 eq_dom _ k _.
-    smt(get_setE).
+    move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom _ k _.
+    smt(get_setE mem_set).
   
   - proc; inline.
     sp; match => //.
     move => stl str.
     match = => // kp.
     if => //.
-    + move => /> &1 &2 hkp _ sstl sstr c_clear s_clear inv1 inv2 eq_dom.
+    + move => /> &1 &2 hkp _ sstl sstr c_clear s_clear inv1 inv2 inv3 inv4 eq_dom.
       split.
       + move => + j - /(_ j). 
-        rewrite !domE -s_clear => />. search omap ("_.[_]").
+        rewrite !domE -s_clear => />.
         case : (Red_ROM.AKE_O.s_smap.[b{2}, j]{1}) => />.
         smt(s_eq_partners_ck). 
-      clear inv1 inv2.
       move => + j - /(_ j). 
-      rewrite !domE -s_clear => />. search omap ("_.[_]").
+      rewrite !domE -s_clear => />.
       case : (Red_ROM.AKE_O.s_smap.[b{2}, j]{1}) => />.
       smt(s_eq_partners_ck).
     auto => />.
@@ -798,7 +816,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     move => stl str.
     match => //; 1..3: smt().
     + move => st'l ptl irl st'r ptr irr.
-      auto => /> &1 &2. 
+      auto => /> &1 &2 *. 
       smt(c_eq_origins_ck get_setE mem_set).
     move => st'l ptl kl irl st'r ptr kr irr.
     if => //.
@@ -847,29 +865,30 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
 have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
 rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) ll)].
 
-inline; wp.
+inline; wp. 
 call (: ={hm, servers, c_smap, s_smap, tested, kp_set, bad}(Red_ROM2.AKE_O, Game2) /\ ROSc.I1.RO.m{1} = Game2.h1m{2} /\ ROSc.I2.RO.m{1} = Game2.h2m{2});
  try sim />.
 
 - by proc; inline; auto => />.
 
 - proc; inline.
-  sp; match = => // sk.
+  sp. match = => // sk.
   match = => //.
   seq 1 1: (#pre /\ ={kp}); 1: by auto.
   sp 1 1; if => //.
+  sp; seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto => />.
   auto => />.
 
 - proc; inline.
-  sp; match = => // st.
-  match = => // st' pt' ir'.
-  sp; seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
+  sp. match = => // st.
+  match = => // st' pt' ir'. 
   auto => />.
 
 - proc; inline.
   sp; match = => // st.
   match = => // st' pt' k' ir'.
-  if => //. auto => />.
+  if => //.
+  auto => />. 
   smt(get_setE mem_set).
 
 - proc; inline.
