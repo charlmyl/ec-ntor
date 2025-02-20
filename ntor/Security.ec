@@ -262,76 +262,144 @@ declare axiom A_ll (G <: GAKE_out{-A}):
 declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis <= q_is /\ Counter.cm1 <= q_m1 /\ Counter.cm2 <= q_m2].
 
 
-(* ------------------------------------------------------------------------------------------ *)
-(* Step 4: Introducing event of collision between test query and queries made to the RO by the adversary. *)
-lemma Step4 &m :
-  Pr[E_GAKE(Game2, A).run() @ &m : res] = Pr[E_GAKE(Game3, A).run() @ &m : res].
-proof. 
-by byequiv => //; sim.
-qed. 
 
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Step 5a:  Removing RO for storing keys *)
-lemma Step5a &m :
-  Pr[E_GAKE(Game3, A).run() @ &m : res /\ (!Game3.badq)]
-  =
-  Pr[E_GAKE(No_Bad_Game, A).run() @ &m : res].
-proof. 
-rewrite eq_sym.
-byequiv => //.
-proc; inline.
-call (: Game3.badq, ={servers, c_smap, s_smap, tested, kp_set, bad, hm, h1m, h2m, hq, tq, badq} (No_Bad_Game, Game3)); last first.
-
-auto => />.
-move => *.
-split. 
-
+(* Step 5:  Removing RO for storing keys *)
+lemma Step5 &m: `| Pr[E_GAKE(Game3, A).run() @ &m : res] - Pr[E_GAKE(Game4, A).run() @ &m : res] | <= Pr[E_GAKE(Game3, A).run() @ &m : Game3.badq].
+proof.
+rewrite StdOrder.RealOrder.distrC.
+byequiv (: _ ==> _) : Game4.badq => //; first last.
++ by smt().
+symmetry; proc; inline*.
+call (: Game4.badq
+      , ={servers, c_smap, s_smap, tested, kp_set, bad, hm, h1m, h2m, hq, tq, badq}(Game3, Game4)
+       (* TODO : add invariant for state maps - they are not equivalent! *)
+      , ={badq}(Game3, Game4)) => //; try sim />.
 
 - exact A_ll.
 
-- proc; inline.
-  rcondt{2} ^if; 1: by auto.
-  sp ^Game3.badq<- ^No_Bad_Game.badq<-.
-  by case (No_Bad_Game.badq{2}); auto => />.
-- move => &2 bad. islossless.
-- move => _.
-  by proc; if; auto.
+- admit.
+- move => &2 bad; proc; auto => />. 
+  rewrite dkey_ll dtag_ll //=. admit.
+- move => &1; proc; auto.
+  rewrite dkey_ll dtag_ll //=. admit.
+
+- move => &2 bad.
+  proc; if; auto => />.
+  by rewrite dkp_ll.
+- move => &1.
+  proc; if; auto => />.
+  by rewrite dkp_ll.
+
+- move => &2 bad.
+  proc; auto => />.
+- move => &1.
+  proc; auto => />.
+
+- move => &2 bad.
+  proc; sp; if => //; sp; match. 
+  + auto => />. by rewrite dkp_ll.
+  match; auto => />.
+- move => &1.
+  proc; sp; if => //; sp; match. 
+  + auto => />. by rewrite dkp_ll.
+  match; auto => />.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  admit.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  admit.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+  by rewrite dtag_ll.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+  by rewrite dtag_ll.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  by rewrite dkey_ll.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  by rewrite dkey_ll.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
 
 - proc; inline.
-  rcondt{2} ^if; 1: by auto. 
-  if => //; auto => />. 
-- move => &2 bad. islossless.
-- move => _.
-  by proc; if; auto; if; auto.
+  admit.
+- move => &2 bad.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  admit.
+- move => &1.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  admit.
 
 - admit.
+- move => &2 bad.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  admit.
+- move => &1.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  admit.
 
-- proc.
-  sp; if => //.
-  sp; match = => // st.
-  match = => // st' t' k' ir'.
-  if => //.
-  rcondt{1} ^if. 
-  - auto => />. admit. (* TODO: Invariant! *)
-  auto => /> &1 &2 *. rewrite get_setE => /=.
-  admit. (* TODO: h2m not equal! *)
-
- - proc.
-  sp; if => //.
-  sp; match = => // st.
-  match = => // st' t' k' ir'.
-  if => //.
-  rcondt{1} ^if. 
-  - auto => />. admit. (* TODO: Invariant! *)
-  auto => /> &1 &2 *. rewrite get_setE => /=.
-  admit. (* TODO: h2m not equal! *)
-qed. 
-
+auto => />.
+move => rl rr al bl bql hml h1ml h2ml hql kpl ssl sl tl tql ar br bqr hmr h1mr h2mr hqr kpr ssr sr tr tqr. 
+by case : (!bqr) => />.
+qed.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Step 6a: Equivalence to the ideal Game  *)
-lemma Step6a &m :
+(* Step 6: Equivalence to the ideal Game  *)
+lemma Step6 &m :
   Pr[E_GAKE(Game4, A).run() @ &m : res /\ (oget Game4.tq \notin Game4.hq) ]
   =
   Pr[E_GAKE(GAKE1(NTOR_S(RO), NTOR_C(RO), RO), A).run() @ &m : res].
@@ -339,12 +407,7 @@ proof.
 byequiv => //.
 proc; inline.
 call (: ={servers, c_smap, s_smap, tested}(Game4, GAKEb) /\ RO.m{2} = Game4.hm{1}); try sim />; admit.
-
 qed.
-
-
-(* ------------------------------------------------------------------------------------------ *)
-(* Step 5b: Starting the crypto part  *)
 
 
 
@@ -980,6 +1043,14 @@ call (: ={hm, servers, c_smap, s_smap, tested, kp_set, bad}(Red_ROM2.AKE_O, Game
 auto => />.
 qed.
 
+
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 4: Introducing event of collision between test query and queries made to the RO by the adversary. *)
+lemma Step4 &m :
+  Pr[E_GAKE(Game2, A).run() @ &m : res] = Pr[E_GAKE(Game3, A).run() @ &m : res].
+proof. 
+by byequiv => //; sim.
+qed. 
 
 
 
