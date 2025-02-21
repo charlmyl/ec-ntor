@@ -241,7 +241,7 @@ module No_Bad_Game = Game3 with {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -Game3, -Game4, -No_Bad_Game, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll, -BB.Sample, -Red_ROM, -Red_ROM2 }.
+declare module A <: A_GAKE {-GAKE0, -Game0, -Game1, -Game2, -Game3, -Game4, -Game5, -No_Bad_Game, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll, -BB.Sample, -Red_ROM, -Red_ROM2 }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -398,15 +398,272 @@ by case : (!bqr) => />.
 qed.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Step 6: Equivalence to the ideal Game  *)
-lemma Step6 &m :
-  Pr[E_GAKE(Game4, A).run() @ &m : res /\ (oget Game4.tq \notin Game4.hq) ]
-  =
-  Pr[E_GAKE(GAKE1(NTOR_S(RO), NTOR_C(RO), RO), A).run() @ &m : res].
+(* Step 6: Going back to ideal game by introducing Birthday bound *)
+lemma Step6a &m :
+  `| Pr[E_GAKE(Game4, A).run() @ &m : res] - Pr[E_GAKE(Game5, A).run() @ &m : res] | <= Pr[E_GAKE(Game4, A).run() @ &m : Game4.bad].
+proof. 
+rewrite StdOrder.RealOrder.distrC.
+byequiv (: _ ==> _) : Game5.bad => //; first last.
++ by smt(eq_iff).
+symmetry; proc; inline*.
+call (: Game5.bad
+      , ={servers, c_smap, s_smap, tested, kp_set, hm, bad}(Game4, Game5)
+      , ={bad}(Game4, Game5)) => //; try sim />.
+
+- exact A_ll.
+
+- admit.
+- move => &2 bad; proc; auto => />. 
+  by rewrite dkey_ll dtag_ll //=.
+- move => &1; proc; auto.
+  by rewrite weight_dprod dkey_ll dtag_ll.
+
+- proc; if => //. auto => />.
+- move => &2 bad.
+  proc; if; auto => />.
+  rewrite dkp_ll //=. admit.
+- move => &1.
+  proc; if; auto => />.
+  by rewrite dkp_ll.
+
+- move => &2 bad.
+  proc; auto => />.
+- move => &1.
+  proc; auto => />.
+
+- proc.
+  sp; if => //.
+  sp; match = => //. 
+  + seq 1 1: (#pre /\ ={kp}); 1: by auto.
+    by sp 0 1; if{2}; auto => />.
+  move => st. 
+  match = => //.
+  move => st' pr' ir'.
+  auto => />.
+- move => &2 bad.
+  proc; sp; if => //; sp. 
+  match; auto => />.
+  + rewrite dkp_ll. smt().
+  by smt().
+- move => &1. 
+  proc; sp; if => //. 
+  sp; match; auto => />.
+  + by rewrite dkp_ll.
+  by smt().
+
+- proc; inline.
+  sp; match = => //. 
+  move => sk.
+  match = => //.
+  + seq 1 1: (#pre /\ ={kp}); 1: by auto.
+  sp; if => //.
+  admit.
+- move => &2 bad.
+  proc; inline*; sp; match; auto => />.
+  match; auto => />.
+  admit.
+- move => &1. 
+  proc; sp; match; auto => />.
+  match; 2: by auto => />. 
+  rcondf ^if; 1: by auto => />. 
+  auto => />.
+  by rewrite dkp_ll.
+
+- proc. 
+  sp; match = => // st.
+  match = => // st' pt' ir'.
+  admit.
+- move => &2 bad.
+  proc; inline.
+  sp; match; auto. 
+  match; auto => />.
+  by rewrite dtag_ll.
+- move => &1.
+  proc; inline*; auto => />.
+  sp; match; auto.
+  match; auto.
+  by rewrite weight_dprod dkey_ll dtag_ll.
+
+- proc.
+  sp; match = => // st.
+  match = => // st' pt k ir.
+  if => //.
+  admit.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+
+- proc.
+  sp; match = => // st.
+  match = => // st' pt k ir.
+  if => //.
+  admit. 
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+  if => //; auto => />.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto.
+
+- proc.
+  sp; if => //.
+  match = => // st.
+  match = => // st' pt k ir.
+  if => //.
+  admit.
+- move => &2 bad.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto; if => //; auto.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto; if => //; auto.
+  by rewrite dkey_ll.
+
+- proc.
+  sp; if => //.
+  match = => // st.
+  match = => // st' pt k ir.
+  if => //.
+  admit. 
+- move => &2 bad.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto; if => //; auto.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto; if => //; auto.
+  by rewrite dkey_ll.
+
+auto => />.
+move => rl rr al bl csl kpl ssl sl tl ar br csr hmr kpr ssr sr tr. 
+by case : (!br) => />.
+qed.
+
+lemma Step6b &m: Pr[E_GAKE(Game4, A).run() @ &m : Game0.bad] <= ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
+proof.
+apply (StdOrder.RealOrder.ler_trans Pr[BB.Exp(BB.Sample, Red_Coll(A)).main() @ &m : ! uniq BB.Sample.l]); first last.
++ apply (BB.pr_collision_q2 (Red_Coll(A))).
+  + move => S S_ll.
+    islossless.
+    apply (A_ll (Counter(Red_Coll_O_AKE(S)))); islossless.
+    + match; 1: auto; islossless.
+      match; auto.
+    + match; auto. 
+      by sp; match; auto; islossless.
+    + match => //.
+      by sp; match; auto; islossless.
+    + match => //; islossless.
+      by match; islossless.
+    + by match; 1: auto; match; islossless.
+    + by match; 1: auto; match; islossless.
+    + by match; 1: auto; match; islossless.
+    + by match; 1: auto; match; islossless.
+    + by match; 1: auto; match; islossless.
+    + by match; 1: auto; match; islossless.
+  proc; inline.
+  sp.
+  conseq (: _ ==> size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) (: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis <= q_is /\ Counter.cm1 <= q_m1 /\ Counter.cm2 <= q_m2)=> //.
+  + smt().
+  + by call (A_bounded_qs (Red_Coll_O_AKE(BB.Sample))).
+  call (: size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) => //.
+  + by proc; auto.
+  + by proc; inline; sp; if => //; auto => /#.
+  + by proc; auto.
+  + proc; inline; sp; if => //; 2: auto => /#.
+    by sp; match; auto => /#.
+  + proc; inline; sp; match; 1: auto => /#.
+    case ((Red_Coll_O_AKE.s_smap.[b, j]) = None).
+    + by match None ^match; auto => /#.
+    by match Some ^match; auto => /#.
+  + by proc; inline; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; if => //; sp; match; 1: auto; match; auto => /#.
+  + by proc; sp; if => //; sp; match; 1: auto; match; auto => /#.
+  auto => /#.
+byequiv => //.
+proc. inline.
+call (:
+ ={hm, servers, c_smap, s_smap, tested, kp_set, bad}(Game4, Red_Coll_O_AKE(BB.Sample))
+ /\ (Game4.bad{1} => !uniq BB.Sample.l{2})
+ /\ (forall kp, kp \in Game4.kp_set{1} => kp \in BB.Sample.l{2})
+) => //; admit.
+(* TODO : Either change back to sampling tuple or change reduction for this case *)
+(*
++ proc; inline; sp 0 2; if => //; auto => />. 
+  smt(mem_set in_fsetU1).
++ proc; inline; sp 2 4; if => //; auto.
+  sp; match = => // [|st].
+  + auto => />.
+    smt(mem_set in_fsetU1).
+  match = => // st' pt ir. 
+  auto => />.
++ proc; inline; sp 2 4; match = => // [|st]; 1: auto.
+  match = => // [|st']; 2: auto.
+  auto => />.
+  smt(mem_set in_fsetU1).
+auto => />.
+smt(in_fset0).*)
+qed.
+
+
+lemma Step6c &m :
+  Pr[E_GAKE(GAKE1(NTOR_S(RO), NTOR_C(RO), RO), A).run() @ &m : res] = Pr[E_GAKE(Game5, A).run() @ &m : res].
 proof. 
 byequiv => //.
 proc; inline.
-call (: ={servers, c_smap, s_smap, tested}(Game4, GAKEb) /\ RO.m{2} = Game4.hm{1}); try sim />; admit.
+call (: ={servers, c_smap, s_smap, tested}(GAKEb, Game5) /\ RO.m{1} = Game5.hm{2}); try sim />.
+
+- proc; inline; auto; if => //; auto => /#.
+
+- proc; inline. 
+  sp; if => //.
+  sp; match = => // [|st]; 1:by auto.
+  by match = => // st' pt' ir'; auto.
+
+- proc; inline.
+  sp; match = => // sk.
+  match = => //.
+  match Some {1} 4.
+  + by auto=> /> _ _ _ _; exists (b{m0}, sk, None).
+  match Some {1} ^match=> //; 1: by auto=> /> /#.
+  by auto => />.
+
+- proc; inline; auto=> />.
+  sp; match = => //; 1: auto.
+  by match = => //; 1: auto.
 qed.
 
 
