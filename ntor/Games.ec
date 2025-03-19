@@ -39,6 +39,8 @@ Steps done:
 (* Step0 inlining everything and adding bad event *)
 module Game0 : GAKE_out_i = {
   (* This is not aligned with the sequence above *)
+  var b0 : bool 
+
   var hm : (pkey * pkey * s_id * pkey * pkey, tag * key) fmap
 
   var servers : (s_id, server_state) fmap
@@ -52,7 +54,8 @@ module Game0 : GAKE_out_i = {
   var bad : bool
 
 
-  proc init_mem() : unit = {
+  proc init_mem(b: bool) : unit = {
+    b0 <- b;
     hm <- empty;
     servers <- empty;
     c_smap <- empty;
@@ -288,6 +291,7 @@ module Game0 : GAKE_out_i = {
   }
 
   proc c_test(i: int) : key option = {
+    var ks;
     var k <- None;
 
     if (!tested) {
@@ -299,10 +303,16 @@ module Game0 : GAKE_out_i = {
           if (oget c_smap.[i] is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
                   \/ fresh_partner_c t' s_smap servers = Some false)) {
-              k <- Some k';
-              c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+              if (b0 = false) {
+                k <- Some k';
+                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+              } else {
+                ks <$ dkey;
+                k <- Some ks;
+                c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');
+              }
               tested <- true;
-            }
+           }
           }
         }
       end;
@@ -311,6 +321,7 @@ module Game0 : GAKE_out_i = {
   }
 
   proc s_test(b: s_id, j: int) : key option = {
+    var ks;
     var k <- None;
 
     if (!tested) {
@@ -323,8 +334,14 @@ module Game0 : GAKE_out_i = {
             if (!(   get_ir_sess (oget s_smap.[b, j]) 
                   \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
                   \/ fresh_partner_s t' c_smap = Some false)) {
-              k <- Some k';
-              s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+              if (b0 = false) {
+                k <- Some k';
+                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+              } else {
+                ks <$ dkey;
+                k <- Some ks;
+                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');
+              }
               tested <- true;
             }
           }
@@ -354,6 +371,8 @@ module Game1 = Game0 with {
 
 print Game1.
 
+
+(* TO DO : Fix following game definitions!
 
 (* Step2: Splitting the random oracle *)
 module Game2 = Game1 with {
@@ -771,3 +790,4 @@ module Game5 : GAKE_out_i = {
 
 
 print Game4.
+*)

@@ -252,11 +252,13 @@ print RO.
 module type GAKE_out_i = {
   include GAKE_out
 
-  proc init_mem() : unit
+  proc init_mem(b : bool) : unit
 }.
 
 (* real AKE game *)
 module GAKEb (S: Server) (C: Client) (H : RO) = {
+  var b0 : bool 
+
   var servers : (s_id, server_state) fmap
 
   var c_smap: (int, pr_st_client instance_state) fmap
@@ -264,7 +266,8 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
   
   var tested: bool
 
-  proc init_mem() : unit = {
+  proc init_mem(b: bool) : unit = {
+    b0 <- b;
     H.init();
     servers <- empty;
     c_smap <- empty;
@@ -485,13 +488,9 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
     end;
     return ek;
   }
-}.
-
-
-module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
-  include GAKEb(S, C, H)
 
   proc c_test(i: int) : key option = {
+    var ks;
     var k <- None;
 
     if (!GAKEb.tested) {
@@ -503,8 +502,14 @@ module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
           if (oget GAKEb.c_smap.[i] is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget GAKEb.c_smap.[i]) \/ get_ir_eph (oget GAKEb.c_smap.[i]) 
                   \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false)) {
-              k <- Some k';
-              GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+              if (b0 = false) {
+                k <- Some k';
+                GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+              } else {
+                ks <$ dkey;
+                k <- Some ks;
+                GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');
+              }
               GAKEb.tested <- true;
            }
           }
@@ -515,6 +520,7 @@ module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
   }
 
   proc s_test(b: s_id, j: int) : key option = {
+    var ks;
     var k <- None;
 
     if (!GAKEb.tested) {
@@ -527,63 +533,14 @@ module GAKE0 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
             if (!(   get_ir_sess (oget GAKEb.s_smap.[b, j]) 
                   \/ (get_ir_eph (oget GAKEb.s_smap.[b, j]) /\ get_sr_ltk (oget GAKEb.servers.[b]))
                   \/ fresh_partner_s t' GAKEb.c_smap = Some false)) {
-              k <- Some k';
-              GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
-              GAKEb.tested <- true;
-            }
-          }
-        }
-      end;
-    }
-    return k;
-  }
-}.
-
-module GAKE1 (S: Server) (C: Client) (H : RO) : GAKE_out_i = {
-  include GAKEb(S, C, H)
-
-  proc c_test(i: int) : key option = {
-    var k <- None;
-    var ks;
-
-    if (!GAKEb.tested) {
-      match GAKEb.c_smap.[i] with
-      | None => { }
-      | Some _ => {
-          (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
-             and not all partner instances are unfresh can be tested *)
-          if (oget GAKEb.c_smap.[i] is Accepted st' t' k' ir') {
-            if (!(   get_ir_sess (oget GAKEb.c_smap.[i]) \/ get_ir_eph (oget GAKEb.c_smap.[i]) 
-                  \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false)) {
-              ks <$ dkey;
-              k <- Some ks;
-              GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');
-              GAKEb.tested <- true;
-            }
-          }
-        }
-      end;
-    }
-    return k;
-  }
-
-  proc s_test(b: s_id, j: int) : key option = {
-    var k <- None;
-    var ks;
-
-    if (!GAKEb.tested) {
-      match GAKEb.s_smap.[(b, j)] with
-      | None => { }
-      | Some _ => {
-          (* only accepted server instances that are not sesskey revealed, not trivially broken
-             and not all partner instances are unfresh can be tested *)
-          if (oget GAKEb.s_smap.[b, j] is Accepted st' t' k' ir') {
-            if (!(   get_ir_sess (oget GAKEb.s_smap.[b, j]) 
-                  \/ (get_ir_eph (oget GAKEb.s_smap.[b, j]) /\ get_sr_ltk (oget GAKEb.servers.[b]))
-                  \/ fresh_partner_s t' GAKEb.c_smap = Some false)) {
-              ks <$ dkey;
-              k <- Some ks;
-              GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');
+              if (b0 = false) {
+                k <- Some k';
+                GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+              } else {
+                ks <$ dkey;
+                k <- Some ks;
+                GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');
+              }
               GAKEb.tested <- true;
             }
           }
@@ -601,14 +558,15 @@ module type A_GAKE (G : GAKE_out) = {
   proc run() : bool
 }.
 
-module E_GAKE (O : GAKE_out_i) (A : A_GAKE) = {
-  proc run() : bool = {
-    var b : bool;
+module E_GAKE (O: GAKE_out_i) (A : A_GAKE) = {
 
-    O.init_mem();
+  proc run(b: bool) : bool = {
+    var b' : bool;
+
+    O.init_mem(b);
     
-    b <@ A(O).run();
+    b' <@ A(O).run();
     
-    return b;
+    return b';
   }
 }.
