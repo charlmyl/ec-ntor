@@ -372,6 +372,31 @@ module Game1 = Game0 with {
 print Game1.
 
 
+module Game2 = Game1 with {
+  var hq : (pkey * pkey * s_id * pkey * pkey) fset
+  var tq : (pkey * pkey * s_id * pkey * pkey) option
+  var badq : bool
+
+  proc init_mem [
+    -1 + { hq <- fset0; tq <- None; badq <- false;}
+  ]
+
+  proc h [
+    1 + ^ {hq <- hq `|` fset1 x; badq <- (tq <> None /\ oget tq \in hq);}
+  ]
+
+  proc c_test [
+    ^if.^match#Some.^match#Accepted.^if.^tested<- + {tq <- Some ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); badq <- (oget tq \in hq);}
+  ]
+
+  proc s_test [
+    ^if.^match#Some.^match#Accepted.^if.^tested<- + {tq <- Some  (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); badq <- (oget tq \in hq);}
+  ]
+}.
+
+print Game2.
+
+
 (* TO DO : Fix following game definitions!
 
 (* Step2: Splitting the random oracle *)
