@@ -104,10 +104,6 @@ realize topairK by rewrite /topair /ofpair.
 realize ofpairK by rewrite /topair /ofpair.
 realize sample_spec by rewrite /ofpair dprodC dmap_comp //=.
 
-print Game1.
-print ROc.
-
-
 module (Red_ROM_real (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.IdealAll.RO) = {
   module AKE_O : GAKE_out = Game1 with {
     proc h [ 
@@ -117,17 +113,33 @@ module (Red_ROM_real (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.Idea
   }
 
   proc distinguish() = {
-    var b;
+    var b';
     AKE_O.init_mem(false);
-    b <@ D(AKE_O).run();
-    return b;
+    b' <@ D(AKE_O).run();
+    return b';
   }
 }.
 
-(*
+module (Red_ROM_ideal (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.IdealAll.RO) = {
+  module AKE_O : GAKE_out = Game1 with {
+    proc h [ 
+      ^tk<$ ~ {tk <@ O.get(x);}
+      ^if -
+    ] res ~ (tk)
+  }
+
+  proc distinguish() = {
+    var b';
+    AKE_O.init_mem(true);
+    b' <@ D(AKE_O).run();
+    return b';
+  }
+}.
+
+
 print Game2.
 
-module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
+module (Red_ROM2_real (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
   module AKE_O : GAKE_out = Game2 with {
     proc init_mem [
       ^h1m<- ~ {O1.init();}
@@ -142,49 +154,74 @@ module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 
     ] res ~ ((t, k))
 
     proc send_msg2 [
-      ^match#Some.^match#None.^if.^ts<$ -
-      ^match#Some.^match#None.^if.^if -
-      ^match#Some.^match#None.^if.^t_B<- ~ {t_B <@ O1.get(x); O2.sample(x);}
+      ^match#Some.^match#None.^if.^ts<$ ~ {t_B <@ O1.get(x); sk <@ O2.get(x);}
+      [^match#Some.^match#None.^if.^if - ^sk<-] -
     ]
 
     proc send_msg3 [
-      ^match#Some.^match#Pending.^ts<$ -
-      ^match#Some.^match#Pending.^if -
-      ^match#Some.^match#Pending.^t_A<- ~ {t_A <@ O1.get(x); O2.sample(x);}
-    ]
-
-    proc c_rev_skey [
-      ^match#Some.^match#Accepted.^if.^ks<$ -
-      ^match#Some.^match#Accepted.^if.^if -
-      ^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-    ]
-
-    proc s_rev_skey [
-      ^match#Some.^match#Accepted.^if.^ks<$ -
-      ^match#Some.^match#Accepted.^if.^if -
-      ^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^match#Some.^match#Pending.^ts<$ ~ {t_A <@ O1.get(x); sk <@ O2.get(x);}
+      [^match#Some.^match#Pending.^if - ^sk<-] -
     ]
 
     proc c_test [
-      ^if.^match#Some.^match#Accepted.^if.^ks<$ -
-      ^if.^match#Some.^match#Accepted.^if.^if -
-      ^if.^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted.^if.^if.^ks<$ ~ {ks <@ O2.get(x);}
     ]
 
     proc s_test [
-      ^if.^match#Some.^match#Accepted.^if.^ks<$ -
-      ^if.^match#Some.^match#Accepted.^if.^if -
-      ^if.^match#Some.^match#Accepted.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted.^if.^if.^ks<$ ~ {ks <@ O2.get(x);}
     ]  
   }
 
   proc distinguish() = {
     var b;
-    AKE_O.init_mem();
+    AKE_O.init_mem(false);
     b <@ D(AKE_O).run();
     return b;
   }
-}.*)
+}.
+
+
+module (Red_ROM2_ideal (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
+  module AKE_O : GAKE_out = Game2 with {
+    proc init_mem [
+      ^h1m<- ~ {O1.init();}
+      ^h2m<- -
+    ]
+
+    proc h [ 
+      ^t<$ ~ {t <@ O1.get(x); k <@ O2.get(x);}
+      ^if -
+      ^k<$ -
+      ^if -
+    ] res ~ ((t, k))
+
+    proc send_msg2 [
+      ^match#Some.^match#None.^if.^ts<$ ~ {t_B <@ O1.get(x); sk <@ O2.get(x);}
+      [^match#Some.^match#None.^if.^if - ^sk<-] -
+    ]
+
+    proc send_msg3 [
+      ^match#Some.^match#Pending.^ts<$ ~ {t_A <@ O1.get(x); sk <@ O2.get(x);}
+      [^match#Some.^match#Pending.^if - ^sk<-] -
+    ]
+
+    proc c_test [
+      ^if.^match#Some.^match#Accepted.^if.^if.^ks<$ ~ {ks <@ O2.get(x);}
+    ]
+
+    proc s_test [
+      ^if.^match#Some.^match#Accepted.^if.^if.^ks<$ ~ {ks <@ O2.get(x);}
+    ]  
+  }
+
+  proc distinguish() = {
+    var b;
+    AKE_O.init_mem(true);
+    b <@ D(AKE_O).run();
+    return b;
+  }
+}.
+
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Intermediate Bad Game Wrapper *)
@@ -253,7 +290,7 @@ module No_Bad_Game = Game3 with {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, -Game2, (*-Game3, -Game4, -Game5, -No_Bad_Game,*) -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM_real(*, -Red_ROM2*) }.
+declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, (*-Game2, -Game3, -Game4, -Game5, -No_Bad_Game,*) -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM_real, -Red_ROM_ideal, -Red_ROM2_real, -Red_ROM_ideal }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -275,7 +312,7 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 
 
 
-
+(*
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Introducing state to keep track of event that adversary queries RO on test session input *)
 lemma game1_game2 bit &m: Pr[E_GAKE(Game1, A).run(bit) @ &m : res] = Pr[E_GAKE(Game2, A).run(bit) @ &m : res].
@@ -287,7 +324,7 @@ lemma game2_adv &m: `| Pr[E_GAKE(Game2, A).run(false) @ &m : res] - Pr[E_GAKE(Ga
 proof. 
 admit. 
 qed.
-
+*)
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 0: Inlining everything. *)
 lemma gake_game0 b &m :
@@ -391,7 +428,7 @@ call (: Game1.bad
   match; 2: by auto => />. 
   rcondf ^if; 1: by auto => />. 
   auto => />.
-  by rewrite weight_dprod dkey_ll dtag_ll dkp_ll.
+  by rewrite dkp_ll.
 
 - move => &2 bad.
   proc; inline.
@@ -709,7 +746,7 @@ admit.
   match; 2: by auto => />. 
   rcondf ^if; 1: by auto => />. 
   auto => />.
-  by rewrite weight_dprod dkey_ll dtag_ll dkp_ll.
+  by rewrite dkp_ll.
 
 - move => &2 bad.
   proc; inline.
@@ -823,11 +860,6 @@ qed.
 
 
 
-
-
-(* old code
-
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Splitting the random oracle. *)
 local clone import DProd.ProdSampling with
@@ -835,14 +867,14 @@ local clone import DProd.ProdSampling with
   type t2 <- key
 proof *.
 
-lemma Step2 &m: Pr[E_GAKE(Game1, A).run() @ &m : res] = Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res].
+lemma game1_splitRO_real &m: Pr[E_GAKE(Game1, A).run(false) @ &m : res] = Pr[ROc.IdealAll.MainD(Red_ROM_real(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res].
 proof.
-byequiv (: ={glob A, glob Red_ROM} ==> _)  => //.
+byequiv (: ={glob A, glob Red_ROM_real} /\ arg{1} = false ==> _)  => //.
 proc*.
-outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM(A), ROc.IdealAll.RO).distinguish(); }.
+outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM_real(A), ROc.IdealAll.RO).distinguish(); }.
 
 + inline; wp.
-  call (: ={servers, c_smap, s_smap, tested, kp_set, bad}(Game1, Red_ROM.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2}); 
+  call (: ={servers, c_smap, s_smap, tested, kp_set, bad}(Game1, Red_ROM_real.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2} /\ Game1.b0{1} = Red_ROM_real.AKE_O.b0{2}); 
     try sim />.
 
   + proc; inline.
@@ -865,8 +897,46 @@ outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM(A), ROc.IdealAll.RO).distingui
     sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto.
     auto => />.
 
-by call (ROSc.RO_split (Red_ROM(A))).
+  + auto.
+
+by call (ROSc.RO_split (Red_ROM_real(A))).
 qed.
+
+lemma game1_splitRO_ideal &m: Pr[E_GAKE(Game1, A).run(true) @ &m : res] = Pr[ROc.IdealAll.MainD(Red_ROM_ideal(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res].
+proof.
+byequiv (: ={glob A, glob Red_ROM_ideal} /\ arg{1} = true ==> _)  => //.
+proc*.
+outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM_ideal(A), ROc.IdealAll.RO).distinguish(); }.
+
++ inline; wp.
+  call (: ={servers, c_smap, s_smap, tested, kp_set, bad}(Game1, Red_ROM_ideal.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2} /\ Game1.b0{1} = Red_ROM_ideal.AKE_O.b0{2}); 
+    try sim />.
+
+  + proc; inline.
+    case ((x \in Game1.hm){1}).
+    - auto => />.
+    sp; seq 1 1: (#pre /\ tk{1} = r{2}); 1: by auto.
+    auto => />.
+
+  + proc; inline.
+    sp 2 2; match = => // sk.
+    match = => //.
+    seq 1 1: (#pre /\ ={kp}); 1: by auto.
+    sp 1 1; if => //.
+    sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto => />.
+    auto => />.
+
+  + proc; inline.
+    sp 1 1; match = => // st.
+    match = => // st' pt ir.
+    sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto.
+    auto => />.
+
+  + auto.
+
+by call (ROSc.RO_split (Red_ROM_ideal(A))).
+qed.
+
 
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -965,27 +1035,27 @@ by case: (sml.[x])=> /> [] @/c_clear_k /#.
 qed.
 
 
-lemma Step3 &m: Pr[ROc.IdealAll.MainD(Red_ROM(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run() @ &m : res].
+lemma splitRO_game2_real &m: Pr[ROc.IdealAll.MainD(Red_ROM_real(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run(false) @ &m : res].
 proof.
-byequiv (: ={glob A, glob Red_ROM2} ==> _)  => //.
+byequiv (: ={glob A, glob Red_ROM2_real} /\ arg{2} = false ==> _)  => //.
 proc*.
 
-outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.RO).distinguish(); }.
+outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish(); }.
 
 + inline*; wp.
-  call (: ={hm, servers, tested, kp_set, bad}(Red_ROM.AKE_O, Red_ROM2.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
-          /\ (forall h, omap (fun v => c_clear_k v) Red_ROM.AKE_O.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
-          /\ (forall h, omap (fun v => s_clear_k v) Red_ROM.AKE_O.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
-          /\ (forall i st pt ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Pending st pt ir) 
+  call (: ={hm, servers, tested, kp_set, bad}(Red_ROM_real.AKE_O, Red_ROM2_real.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
+          /\ (forall h, omap (fun v => c_clear_k v) Red_ROM_real.AKE_O.c_smap.[h]{1} = Red_ROM2_real.AKE_O.c_smap.[h]{2})
+          /\ (forall h, omap (fun v => s_clear_k v) Red_ROM_real.AKE_O.s_smap.[h]{1} = Red_ROM2_real.AKE_O.s_smap.[h]{2})
+          /\ (forall i st pt ir, Red_ROM_real.AKE_O.c_smap{1}.[i] = Some (Pending st pt ir) 
                 => (exists b, ir = (b, false, false)))
-          /\ (forall i st pt ir, Red_ROM.AKE_O.s_smap{1}.[i] = Some (Pending st pt ir) 
+          /\ (forall i st pt ir, Red_ROM_real.AKE_O.s_smap{1}.[i] = Some (Pending st pt ir) 
                 => ir = (false, false, false))
-          /\ (forall i st pt k ir, Red_ROM.AKE_O.c_smap{1}.[i] = Some (Accepted st pt k ir)
-                => (exists k', Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k' ir))
+          /\ (forall i st pt k ir, Red_ROM_real.AKE_O.c_smap{1}.[i] = Some (Accepted st pt k ir)
+                => (exists k', Red_ROM2_real.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k' ir))
                    /\ ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
                    /\ k = oget ROSc.I2.RO.m{2}.[((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1)])
-          /\ (forall i st pt k ir, Red_ROM.AKE_O.s_smap{1}.[i] = Some (Accepted st pt k ir)
-                => (exists k', Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k' ir))
+          /\ (forall i st pt k ir, Red_ROM_real.AKE_O.s_smap{1}.[i] = Some (Accepted st pt k ir)
+                => (exists k', Red_ROM2_real.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k' ir))
                    /\ (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
                    /\ k = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
           /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.

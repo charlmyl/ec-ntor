@@ -357,20 +357,83 @@ print Game0.
 (* Step1: Removing key collisions *)
 module Game1 = Game0 with {
   proc init_s [
-    ^if.^bad<- + (!bad)
+    [^if.^bad<- - ^servers<-] + (!bad)
   ]
 
   proc send_msg1 [
-    ^if.^match#None.^bad<- + (!bad)
+    [^if.^match#None.^bad<- - ^r<-] + (!bad)
   ]
 
   proc send_msg2 [
-    ^match#Some.^match#None.^bad<- + (!bad)
+    [^match#Some.^match#None.^bad<- - ^r<-] + (!bad)
   ]
 }.
 
 print Game1.
 
+
+(* Step2: Splitting the random oracle *)
+module Game2 = Game1 with {
+  var h1m : (pkey * pkey * s_id * pkey * pkey, tag) fmap
+  var h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap
+
+  proc init_mem [
+    -1 + { h1m <- empty; h2m <- empty; }
+  ]
+
+  proc h [
+    var t : tag
+    var k : key
+    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
+    ^if -
+  ] res ~ ((oget h1m.[x], oget h2m.[x]))
+
+  proc send_msg2 [
+    var ts : tag
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ kp.`2, m2 ^ sk_b, b, m2, kp.`1);
+                                      ts <$ dtag;
+                                      if (x \notin h1m) {h1m.[x] <- ts;} 
+                                      t_B <- oget h1m.[x];
+                                      ks <$ dkey;
+                                      if (x \notin h2m) {h2m.[x] <- ks;} 
+                                      sk <- oget h2m.[x];}
+  ]
+
+  proc send_msg3 [
+    var ts : tag
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
+                                     ts <$ dtag;
+                                     if (x \notin h1m) {h1m.[x] <- ts;} 
+                                     t_A <- oget h1m.[x];
+                                     ks <$ dkey;
+                                     if (x \notin h2m) {h2m.[x] <- ks;} 
+                                     sk <- oget h2m.[x];}
+
+  ]
+
+  proc c_test [
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; k <- Some ks;}
+    ^if.^match#Some.^match#Accepted.^if.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' (oget k) ir');}
+  ]
+
+  proc s_test [
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; k <- Some ks;}
+    ^if.^match#Some.^match#Accepted.^if.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' (oget k) ir');}
+  ]
+
+}.
+
+print Game2. 
+
+
+
+(* TO DO : Fix following game definitions!
 
 module Game2 = Game1 with {
   var hq : (pkey * pkey * s_id * pkey * pkey) fset
@@ -395,76 +458,6 @@ module Game2 = Game1 with {
 }.
 
 print Game2.
-
-
-(* TO DO : Fix following game definitions!
-
-(* Step2: Splitting the random oracle *)
-module Game2 = Game1 with {
-  var h1m : (pkey * pkey * s_id * pkey * pkey, tag) fmap
-  var h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap
-
-  proc init_mem [
-    -1 + { h1m <- empty; h2m <- empty; }
-  ]
-
-  proc h [
-    var t : tag
-    var k : key
-    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
-    ^if -
-  ] res ~ ((oget h1m.[x], oget h2m.[x]))
-
-  proc send_msg2 [
-    var ts : tag
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ kp.`2, m2 ^ sk_b, b, m2, kp.`1);
-                                      ts <$ dtag;
-                                      if (x \notin h1m) {h1m.[x] <- ts;} 
-                                      t_B <- oget h1m.[x]; sk <- witness;}
-  ]
-
-  proc send_msg3 [
-    var ts : tag
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
-                                      ts <$ dtag;
-                                      if (x \notin h1m) {h1m.[x] <- ts;} 
-                                      t_A <- oget h1m.[x]; sk <- witness;}
-
-  ]
-
-  proc c_rev_skey [
-    var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^match#Some.^match#Accepted.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_sess (Accepted st' t' (oget k) ir');}
-  ]
-
-  proc s_rev_skey [
-    var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^match#Some.^match#Accepted.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' (oget k) ir');}
-  ]
-
-  proc c_test [
-    var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^if.^match#Some.^match#Accepted.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' (oget k) ir');}
-  ]
-
-  proc s_test [
-    var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^if.^match#Some.^match#Accepted.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' (oget k) ir');}
-  ]
-
-}.
-
-print Game2. 
 
 
 module Game3 = Game2 with {
