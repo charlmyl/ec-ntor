@@ -415,6 +415,11 @@ module Game2 = Game1 with {
 
   ]
 
+}.
+
+print Game2. 
+
+module Game3 = Game2 with {
   proc c_test [
     var x : pkey * pkey * s_id * pkey * pkey
     ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; k <- Some ks;}
@@ -426,12 +431,9 @@ module Game2 = Game1 with {
     ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; k <- Some ks;}
     ^if.^match#Some.^match#Accepted.^if.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' (oget k) ir');}
   ]
-
 }.
 
-print Game2. 
-
-
+print Game3.
 
 (* TO DO : Fix following game definitions!
 

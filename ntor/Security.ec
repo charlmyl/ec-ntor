@@ -140,7 +140,7 @@ module (Red_ROM_ideal (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.Ide
 print Game2.
 
 module (Red_ROM2_real (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
-  module AKE_O : GAKE_out = Game2 with {
+  module AKE_O : GAKE_out = Game3 with {
     proc init_mem [
       ^h1m<- ~ {O1.init();}
       ^h2m<- -
@@ -182,7 +182,7 @@ module (Red_ROM2_real (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher)
 
 
 module (Red_ROM2_ideal (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
-  module AKE_O : GAKE_out = Game2 with {
+  module AKE_O : GAKE_out = Game3 with {
     proc init_mem [
       ^h1m<- ~ {O1.init();}
       ^h2m<- -
@@ -290,7 +290,7 @@ module No_Bad_Game = Game3 with {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, (*-Game2, -Game3, -Game4, -Game5, -No_Bad_Game,*) -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM_real, -Red_ROM_ideal, -Red_ROM2_real, -Red_ROM_ideal }.
+declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, -Game2, (*-Game3, -Game4, -Game5, -No_Bad_Game,*) -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM_real, -Red_ROM_ideal, -Red_ROM2_real, -Red_ROM_ideal }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -655,7 +655,7 @@ qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 1: Remove collisions in ephemeral and long-term keys. Strategy with single birthday bound. *)
-lemma game0_split bit &m: Pr[E_GAKE(Game0, A).run(bit) @ &m : res] = Pr[E_GAKE(Game0, A).run(bit) @ &m : res /\ Game0.bad] + Pr[E_GAKE(Game0, A).run(bit) @ &m : res /\ !Game0.bad]. 
+lemma game0_musplit bit &m: Pr[E_GAKE(Game0, A).run(bit) @ &m : res] = Pr[E_GAKE(Game0, A).run(bit) @ &m : res /\ Game0.bad] + Pr[E_GAKE(Game0, A).run(bit) @ &m : res /\ !Game0.bad]. 
 proof. 
 by rewrite Pr[mu_split Game0.bad].
 qed.
@@ -828,7 +828,7 @@ qed.
 lemma game0_game1_adv &m: `| Pr[E_GAKE(Game0, A).run(false) @ &m : res] - Pr[E_GAKE(Game0, A).run(true) @ &m : res] |
                        <= `| Pr[E_GAKE(Game1, A).run(false) @ &m : res] - Pr[E_GAKE(Game1, A).run(true) @ &m : res] | +  ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
 proof. 
-rewrite !(game0_split _).
+rewrite !(game0_musplit _).
 apply (StdOrder.RealOrder.ler_trans 
         (`| Pr[E_GAKE(Game0, A).run(false) @ &m : res /\ !Game0.bad] - Pr[E_GAKE(Game0, A).run(true) @ &m : res /\ !Game0.bad]| 
           + `| Pr[E_GAKE(Game0, A).run(false) @ &m : res /\ Game0.bad] - Pr[E_GAKE(Game0, A).run(true) @ &m : res /\ Game0.bad]|)).
@@ -867,14 +867,17 @@ local clone import DProd.ProdSampling with
   type t2 <- key
 proof *.
 
-lemma game1_splitRO_real &m: Pr[E_GAKE(Game1, A).run(false) @ &m : res] = Pr[ROc.IdealAll.MainD(Red_ROM_real(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res].
+lemma game1_splitRO bit &m: Pr[E_GAKE(Game1, A).run(bit) @ &m : res] =  Pr[E_GAKE(Game2, A).run(bit) @ &m : res].
 proof.
-byequiv (: ={glob A, glob Red_ROM_real} /\ arg{1} = false ==> _)  => //.
+case (bit = false) => real_ideal.
+
+(* Proof on the real side *)
+byequiv (: ={glob A, glob Red_ROM_real} /\ arg{1} = bit /\ arg{2} = bit ==> _) => //.
 proc*.
-outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM_real(A), ROc.IdealAll.RO).distinguish(); }.
+transitivity*  {1} { r <@ ROc.IdealAll.MainD(Red_ROM_real(A), ROc.IdealAll.RO).distinguish(); }.
 
 + inline; wp.
-  call (: ={servers, c_smap, s_smap, tested, kp_set, bad}(Game1, Red_ROM_real.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2} /\ Game1.b0{1} = Red_ROM_real.AKE_O.b0{2}); 
+  call (: ={b0, servers, c_smap, s_smap, tested, kp_set, bad}(Game1, Red_ROM_real.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2}); 
     try sim />.
 
   + proc; inline.
@@ -899,17 +902,47 @@ outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM_real(A), ROc.IdealAll.RO).dist
 
   + auto.
 
-by call (ROSc.RO_split (Red_ROM_real(A))).
-qed.
+transitivity*  {2} { r <@ ROc.IdealAll.MainD(Red_ROM_real(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish(); };
+  1: by call (ROSc.RO_split (Red_ROM_real(A))).
 
-lemma game1_splitRO_ideal &m: Pr[E_GAKE(Game1, A).run(true) @ &m : res] = Pr[ROc.IdealAll.MainD(Red_ROM_ideal(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res].
-proof.
-byequiv (: ={glob A, glob Red_ROM_ideal} /\ arg{1} = true ==> _)  => //.
+inline; wp.
+call (: ={b0, servers, c_smap, s_smap, tested, kp_set, bad}(Red_ROM_real.AKE_O, Game2) /\ Game2.h1m{2} = ROSc.I1.RO.m{1} /\ Game2.h2m{2} = ROSc.I2.RO.m{1}
+          /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); 
+    try sim />.
+
++ proc; inline.
+  case ((x \in Game1.hm){1}).
+  - auto => />. smt(mem_set).
+  sp; seq 1 1: (#pre /\ r{1} = t{2}); 1: by auto.
+  auto => />.
+  smt(mem_set).
+
++ proc; inline.
+  sp 2 2; match = => // sk.
+  match = => //.
+  seq 1 1: (#pre /\ ={kp}); 1: by auto.
+  sp 1 1; if => //.
+  sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto => />.
+  auto => />.
+  smt(mem_set).
+
++ proc; inline.
+  sp 1 1; match = => // st.
+  match = => // st' pt ir.
+  sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
+  auto => />.
+  smt(mem_set).
+
+auto => />.
+smt(emptyE).
+
+(* Proof on the ideal side *)
+byequiv (: ={glob A, glob Red_ROM_ideal} /\ arg{1} = bit /\ arg{2} = bit ==> _) => //.
 proc*.
-outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM_ideal(A), ROc.IdealAll.RO).distinguish(); }.
+transitivity*  {1} { r <@ ROc.IdealAll.MainD(Red_ROM_ideal(A), ROc.IdealAll.RO).distinguish(); }.
 
 + inline; wp.
-  call (: ={servers, c_smap, s_smap, tested, kp_set, bad}(Game1, Red_ROM_ideal.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2} /\ Game1.b0{1} = Red_ROM_ideal.AKE_O.b0{2}); 
+  call (: ={b0, servers, c_smap, s_smap, tested, kp_set, bad}(Game1, Red_ROM_ideal.AKE_O) /\ Game1.hm{1} = ROc.IdealAll.RO.m{2}); 
     try sim />.
 
   + proc; inline.
@@ -932,16 +965,186 @@ outline {1} [1] { r <@ ROc.IdealAll.MainD(Red_ROM_ideal(A), ROc.IdealAll.RO).dis
     sp. seq 1 1: (#pre /\ tk{1} = r0{2}); 1: by auto.
     auto => />.
 
-  + auto.
+  + auto => /#.
 
-by call (ROSc.RO_split (Red_ROM_ideal(A))).
+transitivity*  {2} { r <@ ROc.IdealAll.MainD(Red_ROM_ideal(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish(); };
+  1: by call (ROSc.RO_split (Red_ROM_ideal(A))).
+
+inline; wp.
+call (: ={b0, servers, c_smap, s_smap, tested, kp_set, bad}(Red_ROM_ideal.AKE_O, Game2) /\ Game2.h1m{2} = ROSc.I1.RO.m{1} /\ Game2.h2m{2} = ROSc.I2.RO.m{1}
+          /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); 
+    try sim />.
+
++ proc; inline.
+  case ((x \in Game1.hm){1}).
+  - auto => />. smt(mem_set).
+  sp; seq 1 1: (#pre /\ r{1} = t{2}); 1: by auto.
+  auto => />.
+  smt(mem_set).
+
++ proc; inline. 
+  sp 2 2; match = => // sk.
+  match = => //.
+  seq 1 1: (#pre /\ ={kp}); 1: by auto.
+  sp 1 1; if => //.
+  sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto => />.
+  auto => />.
+  smt(mem_set).
+
++ proc; inline.
+  sp 1 1; match = => // st.
+  match = => // st' pt ir.
+  sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
+  auto => />.
+  smt(mem_set).
+
+auto => />.
+smt(emptyE).
 qed.
-
 
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 3: Moving sampling of the shared key. *)
-print ROSc.
+lemma splitRO_game2_real &m: Pr[ROc.IdealAll.MainD(Red_ROM_real(A), ROSc.RO_Pair(ROSc.I1.RO,ROSc.I2.RO)).distinguish() @ &m : res] = Pr[E_GAKE(Game2, A).run(false) @ &m : res].
+proof.
+byequiv (: ={glob A, glob Red_ROM2_real} /\ arg{2} = false ==> _)  => //.
+proc*.
+
+outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish(); }.
+
++ inline*; wp.
+  call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad}(Red_ROM_real.AKE_O, Red_ROM2_real.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
+          /\ (forall i st pt k ir, Red_ROM_real.AKE_O.c_smap{1}.[i] = Some (Accepted st pt k ir)
+                => (exists k', Red_ROM2_real.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k' ir))
+                   /\ ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
+                   /\ k = oget ROSc.I2.RO.m{2}.[((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1)])
+          /\ (forall i st pt k ir, Red_ROM_real.AKE_O.s_smap{1}.[i] = Some (Accepted st pt k ir)
+                => (exists k', Red_ROM2_real.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k' ir))
+                   /\ (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
+                   /\ k = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
+
+          /\ forall x, x \in ROSc.I1.RO.m{1} <=> x \in ROSc.I2.RO.m{1}); last first.
+  - by auto => />; smt(map_empty emptyE).
+
+  - proc; inline; auto => />; smt(mem_set get_setE).
+
+  - by sim />. 
+  
+  - by sim />.
+
+  - proc; inline.
+    sp; if => //.
+    sp; match.
+    + smt().
+    + smt().
+    + by auto=> />; smt(get_setE).
+    move=> stl str; auto=> />.
+    smt(get_setE).
+
+  - proc; inline.
+    sp; match = => // sk.
+    match => //.
+    seq 1 1: (#pre /\ ={kp}); 1:by auto.
+    sp 1 1; if => //.
+    swap {1} ^r0<$ @ 1; swap {1} ^r3<$ @ 2.
+    swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2. 
+    seq  2  2: (#pre /\ ={r0} /\ r3{1} = r1{2}); 1: by auto=> />.
+    sp 4 3; if {1} => //.
+    + rcondt {1} ^if; 1: by auto => /#.
+      rcondt {2} ^if; 1: by auto => /#.
+      rcondt {2} ^if; 1: by auto => /#. 
+      auto => /> &1. 
+      smt(mem_set get_setE).
+    rcondf {1} ^if; 1: by auto => /#.
+    rcondf {2} ^if; 1: by auto => /#.
+    rcondf {2} ^if; 1: by auto => /#.
+    auto => /> &2. admit.
+
+  - proc; inline.
+    sp; match=> // stl str.
+    match => // st'l ptl irl st'r ptr irr.
+    swap {1} ^r0<$ @ 1; swap {1} ^r3<$ @ 2.
+    swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2.
+    seq  2  2: (#pre /\ ={r0} /\ r3{1} = r1{2}); 1: by auto.
+    sp ^if & -1   ^if & -1.
+    if{1} => //.
+    + rcondt {1} ^if; 1: by auto => /#.
+      rcondt {2} ^if; 1: by auto => /#.
+      rcondt {2} ^if; 1: by auto => /#. 
+      auto => /> &1. 
+      smt(mem_set get_setE).
+    rcondf {1} ^if; 1: by auto => /#.
+    rcondf {2} ^if; 1: by auto => /#.
+    rcondf {2} ^if; 1: by auto => /#.
+    auto => /> &1 &2. 
+    smt(mem_set get_setE). 
+
+  - proc; inline.
+    sp; match=> // stl str.
+    match => // st'l ptl kl irl st'r ptr kr irr.
+    if => //; auto=> />; smt(get_setE mem_set).
+
+  - proc; inline.
+    sp; match=> // stl str.
+    match => // st'l ptl kl irl st'r ptr kr irr.
+    if => //; auto=> />; smt(get_setE mem_set).
+
+  - proc; inline.
+    sp; match=> // stl str.
+    match => // kpl kpr.
+    if => //; auto=> />. 
+    by smt(get_setE mem_set).
+
+  - proc; inline.
+    sp; match=> // stl str.
+    match => // st'l ptl irl st'r ptr irr.
+    + if => //; auto=> />; smt(get_setE mem_set).
+    move => k ir.
+    if => //; auto => />; smt(get_setE mem_set).
+
+  - proc; inline.
+    sp; match=> // stl str.
+    match => // st'l ptl irl st'r ptr irr k ir.
+    if => //; auto => />; smt(get_setE mem_set).
+
+  - proc; inline.
+    sp; if => //; match=> // stl str.
+    match => // st'l ptl kl irl st'r ptr kr irr.
+    if => //; 1: auto=> /#.
+    if => //; auto => />. 
+    + smt(get_setE mem_set).
+    move => &2 *.
+    split. smt().
+    move => i0 st pt k0 ir. 
+    move => H. split. 
+    case (i0 = i{2}) => i0i.
+    rewrite i0i !get_set_sameE.
+    move => H.
+    split. smt().
+    split. 
+    smt(get_setE mem_set).
+    admit.
+    
+
+  - proc; inline.
+    sp; if => //; match=> // stl str.
+    match => // st'l ptl irl st'r ptr irr k' ir'.
+    if => //; 1: auto=> /#.
+    if => //; auto => />. 
+    + smt(get_setE mem_set).
+    admit.
+
+admit. 
+qed.
+ 
+
+
+
+
+
+
+(* old code
+
 
 (* Clearing the key out of the state *)
 local op s_clear_k (s : pr_st_server instance_state) =
@@ -1043,7 +1246,7 @@ proc*.
 outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish(); }.
 
 + inline*; wp.
-  call (: ={hm, servers, tested, kp_set, bad}(Red_ROM_real.AKE_O, Red_ROM2_real.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
+  call (: ={b0, hm, servers, tested, kp_set, bad}(Red_ROM_real.AKE_O, Red_ROM2_real.AKE_O) /\ ={ROSc.I1.RO.m, ROSc.I2.RO.m}
           /\ (forall h, omap (fun v => c_clear_k v) Red_ROM_real.AKE_O.c_smap.[h]{1} = Red_ROM2_real.AKE_O.c_smap.[h]{2})
           /\ (forall h, omap (fun v => s_clear_k v) Red_ROM_real.AKE_O.s_smap.[h]{1} = Red_ROM2_real.AKE_O.s_smap.[h]{2})
           /\ (forall i st pt ir, Red_ROM_real.AKE_O.c_smap{1}.[i] = Some (Pending st pt ir) 
@@ -1091,7 +1294,11 @@ outline {1} [1] { r <@ ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).d
         rcondt {2} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#. 
         auto => /> &1 &2.
-        smt(mem_set get_setE).
+        move => *.
+        split. rewrite get_setE //=. move => h.
+        case (h = (b, j){2}) => hbj.
+        rewrite hbj !get_set_sameE //=. 
+        smt(mem_set get_set_sameE).
       + rcondf {1} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
