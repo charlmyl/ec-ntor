@@ -372,13 +372,16 @@ module Game1 = Game0 with {
 print Game1.
 
 
-(* Step2: Splitting the random oracle *)
+(* Step2: Splitting the random oracle and tracking bad event of overlap between RO queries and test query *)
 module Game2 = Game1 with {
   var h1m : (pkey * pkey * s_id * pkey * pkey, tag) fmap
   var h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap
+  var hq : (pkey * pkey * s_id * pkey * pkey) fset
+  var tq : (pkey * pkey * s_id * pkey * pkey) option
+  var badq : bool
 
   proc init_mem [
-    -1 + { h1m <- empty; h2m <- empty; }
+    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; }
   ]
 
   proc h [
@@ -386,6 +389,7 @@ module Game2 = Game1 with {
     var k : key
     ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
     ^if -
+    1 + ^ {hq <- hq `|` fset1 x; badq <- (tq <> None /\ oget tq \in hq);}
   ] res ~ ((oget h1m.[x], oget h2m.[x]))
 
   proc send_msg2 [
@@ -415,21 +419,29 @@ module Game2 = Game1 with {
 
   ]
 
-}.
-
-print Game2. 
-
-module Game3 = Game2 with {
   proc c_test [
     var x : pkey * pkey * s_id * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); ks <$ dkey; k <- Some ks;}
-    ^if.^match#Some.^match#Accepted.^if.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' (oget k) ir');}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
   ]
 
   proc s_test [
     var x : pkey * pkey * s_id * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); ks <$ dkey; k <- Some ks;}
-    ^if.^match#Some.^match#Accepted.^if.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' (oget k) ir');}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
+  ]
+}.
+
+print Game2. 
+
+(* Step3: Replacing key computation on real side with sampling *)
+module Game3 = Game2 with {
+  proc c_test [
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; k <- Some ks;}
+    ^if.^match#Some.^match#Accepted.^if.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');}
+  ]
+
+  proc s_test [
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; k <- Some ks;}
+    ^if.^match#Some.^match#Accepted.^if.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');}
   ]
 }.
 
