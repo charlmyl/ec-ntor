@@ -422,13 +422,13 @@ module Game2 = Game1 with {
   proc c_test [
     var x : pkey * pkey * s_id * pkey * pkey
     ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
   ]
 
   proc s_test [
     var x : pkey * pkey * s_id * pkey * pkey
     ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^k<- + ^ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); tq <- Some x; badq <- (oget tq \in hq);}
   ]
 }.
 
