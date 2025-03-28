@@ -188,7 +188,7 @@ module Game0 : GAKE_out_i = {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
             k <- Some k';
-            c_smap.[i] <- set_ir_sess (Accepted st' t' (oget k) ir');
+            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -207,7 +207,7 @@ module Game0 : GAKE_out_i = {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' (oget k) ir');
+            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -309,7 +309,7 @@ module Game0 : GAKE_out_i = {
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');
+                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
               tested <- true;
            }
@@ -340,7 +340,7 @@ module Game0 : GAKE_out_i = {
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');
+                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
               tested <- true;
             }
@@ -418,6 +418,8 @@ module Game2 = Game1 with {
                                      sk <- oget h2m.[x];}
 
   ]
+  
+
 
   proc c_test [
     var x : pkey * pkey * s_id * pkey * pkey

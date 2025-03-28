@@ -177,13 +177,11 @@ module (Red_ROM2_real (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher)
 
     proc c_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');}
       ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
 
     proc s_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');}
       ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
   }
@@ -235,13 +233,11 @@ module (Red_ROM2_ideal (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher
 
     proc c_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');}
       ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
 
     proc s_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');}
       ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
   }
@@ -324,6 +320,8 @@ call (: ={b0, servers, c_smap, s_smap, tested}(GAKEb, Game0) /\ RO.m{1} = Game0.
 - proc; inline; auto=> />.
   sp; match = => //; 1: auto.
   by match = => //; 1: auto.
+
+admit. admit.
 qed.
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -985,14 +983,14 @@ qed.
 local op s_clear_k (s : pr_st_server instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => if ir.`2 \/ ir.`3 then s else Accepted st t witness ir
+| Accepted st t k ir => Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
 local op c_clear_k (s : pr_st_client instance_state) =
 match s with
 | Pending _ _ _ => s
-| Accepted st t k ir => if ir.`2 \/ ir.`3 then s else Accepted st t witness ir
+| Accepted st t k ir => Accepted st t witness ir
 | Aborted _ _ _ => s
 end.
 
@@ -1282,6 +1280,9 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     smt(get_setE).
 qed.
 
+
+print eq_except.
+
 lemma game2_delay_ideal &m: Pr[E_GAKE(Game2, A).run(true) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res].
 proof. 
 byequiv => //.
@@ -1470,7 +1471,10 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     rcondf{1} ^if; 1: by auto.
     rcondf{2} ^if; 1: by auto.
     auto => /> &1 &2 *.
-    admit. (* add in invariant that in tested case we don't care about value of key *)
+    split.
+    smt(get_setE).
+    move => *.
+    split. admit. smt(get_setE).
 
   - proc; inline.
     sp; if => //; sp; match => //.
