@@ -508,7 +508,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');
+                GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
               GAKEb.tested <- true;
            }
@@ -539,7 +539,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');
+                GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
               GAKEb.tested <- true;
             }

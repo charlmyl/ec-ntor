@@ -177,12 +177,10 @@ module (Red_ROM2_real (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher)
 
     proc c_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
 
     proc s_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
   }
 
@@ -233,12 +231,10 @@ module (Red_ROM2_ideal (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher
 
     proc c_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
 
     proc s_test [
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ ~ {ks <@ O2.get(x);}
     ]
   }
 
@@ -1285,10 +1281,10 @@ print eq_except.
 
 lemma game2_delay_ideal &m: Pr[E_GAKE(Game2, A).run(true) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res].
 proof. 
-byequiv => //.
+byequiv  => //.
 proc*.
-+ inline; wp.
-  call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq}(Game2, Red_ROM2_ideal.AKE_O) /\ Game2.b0{1} = true
+inline; wp.
+call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq}(Game2, Red_ROM2_ideal.AKE_O) /\ Game2.b0{1} = true
           /\ Game2.h1m{1} = ROSc.I1.RO.m{2} /\ Game2.h2m{1} = ROSc.I2.RO.m{2}
           /\ (forall h, omap (fun v => c_clear_k v) Game2.c_smap.[h]{1} = Red_ROM2_ideal.AKE_O.c_smap.[h]{2})
           /\ (forall h, omap (fun v => s_clear_k v) Game2.s_smap.[h]{1} = Red_ROM2_ideal.AKE_O.s_smap.[h]{2})
@@ -1321,8 +1317,8 @@ proc*.
     + by auto=> />; smt(get_setE).
     move=> stl str; auto=> />.
     smt(get_setE).
-  
-  - proc; inline.
+
+- proc; inline.
     sp; match = => // sk.
     match => //.
     + smt().
@@ -1470,11 +1466,8 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
       smt(c_eq_fresh_ck).
     rcondf{1} ^if; 1: by auto.
     rcondf{2} ^if; 1: by auto.
-    auto => /> &1 &2 *.
-    split.
+    auto => />.
     smt(get_setE).
-    move => *.
-    split. admit. smt(get_setE).
 
   - proc; inline.
     sp; if => //; sp; match => //.
@@ -1489,19 +1482,40 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     rcondf{1} ^if; 1: by auto.
     rcondf{2} ^if; 1: by auto.
     auto => />.
-    admit. (* add in invariant that in tested case we don't care about value of key *)
+    smt(get_setE).
 qed.
 
 
+lemma lazy_real &m: Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res].
+proof. 
+byequiv (: ={glob A, glob Red_ROM2_real} ==> _)  => //.
+proc*.
+
+have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
+rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2_real(A, ROSc.I1.RO)) ll)].
+sim.
+qed. 
+
+lemma lazy_ideal &m: Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res].
+proof. 
+byequiv (: ={glob A, glob Red_ROM2_ideal} ==> _)  => //.
+proc*.
+
+have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
+rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2_ideal(A, ROSc.I1.RO)) ll)].
+sim.
+qed. 
+
+
 lemma sofar &m: `| Pr[E_GAKE(GAKEb(NTOR_S(RO), NTOR_C(RO), RO), A).run(false) @ &m : res] - Pr[E_GAKE(GAKEb(NTOR_S(RO), NTOR_C(RO), RO), A).run(true) @ &m : res]|
-  <= `|Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res] - Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res]|
+  <= `|Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res] - Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res]|
       + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
 proof.   
 rewrite !(gake_game0 _).
 apply (StdOrder.RealOrder.ler_trans 
         (`|Pr[E_GAKE(Game1, A).run(false) @ &m : res] - Pr[E_GAKE(Game1, A).run(true) @ &m : res]| + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp))).
 + smt(game0_game1 game0_bad).
-by rewrite !(game1_game2 _) game2_delay_real game2_delay_ideal.
+by rewrite !(game1_game2 _) game2_delay_real game2_delay_ideal lazy_real lazy_ideal.
 qed. 
 
 
@@ -1513,32 +1527,33 @@ qed.
 
 
 
-lemma interestingbit &m: `|Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res] - Pr[ROSc.I2.MainD(Red_ROM3_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res]| <= Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : Red_ROM2_real.AKE_O.badq].
+lemma interestingbit &m: `|Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res] - Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res]| <= Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : Red_ROM2_real.AKE_O.badq].
 proof.
 rewrite StdOrder.RealOrder.distrC.
-byequiv (: _ ==> _) : Red_ROM3_real.AKE_O.badq => //; first last.
+byequiv (: _ ==> _) : Red_ROM2_ideal.AKE_O.badq => //; first last.
 + smt().
 symmetry; proc; inline.
 wp.
-call (: Red_ROM3_real.AKE_O.badq
-      , ={b0, servers, c_smap, s_smap, tested, kp_set, hm, bad, hq, tq, badq}(Red_ROM2_real.AKE_O, Red_ROM3_real.AKE_O)
+call (: Red_ROM2_ideal.AKE_O.badq
+      , ={servers, c_smap, s_smap, tested, kp_set, hm, bad, hq, tq, badq}(Red_ROM2_real.AKE_O, Red_ROM2_ideal.AKE_O)
         /\ ROSc.I1.RO.m{1} = ROSc.I1.RO.m{2} /\ ROSc.I2.RO.m{1} = ROSc.I2.RO.m{2}
-      , ={badq}(Red_ROM2_real.AKE_O, Red_ROM3_real.AKE_O)) => //; try sim />.
+        /\ Red_ROM2_real.AKE_O.b0{1} = false /\ Red_ROM2_ideal.AKE_O.b0{2} = true
+      , ={badq}(Red_ROM2_real.AKE_O, Red_ROM2_ideal.AKE_O)) => //; try sim />.
 
 - exact A_ll.
 
 - proc; inline; auto => />.
 - move => &2 badq; proc*; inline. auto => />. 
-  rewrite dkey_ll dtag_ll //=. admit.
+  rewrite dkey_ll dtag_ll //=. smt().
 - move => &1; proc*; inline; auto.
-  rewrite dkey_ll dtag_ll //=. admit.
+  rewrite dkey_ll dtag_ll //=. smt().
 
 - move => &2 badq.
   proc; if; auto.
   rewrite dkp_ll //=.
 - move => &1. 
-  proc; if => //. 
-  rcondf ^if; auto => />. admit.
+  proc; if => //.
+  auto => />. 
   by rewrite dkp_ll.
 
 - move => &2 badq.
@@ -1559,23 +1574,23 @@ call (: Red_ROM3_real.AKE_O.badq
 
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
-  match; auto => />. 
+  match => //.
   admit.
 - move => &1. 
   proc; inline; sp; match; auto => />.
-  match; 2: by auto => />. 
+  match => //. 
   admit.
 
 - move => &2 bad.
   proc; inline.
   sp; match; auto. 
   match; auto => />.
-  by rewrite dkey_ll dtag_ll.
+  by rewrite dtag_ll.
 - move => &1.
   proc; inline*; auto => />.
   sp; match; auto.
   match; auto.
-  by rewrite dkey_ll dtag_ll.
+  by rewrite dtag_ll.
 
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
@@ -1624,41 +1639,74 @@ call (: Red_ROM3_real.AKE_O.badq
   proc; sp; match; 1: by auto. 
   match; auto => />.
 
-- admit.
+- proc; inline.
+  sp; if => //; sp; match = => //.
+  move => st.
+  match = => //.
+  move => st' pt' k' ir'.
+  if => //.
+  rcondt{1} ^if; 1: by auto.
+  rcondf{2} ^if; 1: by auto.
+  swap {1} ^r<$ @ 1.
+  swap {2} ^ks<$ @ 1. 
+  seq 1 1: (#pre /\ r{1} = ks{2}); 1: by auto=> />.
+  sp 4 3. if{1} => //.
+  + auto => // &1 &2 *.
+    case (Red_ROM2_ideal.AKE_O.badq{2}) => badqh. smt().
+    split. smt(get_setE mem_set).
+    split. smt(get_setE mem_set).
+    split. smt(get_setE mem_set).
+    split. admit. 
+    smt(get_setE mem_set).
+auto => // &1 &2 *.
+    case (Red_ROM2_ideal.AKE_O.badq{2}) => badqh. smt().
+    split. admit.
+    split. smt(get_setE mem_set).
+    split. smt(get_setE mem_set).
+    split. admit. 
+    smt(get_setE mem_set).
 - move => &2 bad.
   proc; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
   + inline; auto => />.
-    admit.
+    by rewrite dkey_ll /#.
   auto => />.
-  admit.
+  by rewrite dkey_ll /#.
 - move => &1.
   proc; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
-  + auto => />.
-    admit.
+  + inline; auto => />.
+    by rewrite dkey_ll /#.
   auto => />.
-  admit.
+  by rewrite dkey_ll /#.
 
-- admit.
+- proc; inline.
+  sp; if => //; sp; match = => //.
+  move => st.
+  match = => //.
+  move => st' pt' k' ir'.
+  if => //.
+  rcondt{1} ^if; 1: by auto.
+  rcondf{2} ^if; 1: by auto.
+  admit.
 - move => &2 bad.
   proc; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
   + inline; auto => />.
-    admit.
+    by rewrite dkey_ll /#.
   auto => />.
-  admit.
+  by rewrite dkey_ll /#.
 - move => &1.
   proc; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
-  + auto => />.
-    admit.
+  + inline; auto => />.
+    by rewrite dkey_ll /#.
   auto => />.
-  admit.
+  by rewrite dkey_ll /#.
 
 auto => />.
 move => rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr. 
