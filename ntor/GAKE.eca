@@ -387,7 +387,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
         if (oget c_smap.[i] is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
             k <- Some k';
-            c_smap.[i] <- set_ir_sess (Accepted st' t' (oget k) ir');
+            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -406,7 +406,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
         if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' (oget k) ir');
+            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }

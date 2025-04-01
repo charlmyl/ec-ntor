@@ -176,11 +176,15 @@ module (Red_ROM2_real (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher)
     ]
 
     proc c_test [
+      var ks2 : key
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
     ]
 
     proc s_test [
+      var ks2 : key
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
     ]
   }
 
@@ -191,6 +195,8 @@ module (Red_ROM2_real (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher)
     return b;
   }
 }.
+
+print Red_ROM2_real.AKE_O.
 
 
 module (Red_ROM2_ideal (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
@@ -230,11 +236,15 @@ module (Red_ROM2_ideal (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher
     ]
 
     proc c_test [
+      var ks2 : key
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
     ]
 
     proc s_test [
+      var ks2 : key
       ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
     ]
   }
 
@@ -276,19 +286,6 @@ declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run:
 
 
 
-(*
-(* ------------------------------------------------------------------------------------------ *)
-(* Step 2: Introducing state to keep track of event that adversary queries RO on test session input *)
-lemma game1_game2 bit &m: Pr[E_GAKE(Game1, A).run(bit) @ &m : res] = Pr[E_GAKE(Game2, A).run(bit) @ &m : res].
-proof.
-byequiv => //; sim.
-qed.
-
-lemma game2_adv &m: `| Pr[E_GAKE(Game2, A).run(false) @ &m : res] - Pr[E_GAKE(Game2, A).run(true) @ &m : res] | <= Pr[E_GAKE(Game2, A).run(false) @ &m : Game2.badq].
-proof. 
-admit. 
-qed.
-*)
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 0: Inlining everything. *)
 lemma gake_game0 b &m :
@@ -1522,7 +1519,9 @@ qed.
 
 
 
+print eq_except.
 
+print pred1.
 
 
 
@@ -1536,13 +1535,20 @@ symmetry; proc; inline.
 wp.
 call (: Red_ROM2_ideal.AKE_O.badq
       , ={servers, c_smap, s_smap, tested, kp_set, hm, bad, hq, tq, badq}(Red_ROM2_real.AKE_O, Red_ROM2_ideal.AKE_O)
-        /\ ROSc.I1.RO.m{1} = ROSc.I1.RO.m{2} /\ ROSc.I2.RO.m{1} = ROSc.I2.RO.m{2}
+        /\ ROSc.I1.RO.m{1} = ROSc.I1.RO.m{2} /\ eq_except (pred1 (oget Red_ROM2_real.AKE_O.tq{1})) ROSc.I2.RO.m{1} ROSc.I2.RO.m{2}
         /\ Red_ROM2_real.AKE_O.b0{1} = false /\ Red_ROM2_ideal.AKE_O.b0{2} = true
+        /\ forall x, x \in ROSc.I2.RO.m{1} <=> x \in ROSc.I2.RO.m{2}
       , ={badq}(Red_ROM2_real.AKE_O, Red_ROM2_ideal.AKE_O)) => //; try sim />.
 
 - exact A_ll.
 
-- proc; inline; auto => />.
+- proc; inline.  
+  sp; seq 1 1: (#pre /\ r{1} = r{2}); 1: by auto=> />.
+  if => //.
+  + auto => /> &1 &2 *. 
+    admit.
+  auto => /> &1 &2 *.
+  admit.
 - move => &2 badq; proc*; inline. auto => />. 
   rewrite dkey_ll dtag_ll //=. smt().
 - move => &1; proc*; inline; auto.
@@ -1561,6 +1567,15 @@ call (: Red_ROM2_ideal.AKE_O.badq
 - move => &1. 
   proc; auto => />. 
 
+(*
+- proc; inline.
+  sp; if => //.
+  sp; match = => // [|st].
+  + auto => /> &1 &2 *.
+    smt(get_setE).
+  match = => // st' pt' ir'.
+  auto => /> &1 &2 *.
+  smt(get_setE).*)
 - move => &2 bad.
   proc; sp; if => //; sp. 
   match; auto => />.
@@ -1571,15 +1586,15 @@ call (: Red_ROM2_ideal.AKE_O.badq
   sp; match; auto => />.
   + by rewrite dkp_ll.
   by smt().
-
+ 
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
   match => //.
-  admit.
+  islossless.
 - move => &1. 
   proc; inline; sp; match; auto => />.
   match => //. 
-  admit.
+  islossless.
 
 - move => &2 bad.
   proc; inline.
@@ -1592,6 +1607,19 @@ call (: Red_ROM2_ideal.AKE_O.badq
   match; auto.
   by rewrite dtag_ll.
 
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' t' k' ir'.
+  if => //.
+  swap{1} ^r<$ @ 1.
+  swap{2} ^r<$ @ 1.
+  seq 1 1: (#pre /\ r{1} = r{2}); 1: by auto=> />.
+  sp 2 2; if => //.
+  + smt().
+  + auto => />.
+    admit.
+  auto => /> &1 &2 *.
+  admit.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1605,6 +1633,7 @@ call (: Red_ROM2_ideal.AKE_O.badq
   auto => />.
   by rewrite dkey_ll.
 
+- admit.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1647,24 +1676,27 @@ call (: Red_ROM2_ideal.AKE_O.badq
   if => //.
   rcondt{1} ^if; 1: by auto.
   rcondf{2} ^if; 1: by auto.
-  swap {1} ^r<$ @ 1.
+  swap {2} ^r0<$ @ 1.
+  seq 0 1: (#pre /\ r0{2} \in dkey). auto => />.
   swap {2} ^ks<$ @ 1. 
+  swap {1} ^r<$ @ 1.
   seq 1 1: (#pre /\ r{1} = ks{2}); 1: by auto=> />.
-  sp 4 3. if{1} => //.
-  + auto => // &1 &2 *.
-    case (Red_ROM2_ideal.AKE_O.badq{2}) => badqh. smt().
-    split. smt(get_setE mem_set).
-    split. smt(get_setE mem_set).
-    split. smt(get_setE mem_set).
-    split. admit. 
+  sp 4 4; if => //.
+  + auto => /> &1 &2 *.    
     smt(get_setE mem_set).
-auto => // &1 &2 *.
-    case (Red_ROM2_ideal.AKE_O.badq{2}) => badqh. smt().
-    split. admit.
-    split. smt(get_setE mem_set).
-    split. smt(get_setE mem_set).
-    split. admit. 
+  + auto => /> &1 &2 *.
+    split. 
+    smt(get_setE).
+    split.
+    rewrite /pred1.
+    rewrite eq_exceptP.
+    move => y ynottq.
+    rewrite !get_set_neqE //=.
+    admit.
     smt(get_setE mem_set).
+  auto => /> &1 &2 *.
+  split. admit.
+  admit.
 - move => &2 bad.
   proc; sp; if => //; sp; match; 1: by auto. 
   match; auto.
@@ -1681,6 +1713,10 @@ auto => // &1 &2 *.
     by rewrite dkey_ll /#.
   auto => />.
   by rewrite dkey_ll /#.
+
+
+    swap {1} ^ts<$ @ 1; swap {1} ^ks<$ @ 2.
+    swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2.
 
 - proc; inline.
   sp; if => //; sp; match = => //.
