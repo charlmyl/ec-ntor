@@ -313,8 +313,6 @@ call (: ={b0, servers, c_smap, s_smap, tested}(GAKEb, Game0) /\ RO.m{1} = Game0.
 - proc; inline; auto=> />.
   sp; match = => //; 1: auto.
   by match = => //; 1: auto.
-
-admit. admit.
 qed.
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -1063,10 +1061,13 @@ rewrite !mem_filter !domE -eqsm.
 by case: (sml.[x])=> /> [] @/c_clear_k /#.
 qed.
 
-lemma game2_delay_real &m: Pr[E_GAKE(Game2, A).run(false) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res].
+lemma game2_delay_real &m: Pr[E_GAKE(Game2, A).run(false) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res].
 proof. 
-byequiv => //.
+byequiv (: ={glob A, glob Red_ROM2_real} /\ arg{1} = false ==> _)  => //.
 proc*.
+
+rewrite equiv [{2} 1 -(ROSc.I2.FullEager.RO_LRO (Red_ROM2_real(A, ROSc.I1.RO)) _)]; 2: by move => _; exact dkey_ll.
+
 + inline; wp.
   call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq}(Game2, Red_ROM2_real.AKE_O) /\ Game2.b0{1} = false
           /\ Game2.h1m{1} = ROSc.I1.RO.m{2} /\ Game2.h2m{1} = ROSc.I2.RO.m{2}
@@ -1276,10 +1277,13 @@ qed.
 
 print eq_except.
 
-lemma game2_delay_ideal &m: Pr[E_GAKE(Game2, A).run(true) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res].
+lemma game2_delay_ideal &m: Pr[E_GAKE(Game2, A).run(true) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res].
 proof. 
-byequiv  => //.
+byequiv (: ={glob A, glob Red_ROM2_ideal} /\ arg{1} = true ==> _)  => //.
 proc*.
+
+rewrite equiv [{2} 1 -(ROSc.I2.FullEager.RO_LRO (Red_ROM2_ideal(A, ROSc.I1.RO)) _)]; 2: by move => _; exact dkey_ll.
+
 inline; wp.
 call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq}(Game2, Red_ROM2_ideal.AKE_O) /\ Game2.b0{1} = true
           /\ Game2.h1m{1} = ROSc.I1.RO.m{2} /\ Game2.h2m{1} = ROSc.I2.RO.m{2}
@@ -1482,28 +1486,6 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     smt(get_setE).
 qed.
 
-
-lemma lazy_real &m: Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res].
-proof. 
-byequiv (: ={glob A, glob Red_ROM2_real} ==> _)  => //.
-proc*.
-
-have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
-rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2_real(A, ROSc.I1.RO)) ll)].
-sim.
-qed. 
-
-lemma lazy_ideal &m: Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.RO).distinguish() @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res].
-proof. 
-byequiv (: ={glob A, glob Red_ROM2_ideal} ==> _)  => //.
-proc*.
-
-have ll : forall (c : pkey * pkey * s_id * pkey * pkey), is_lossless dkey by move=> _; exact dkey_ll.
-rewrite equiv [{1} 1 (ROSc.I2.FullEager.RO_LRO (Red_ROM2_ideal(A, ROSc.I1.RO)) ll)].
-sim.
-qed. 
-
-
 lemma sofar &m: `| Pr[E_GAKE(GAKEb(NTOR_S(RO), NTOR_C(RO), RO), A).run(false) @ &m : res] - Pr[E_GAKE(GAKEb(NTOR_S(RO), NTOR_C(RO), RO), A).run(true) @ &m : res]|
   <= `|Pr[ROSc.I2.MainD(Red_ROM2_real(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res] - Pr[ROSc.I2.MainD(Red_ROM2_ideal(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish() @ &m : res]|
       + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
@@ -1512,17 +1494,8 @@ rewrite !(gake_game0 _).
 apply (StdOrder.RealOrder.ler_trans 
         (`|Pr[E_GAKE(Game1, A).run(false) @ &m : res] - Pr[E_GAKE(Game1, A).run(true) @ &m : res]| + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp))).
 + smt(game0_game1 game0_bad).
-by rewrite !(game1_game2 _) game2_delay_real game2_delay_ideal lazy_real lazy_ideal.
+by rewrite !(game1_game2 _) game2_delay_real game2_delay_ideal.
 qed. 
-
-
-
-
-
-print eq_except.
-
-print pred1.
-
 
 
 
@@ -1535,9 +1508,15 @@ symmetry; proc; inline.
 wp.
 call (: Red_ROM2_ideal.AKE_O.badq
       , ={servers, c_smap, s_smap, tested, kp_set, hm, bad, hq, tq, badq}(Red_ROM2_real.AKE_O, Red_ROM2_ideal.AKE_O)
-        /\ ROSc.I1.RO.m{1} = ROSc.I1.RO.m{2} /\ eq_except (pred1 (oget Red_ROM2_real.AKE_O.tq{1})) ROSc.I2.RO.m{1} ROSc.I2.RO.m{2}
+        /\ ROSc.I1.RO.m{1} = ROSc.I1.RO.m{2} /\ (Red_ROM2_real.AKE_O.tq{1} = None => ={ROSc.I2.RO.m})
+        /\ (forall x, Red_ROM2_real.AKE_O.tq{1} = Some x => eq_except (pred1 x) ROSc.I2.RO.m{1} ROSc.I2.RO.m{2})
+        /\ (Red_ROM2_real.AKE_O.tested{1} = false => Red_ROM2_real.AKE_O.tq{1} = None)
+        /\ (forall i st pt k ir, Red_ROM2_ideal.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k ir) /\ get_ir_test (oget Red_ROM2_ideal.AKE_O.c_smap{2}.[i]) <> true
+                => Some ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) <> Red_ROM2_ideal.AKE_O.tq{2})
+        /\ (forall i st pt k ir, Red_ROM2_ideal.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k ir) /\ get_ir_test (oget Red_ROM2_ideal.AKE_O.s_smap{2}.[i]) <> true
+                => Some (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) <> Red_ROM2_ideal.AKE_O.tq{2})
         /\ Red_ROM2_real.AKE_O.b0{1} = false /\ Red_ROM2_ideal.AKE_O.b0{2} = true
-        /\ forall x, x \in ROSc.I2.RO.m{1} <=> x \in ROSc.I2.RO.m{2}
+        /\ (forall x, x \in ROSc.I2.RO.m{1} <=> x \in ROSc.I2.RO.m{2})
       , ={badq}(Red_ROM2_real.AKE_O, Red_ROM2_ideal.AKE_O)) => //; try sim />.
 
 - exact A_ll.
@@ -1545,10 +1524,22 @@ call (: Red_ROM2_ideal.AKE_O.badq
 - proc; inline.  
   sp; seq 1 1: (#pre /\ r{1} = r{2}); 1: by auto=> />.
   if => //.
-  + auto => /> &1 &2 *. 
-    admit.
-  auto => /> &1 &2 *.
-  admit.
+  + auto => /> &1 &2 badqr hqr *.
+    split. move => *. smt(get_setE).
+    move => *. split. smt(get_setE).
+    move => *. case (Red_ROM2_ideal.AKE_O.tq{2} = None) => ?; 1: by smt().
+    have: (oget Red_ROM2_ideal.AKE_O.tq{2} \notin hqr `|` fset1 x{2}); 1: by smt().
+    move => ?.
+    have: oget Red_ROM2_ideal.AKE_O.tq{2} <> x{2}; 1: by smt(@FSet).
+    by smt().
+  auto => /> &1 &2 badqr hqr *.
+  split; 1: by smt(get_setE).
+  move => *. split; 1: by smt(get_setE).
+  move => *. case (Red_ROM2_ideal.AKE_O.tq{2} = None) => ?; 1: by smt().
+  have: (oget Red_ROM2_ideal.AKE_O.tq{2} \notin hqr `|` fset1 x{2}); 1: by smt().
+  move => ?.
+  have: oget Red_ROM2_ideal.AKE_O.tq{2} <> x{2}; 1: by smt(@FSet).
+  by smt().
 - move => &2 badq; proc*; inline. auto => />. 
   rewrite dkey_ll dtag_ll //=. smt().
 - move => &1; proc*; inline; auto.
@@ -1567,7 +1558,7 @@ call (: Red_ROM2_ideal.AKE_O.badq
 - move => &1. 
   proc; auto => />. 
 
-(*
+
 - proc; inline.
   sp; if => //.
   sp; match = => // [|st].
@@ -1575,7 +1566,7 @@ call (: Red_ROM2_ideal.AKE_O.badq
     smt(get_setE).
   match = => // st' pt' ir'.
   auto => /> &1 &2 *.
-  smt(get_setE).*)
+  smt(get_setE).
 - move => &2 bad.
   proc; sp; if => //; sp. 
   match; auto => />.
@@ -1587,6 +1578,23 @@ call (: Red_ROM2_ideal.AKE_O.badq
   + by rewrite dkp_ll.
   by smt().
  
+- proc; inline.
+  sp; match = => // sk.
+  match = => //.
+  seq 1 1: (#pre /\ ={kp}); 1: by auto=> />.
+  sp 1 1; if => //.
+  sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
+  if => //.  
+  + auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh notinm i0 st pt k ir.
+    case (i0 = (b, j){2}) => eqi.
+    + rewrite eqi get_set_sameE //=. rewrite get_setE //=.
+      admit. (* need that traces are unique and there is no collision with tq *)
+    by rewrite get_set_neqE //#.
+  auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh inm i0 st pt k ir.
+  case (i0 = (b, j){2}) => eqi.
+  + rewrite eqi get_set_sameE //=.
+    admit. (* need that traces are unique and there is no collision with tq *)
+  by rewrite get_set_neqE //#.
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
   match => //.
@@ -1596,6 +1604,32 @@ call (: Red_ROM2_ideal.AKE_O.badq
   match => //. 
   islossless.
 
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt ir.
+  sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
+  if => //.
+  + sp ^if & -1 ^if & -1; if => //.
+    + auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 notinm tag i0 st0 pt0 k ir0.
+      case (i0 = i{2}) => eqi.
+      + rewrite eqi get_set_sameE //=.
+        admit. (* need that traces are unique and there is no collision with tq *)
+      by rewrite get_set_neqE //#.
+    auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inm tag i0 st0 pt0 k ir0.
+    case (i0 = i{2}) => eqi.
+    + by rewrite eqi get_set_sameE //=.
+    by rewrite get_set_neqE //#.
+  auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6.
+  split.
+  + move => tag i0 st0 pt0 k ir0.
+    case (i0 = i{2}) => eqi.
+    + rewrite eqi get_set_sameE //=.
+      admit. (* need that traces are unique and there is no collision with tq *)
+    by rewrite get_set_neqE //#.
+  move => tag i0 st0 pt0 k ir0.
+  case (i0 = i{2}) => eqi.
+  + by rewrite eqi get_set_sameE //=.
+  by rewrite get_set_neqE //#.
 - move => &2 bad.
   proc; inline.
   sp; match; auto. 
@@ -1616,10 +1650,19 @@ call (: Red_ROM2_ideal.AKE_O.badq
   seq 1 1: (#pre /\ r{1} = r{2}); 1: by auto=> />.
   sp 2 2; if => //.
   + smt().
-  + auto => />.
-    admit.
-  auto => /> &1 &2 *.
-  admit.
+  + auto => /> &1 &2 *.
+    smt(get_setE mem_set).
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh inm.
+  have := inv4 i{2} st' t' k' ir'.
+  have -> : get_ir_test (oget Red_ROM2_ideal.AKE_O.c_smap{2}.[i{2}]) <> true; 1: by smt().
+  have -> : (Red_ROM2_ideal.AKE_O.c_smap{2}.[i{2}] = Some (Accepted st' t' k' ir')); 1: by smt().
+  simplify. 
+  move => nottq.
+  split; 1: by smt().
+  move => i0 st0 pt k0 ir.  
+  case (i{2} = i0) => eqi.
+  + by rewrite eqi get_set_sameE //=.
+  by rewrite get_set_neqE //#.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1633,70 +1676,129 @@ call (: Red_ROM2_ideal.AKE_O.badq
   auto => />.
   by rewrite dkey_ll.
 
-- admit.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-  if => //; inline.
-  auto => />.
-  by rewrite dkey_ll.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-  if => //; inline.
-  auto => />.
-  by rewrite dkey_ll.
-
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-- move => &1.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-
 - proc; inline.
-  sp; if => //; sp; match = => //.
-  move => st.
-  match = => //.
-  move => st' pt' k' ir'.
+  sp; match = => // st.
+  match = => // st' t' k' ir'.
   if => //.
-  rcondt{1} ^if; 1: by auto.
-  rcondf{2} ^if; 1: by auto.
-  swap {2} ^r0<$ @ 1.
-  seq 0 1: (#pre /\ r0{2} \in dkey). auto => />.
-  swap {2} ^ks<$ @ 1. 
-  swap {1} ^r<$ @ 1.
-  seq 1 1: (#pre /\ r{1} = ks{2}); 1: by auto=> />.
-  sp 4 4; if => //.
-  + auto => /> &1 &2 *.    
-    smt(get_setE mem_set).
+  swap{1} ^r<$ @ 1.
+  swap{2} ^r<$ @ 1.
+  seq 1 1: (#pre /\ r{1} = r{2}); 1: by auto=> />.
+  sp 2 2; if => //.
+  + smt().
   + auto => /> &1 &2 *.
-    split. 
-    smt(get_setE).
-    split.
-    rewrite /pred1.
-    rewrite eq_exceptP.
-    move => y ynottq.
-    rewrite !get_set_neqE //=.
-    admit.
     smt(get_setE mem_set).
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh inm.
+  have := inv5 (b, j){2} st' t' k' ir'.
+  have -> : get_ir_test (oget Red_ROM2_ideal.AKE_O.s_smap{2}.[(b, j){2}]) <> true; 1: by smt().
+  have -> : (Red_ROM2_ideal.AKE_O.s_smap{2}.[(b, j){2}] = Some (Accepted st' t' k' ir')); 1: by smt().
+  simplify. 
+  move => nottq.
+  split; 1: by smt(). 
+  move => i0 st0 pt k0 ir.  
+  case ((b, j){2} = i0) => eqi.
+  + by rewrite eqi get_set_sameE //=.
+  by rewrite get_set_neqE //#.
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+  if => //; inline.
+  auto => />.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+  if => //; inline.
+  auto => />.
+  by rewrite dkey_ll.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // [st' pt ir| st' pt k ir].
+  + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 unto i0 st0 pt0 k ir0.
+    case (i0 = i{2}) => eqi.
+    + rewrite eqi get_set_sameE //=.
+    by rewrite get_set_neqE //#.
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh i0 st0 pt0 k0 ir0.
+  have := inv4 i{2} st' pt k ir.
+  case (i0 = i{2}) => eqi.
+  + rewrite eqi get_set_sameE //=.
+    smt().    
+  by rewrite get_set_neqE //#.  
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt k ir.
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh i0 st0 pt0 k0 ir0.
+  have := inv5 (b, j){2} st' pt k ir.
+  case (i0 = (b, j){2}) => eqi.
+  + rewrite eqi get_set_sameE //=.
+    smt().    
+  by rewrite get_set_neqE //#.  
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- proc; inline.
+  sp; if => //; sp; match = => //.
+  move => st.
+  match = => //.
+  move => st' pt' k' ir'.
+  if => //.
+  rcondt{1} ^if; 1: by auto.
+  rcondf{2} ^if; 1: by auto.
+  inline{2}. swap {2} ^r0<$ @ 1.
+  seq 0 1: (#pre /\ r0{2} \in dkey). auto => />.
+  sp 3 4; if{2} => //.
+  + sp 0 2.
+    seq 4 1: (#pre /\ ={ks} /\ x{1} \in ROSc.I2.RO.m{1}). 
+    + rcondt{1} ^if; 1: by auto => /#.
+      sp; seq 1 1: (#pre /\ r{1} = ks{2}). auto => />.
+      auto => /> &1 &2 *.
+      split. admit.
+      smt(get_setE mem_set).
+    auto => /> &1 &2 *.    
+    split.
+    smt(get_setE mem_set).
+    split. 
+    move => i0 st0 pt k0 ir. 
+    case (i0 = i{2}) => eqi.
+    + rewrite eqi get_set_sameE //=.
+    rewrite get_set_neqE //=.
+    admit. (* need that traces are unique and there is no collision with tq *)
+    split. 
+    move => i0 st0 pt k0 ir. 
+    admit. (* need that traces are unique and there is no collision with tq *)
+    smt(get_setE).
+  sp 0 1.
+  seq 4 1: (#pre /\ ={ks} /\ x{1} \in ROSc.I2.RO.m{1}).
+  + rcondf{1} ^if; 1: by auto => /#.  
+    admit. (* How to prove that the already sampled value has the same distribution as ks? *)
   auto => /> &1 &2 *.
-  split. admit.
-  admit.
+  split. smt().
+  split.
+  move => i0 st0 pt k0 ir. 
+  case (i0 = i{2}) => eqi.
+  + rewrite eqi get_set_sameE //=.
+  rewrite get_set_neqE //=.
+  admit. (* need that traces are unique and there is no collision with tq *)
+  move => i0 st0 pt k0 ir. 
+  admit. (* need that traces are unique and there is no collision with tq *)
 - move => &2 bad.
   proc; sp; if => //; sp; match; 1: by auto. 
   match; auto.
@@ -1715,9 +1817,6 @@ call (: Red_ROM2_ideal.AKE_O.badq
   by rewrite dkey_ll /#.
 
 
-    swap {1} ^ts<$ @ 1; swap {1} ^ks<$ @ 2.
-    swap {2} ^r0<$ @ 1; swap {2} ^r1<$ @ 2.
-
 - proc; inline.
   sp; if => //; sp; match = => //.
   move => st.
@@ -1726,7 +1825,7 @@ call (: Red_ROM2_ideal.AKE_O.badq
   if => //.
   rcondt{1} ^if; 1: by auto.
   rcondf{2} ^if; 1: by auto.
-  admit.
+  admit. (* same as above *)
 - move => &2 bad.
   proc; sp; if => //; sp; match; 1: by auto. 
   match; auto.
