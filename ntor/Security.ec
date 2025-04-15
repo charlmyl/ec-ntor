@@ -82,6 +82,22 @@ module (Red_Coll_ideal (A : A_GAKE) : BB.Adv) (S : BB.ASampler) = {
   }
 }.
 
+module E_GAKE_BB (A : A_GAKE) = {
+  module O = Game1
+
+  proc run(b: bool) : bool = {
+    var b' : bool;
+
+    O.init_mem(b);
+    
+    b' <@ A(O).run();
+    
+    return b' /\ !O.bad;
+  }
+}.
+
+
+
 (* ------------------------------------------------------------------------------------------ *)
 (* ROM Reductions *)
 clone Split as ROc with
@@ -550,7 +566,8 @@ byequiv (: _ ==> ={Game0.bad}) => //; sim.
 qed. 
 
 
-lemma game0_notbad_game1 bit &m: Pr[E_GAKE(Game0, A).run(bit) @ &m : res /\ !Game0.bad] = Pr[E_GAKE(Game1, A).run(bit) @ &m : res].
+
+lemma game0_notbad_game1 bit &m: Pr[E_GAKE(Game0, A).run(bit) @ &m : res /\ !Game0.bad] = Pr[E_GAKE_BB(A).run(bit) @ &m : res].
 proof. 
 byequiv => //.
 proc; inline.
@@ -560,8 +577,7 @@ call (: Game1.bad
 
 wp; skip => />.
 move => rl rr al bl csl hml kpl ssl sl tl ar br csr hmr kpr ssr sr tr. 
-case : (!br) => />.
-admit. 
+case : (!br) => />. 
 
 - exact A_ll.
 
@@ -705,7 +721,7 @@ admit.
 qed.
 
 lemma game0_game1_adv &m: `| Pr[E_GAKE(Game0, A).run(false) @ &m : res] - Pr[E_GAKE(Game0, A).run(true) @ &m : res] |
-                       <= `| Pr[E_GAKE(Game1, A).run(false) @ &m : res] - Pr[E_GAKE(Game1, A).run(true) @ &m : res] | +  ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
+                       <= `| Pr[E_GAKE_BB(A).run(false) @ &m : res] - Pr[E_GAKE_BB(A).run(true) @ &m : res] | +  ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
 proof. 
 rewrite !(game0_musplit _).
 apply (StdOrder.RealOrder.ler_trans 
@@ -731,11 +747,7 @@ smt(game0_res_bad game0_bad).
 qed.
 
 
-
-
-
-
-
+(* How to work with it from here? *)
 
 
 
