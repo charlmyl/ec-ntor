@@ -1151,12 +1151,15 @@ call (: Red_ROM2.AKE_O.badq
         /\ (forall x, Red_ROM2.AKE_O.tq{1} = Some x => eq_except (pred1 x) ROSc.I2.RO.m{1} ROSc.I2.RO.m{2})
         /\ (Red_ROM2.AKE_O.tested{1} = false => Red_ROM2.AKE_O.tq{1} = None)
       (*  /\ (Red_ROM2.AKE_O.tq{1} <> None => oget Red_ROM2.AKE_O.tq{1} \in ROSc.I2.RO.m{1}) *)
-        /\ (forall i st pt k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k ir) /\ get_ir_test (oget Red_ROM2.AKE_O.c_smap{2}.[i]) <> true
-                => Some ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) <> Red_ROM2.AKE_O.tq{2})
-        /\ (forall i st pt k ir, Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k ir) /\ get_ir_test (oget Red_ROM2.AKE_O.s_smap{2}.[i]) <> true
-                => Some (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) <> Red_ROM2.AKE_O.tq{2})
-        /\ (forall i st pt k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k ir) 
-                => forall i' k' ir', Red_ROM2.AKE_O.c_smap{2}.[i'] = Some (Accepted st pt k' ir') 
+        /\ (forall i st t k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st t k ir) /\ get_ir_test (oget Red_ROM2.AKE_O.c_smap{2}.[i]) <> true
+                => Some ((oget t.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget t.`2).`1) <> Red_ROM2.AKE_O.tq{2})
+        /\ (forall i st t k ir, Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st t k ir) /\ get_ir_test (oget Red_ROM2.AKE_O.s_smap{2}.[i]) <> true
+                => Some (t.`1 ^ oget st.`3, t.`1 ^ st.`2, st.`1, t.`1, (oget t.`2).`1) <> Red_ROM2.AKE_O.tq{2})
+        /\ (forall i st t k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st t k ir) 
+                => forall i' st' k' ir', Red_ROM2.AKE_O.c_smap{2}.[i'] = Some (Accepted st' t k' ir') 
+                => i = i')
+        /\ (forall i st t k ir, Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st t k ir) 
+                => forall i' st' k' ir', Red_ROM2.AKE_O.s_smap{2}.[i'] = Some (Accepted st' t k' ir') 
                 => i = i')
         /\ Red_ROM2.AKE_O.b0{1} = false /\ Red_ROM2.AKE_O.b0{2} = true
         /\ (forall x, x \in ROSc.I2.RO.m{1} <=> x \in ROSc.I2.RO.m{2})
@@ -1226,20 +1229,33 @@ call (: Red_ROM2.AKE_O.badq
   seq 1 1: (#pre /\ ={kp}); 1: by auto=> />.
   sp 1 1; if => //.
   sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
-  if => //.  
-  + auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh notinm i0 st pt k ir.
-    case (Red_ROM2.AKE_O.tq{2} = None).
-    + smt().
-    
-    case (i0 = (b, j){2}) => eqi.
+  if => //.
+  + auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh notinm.
+    split.
+    + move => i st t k ir.
+      case (Red_ROM2.AKE_O.tq{2} = None) => tqn.
+      + smt().
+      case (i = (b, j){2}) => eqi.
+      + rewrite eqi get_set_sameE //=. rewrite get_setE //=.
+        admit. (* need that traces are unique and there is no collision with tq *)
+      by rewrite get_set_neqE /#.
+    move => i st t k ir.
+    case (i = (b, j){2}) => eqi.
     + rewrite eqi get_set_sameE //=. rewrite get_setE //=.
+      move => ? i'.
+      case (i' = (b, j){2}) => eqi'; 1: by smt().
+      admit. (* need that traces are unique and there is no collision with tq *)
+    admit.
+  auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh inm.
+  split; move => i st t k ir. 
+  + case (i = (b, j){2}) => eqi.
+    + rewrite eqi get_set_sameE //=.
       admit. (* need that traces are unique and there is no collision with tq *)
     by rewrite get_set_neqE //#.
-  auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh inm i0 st pt k ir.
-  case (i0 = (b, j){2}) => eqi.
+  case (i = (b, j){2}) => eqi.
   + rewrite eqi get_set_sameE //=.
     admit. (* need that traces are unique and there is no collision with tq *)
-  by rewrite get_set_neqE //#.
+  admit.
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
   match => //.
@@ -1255,26 +1271,40 @@ call (: Red_ROM2.AKE_O.badq
   sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
   if => //.
   + sp ^if & -1 ^if & -1; if => //.
-    + auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 notinm tag i0 st0 pt0 k ir0.
+    + auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 notinm tag. 
+      split; move => i0 st0 pt0 k ir0.
+      + case (i0 = i{2}) => eqi.
+        + rewrite eqi get_set_sameE //=.
+          admit. (* need that traces are unique and there is no collision with tq *)
+        by rewrite get_set_neqE //#.
       case (i0 = i{2}) => eqi.
       + rewrite eqi get_set_sameE //=.
         admit. (* need that traces are unique and there is no collision with tq *)
+      admit.
+    auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inm tag.
+    split; move =>  i0 st0 pt0 k ir0.
+    + case (i0 = i{2}) => eqi.
+      + by rewrite eqi get_set_sameE //=.
       by rewrite get_set_neqE //#.
-    auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inm tag i0 st0 pt0 k ir0.
     case (i0 = i{2}) => eqi.
     + by rewrite eqi get_set_sameE //=.
-    by rewrite get_set_neqE //#.
-  auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6.
-  split.
-  + move => tag i0 st0 pt0 k ir0.
+    admit.
+  auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8.
+  split; move => tag.
+  + split; move => i0 st0 pt0 k ir0.
+    + case (i0 = i{2}) => eqi.
+      + rewrite eqi get_set_sameE //=.
+        admit. (* need that traces are unique and there is no collision with tq *)
+      by rewrite get_set_neqE //#.
     case (i0 = i{2}) => eqi.
     + rewrite eqi get_set_sameE //=.
       admit. (* need that traces are unique and there is no collision with tq *)
+    admit. 
+  split; move => i0 st0 pt0 k ir0.
+  + case (i0 = i{2}) => eqi.
+    + by rewrite eqi get_set_sameE //=.
     by rewrite get_set_neqE //#.
-  move => tag i0 st0 pt0 k ir0.
-  case (i0 = i{2}) => eqi.
-  + by rewrite eqi get_set_sameE //=.
-  by rewrite get_set_neqE //#.
+  admit.
 - move => &2 bad.
   proc; inline.
   sp; match; auto. 
@@ -1297,17 +1327,18 @@ call (: Red_ROM2.AKE_O.badq
   + smt().
   + auto => /> &1 &2 *.
     smt(get_setE mem_set).
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh inm.
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh inm.
   have := inv4 i{2} st' t' k' ir'.
-  have -> : get_ir_test (oget Red_ROM2_ideal.AKE_O.c_smap{2}.[i{2}]) <> true; 1: by smt().
-  have -> : (Red_ROM2_ideal.AKE_O.c_smap{2}.[i{2}] = Some (Accepted st' t' k' ir')); 1: by smt().
+  have -> : get_ir_test (oget Red_ROM2.AKE_O.c_smap{2}.[i{2}]) <> true; 1: by smt().
+  have -> : (Red_ROM2.AKE_O.c_smap{2}.[i{2}] = Some (Accepted st' t' k' ir')); 1: by smt().
   simplify. 
   move => nottq.
   split; 1: by smt().
-  move => i0 st0 pt k0 ir.  
-  case (i{2} = i0) => eqi.
-  + by rewrite eqi get_set_sameE //=.
-  by rewrite get_set_neqE //#.
+  split; move => i0 st0 pt k0 ir.  
+  + case (i{2} = i0) => eqi.
+    + by rewrite eqi get_set_sameE //=.
+    by rewrite get_set_neqE //#.
+  admit.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1332,17 +1363,18 @@ call (: Red_ROM2.AKE_O.badq
   + smt().
   + auto => /> &1 &2 *.
     smt(get_setE mem_set).
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh inm.
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh inm.
   have := inv5 (b, j){2} st' t' k' ir'.
-  have -> : get_ir_test (oget Red_ROM2_ideal.AKE_O.s_smap{2}.[(b, j){2}]) <> true; 1: by smt().
-  have -> : (Red_ROM2_ideal.AKE_O.s_smap{2}.[(b, j){2}] = Some (Accepted st' t' k' ir')); 1: by smt().
+  have -> : get_ir_test (oget Red_ROM2.AKE_O.s_smap{2}.[(b, j){2}]) <> true; 1: by smt().
+  have -> : (Red_ROM2.AKE_O.s_smap{2}.[(b, j){2}] = Some (Accepted st' t' k' ir')); 1: by smt().
   simplify. 
   move => nottq.
   split; 1: by smt(). 
-  move => i0 st0 pt k0 ir.  
-  case ((b, j){2} = i0) => eqi.
-  + by rewrite eqi get_set_sameE //=.
-  by rewrite get_set_neqE //#.
+  split; move => i0 st0 pt k0 ir.  
+  + case ((b, j){2} = i0) => eqi.
+    + by rewrite eqi get_set_sameE //=.
+    by rewrite get_set_neqE //#.
+  admit.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1366,16 +1398,19 @@ call (: Red_ROM2.AKE_O.badq
 - proc; inline.
   sp; match = => // st.
   match = => // [st' pt ir| st' pt k ir].
-  + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 unto i0 st0 pt0 k ir0.
+  + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 unto. 
+    split; move => i0 st0 pt0 k ir0.
+    + case (i0 = i{2}) => eqi.
+      + rewrite eqi get_set_sameE //=.
+      by rewrite get_set_neqE //#.
+    admit.
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh. 
+  split; move => i0 st0 pt0 k0 ir0.
+  + have := inv4 i{2} st' pt k ir.
     case (i0 = i{2}) => eqi.
-    + rewrite eqi get_set_sameE //=.
-    by rewrite get_set_neqE //#.
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh i0 st0 pt0 k0 ir0.
-  have := inv4 i{2} st' pt k ir.
-  case (i0 = i{2}) => eqi.
-  + rewrite eqi get_set_sameE //=.
-    smt().    
-  by rewrite get_set_neqE //#.  
+    + rewrite eqi get_set_sameE /#.
+    by rewrite get_set_neqE /#.  
+  admit.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1386,12 +1421,13 @@ call (: Red_ROM2.AKE_O.badq
 - proc; inline.
   sp; match = => // st.
   match = => // st' pt k ir.
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 fresh i0 st0 pt0 k0 ir0.
-  have := inv5 (b, j){2} st' pt k ir.
-  case (i0 = (b, j){2}) => eqi.
-  + rewrite eqi get_set_sameE //=.
-    smt().    
-  by rewrite get_set_neqE //#.  
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh.
+  split; move => i0 st0 pt0 k0 ir0.
+  + have := inv5 (b, j){2} st' pt k ir.
+    case (i0 = (b, j){2}) => eqi.
+    + by rewrite eqi get_set_sameE /#.
+    by rewrite get_set_neqE /#.
+  admit.
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1430,22 +1466,24 @@ call (: Red_ROM2.AKE_O.badq
     move => i0 st0 pt k0 ir. 
     admit. (* need that traces are unique and there is no collision with tq *)
     smt(get_setE).
+  (* this side is only possible when badq happens since instance cannot be tested or seskey revealed - TODO: could be added as invariant? *)
   sp 0 1.
   seq 4 1: (#pre /\ ={ks} /\ x{1} \in ROSc.I2.RO.m{1}).
   + rcondf{1} ^if; 1: by auto => /#.  
     admit. (* How to prove that the already sampled value has the same distribution as ks? *)
   auto => /> &1 &2 *.
-  split. smt().
+  split; 1: by smt().
   split.
-  move => i0 st0 pt k0 ir. 
-  case (i0 = i{2}) => eqi.
-  + rewrite eqi get_set_sameE //=.
-  rewrite get_set_neqE //=.
-  admit. (* need that traces are unique and there is no collision with tq *)
-  move => i0 st0 pt k0 ir. 
-  admit. (* need that traces are unique and there is no collision with tq *)
+  + move => i0 st0 pt k0 ir. 
+    case (i0 = i{2}) => eqi.
+    + rewrite eqi get_set_sameE //=.
+    rewrite get_set_neqE //=.
+    admit. (* need that traces are unique and there is no collision with tq *)
+  split; move => i0 st0 pt k0 ir. 
+  + admit. (* need that traces are unique and there is no collision with tq *)
+  admit.
 - move => &2 bad.
-  proc; sp; if => //; sp; match; 1: by auto. 
+  proc; inline; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
   + inline; auto => />.
@@ -1453,14 +1491,13 @@ call (: Red_ROM2.AKE_O.badq
   auto => />.
   by rewrite dkey_ll /#.
 - move => &1.
-  proc; sp; if => //; sp; match; 1: by auto. 
+  proc; inline; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
   + inline; auto => />.
     by rewrite dkey_ll /#.
   auto => />.
   by rewrite dkey_ll /#.
-
 
 - proc; inline.
   sp; if => //; sp; match = => //.
@@ -1472,7 +1509,7 @@ call (: Red_ROM2.AKE_O.badq
   rcondf{2} ^if; 1: by auto.
   admit. (* same as above *)
 - move => &2 bad.
-  proc; sp; if => //; sp; match; 1: by auto. 
+  proc; inline; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
   + inline; auto => />.
@@ -1480,7 +1517,7 @@ call (: Red_ROM2.AKE_O.badq
   auto => />.
   by rewrite dkey_ll /#.
 - move => &1.
-  proc; sp; if => //; sp; match; 1: by auto. 
+  proc; inline; sp; if => //; sp; match; 1: by auto. 
   match; auto.
   if => //; if => //.
   + inline; auto => />.
@@ -1489,7 +1526,8 @@ call (: Red_ROM2.AKE_O.badq
   by rewrite dkey_ll /#.
 
 auto => />.
-move => rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr. 
+split; 1: by smt(emptyE).
+move => injc injs rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr. 
 by case : (!bqr) => />.
 qed.
 
