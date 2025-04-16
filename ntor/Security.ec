@@ -1162,17 +1162,13 @@ call (: Red_ROM2.AKE_O.badq
         /\ ROSc.I1.RO.m{1} = ROSc.I1.RO.m{2} /\ (Red_ROM2.AKE_O.tq{1} = None => ={ROSc.I2.RO.m})
         /\ (forall x, Red_ROM2.AKE_O.tq{1} = Some x => eq_except (pred1 x) ROSc.I2.RO.m{1} ROSc.I2.RO.m{2})
         /\ (Red_ROM2.AKE_O.tested{1} = false => Red_ROM2.AKE_O.tq{1} = None)
-      (*  /\ (Red_ROM2.AKE_O.tq{1} <> None => oget Red_ROM2.AKE_O.tq{1} \in ROSc.I2.RO.m{1}) *)
-        /\ (forall i st t k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st t k ir) /\ get_ir_test (oget Red_ROM2.AKE_O.c_smap{2}.[i]) <> true
-                => Some ((oget t.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget t.`2).`1) <> Red_ROM2.AKE_O.tq{2})
-        /\ (forall i st t k ir, Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st t k ir) /\ get_ir_test (oget Red_ROM2.AKE_O.s_smap{2}.[i]) <> true
-                => Some (t.`1 ^ oget st.`3, t.`1 ^ st.`2, st.`1, t.`1, (oget t.`2).`1) <> Red_ROM2.AKE_O.tq{2})
-        /\ (forall i st t k ir, Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st t k ir) 
-                => forall i' st' k' ir', Red_ROM2.AKE_O.c_smap{2}.[i'] = Some (Accepted st' t k' ir') 
-                => i = i')
-        /\ (forall i st t k ir, Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st t k ir) 
-                => forall i' st' k' ir', Red_ROM2.AKE_O.s_smap{2}.[i'] = Some (Accepted st' t k' ir') 
-                => i = i')
+        /\ (Red_ROM2.AKE_O.badq = true <=> (Red_ROM2.AKE_O.tq <> None /\ oget Red_ROM2.AKE_O.tq \in Red_ROM2.AKE_O.hq)){2}
+        /\ (forall i t i', Red_ROM2.AKE_O.c_smap.[i] <> None /\ get_trace (oget Red_ROM2.AKE_O.c_smap.[i]) = t
+                => Red_ROM2.AKE_O.c_smap.[i'] <> None /\ get_trace (oget Red_ROM2.AKE_O.c_smap.[i']) = t
+                => i = i'){2}
+        /\ (forall i t i', Red_ROM2.AKE_O.s_smap.[i] <> None /\ get_trace (oget Red_ROM2.AKE_O.s_smap.[i]) = t
+                => Red_ROM2.AKE_O.s_smap.[i'] <> None /\ get_trace (oget Red_ROM2.AKE_O.s_smap.[i']) = t
+                => i = i'){2}
         /\ Red_ROM2.AKE_O.b0{1} = false /\ Red_ROM2.AKE_O.b0{2} = true
         /\ (forall x, x \in ROSc.I2.RO.m{1} <=> x \in ROSc.I2.RO.m{2})
       , ={badq}(Red_ROM2.AKE_O, Red_ROM2.AKE_O)) => //; try sim />.
@@ -1220,7 +1216,7 @@ call (: Red_ROM2.AKE_O.badq
   sp; if => //.
   sp; match = => // [|st].
   + auto => /> &1 &2 *.
-    smt(get_setE).
+    admit. (* injectivity *)
   match = => // st' pt' ir'.
   auto => /> &1 &2 *.
   smt(get_setE).
@@ -1242,32 +1238,18 @@ call (: Red_ROM2.AKE_O.badq
   sp 1 1; if => //.
   sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
   if => //.
-  + auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh notinm.
-    split.
-    + move => i st t k ir.
-      case (Red_ROM2.AKE_O.tq{2} = None) => tqn.
-      + smt().
-      case (i = (b, j){2}) => eqi.
-      + rewrite eqi get_set_sameE //=. rewrite get_setE //=.
-        admit. (* need that traces are unique and there is no collision with tq *)
-      by rewrite get_set_neqE /#.
-    move => i st t k ir.
-    case (i = (b, j){2}) => eqi.
-    + rewrite eqi get_set_sameE //=. rewrite get_setE //=.
-      move => ? i'.
-      case (i' = (b, j){2}) => eqi'; 1: by smt().
-      admit. (* need that traces are unique and there is no collision with tq *)
-    admit.
-  auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh inm.
-  split; move => i st t k ir. 
-  + case (i = (b, j){2}) => eqi.
-    + rewrite eqi get_set_sameE //=.
-      admit. (* need that traces are unique and there is no collision with tq *)
-    by rewrite get_set_neqE //#.
-  case (i = (b, j){2}) => eqi.
-  + rewrite eqi get_set_sameE //=.
-    admit. (* need that traces are unique and there is no collision with tq *)
-  admit.
+  + auto => /> &1 &2 kps bad stm _ stsk _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 kpuq notinm i i'.
+    case (i = (b,j){2}) => ibj.
+    + rewrite ibj get_set_sameE //=.
+      case (i' = (b,j){2}) => i'bj; 1: by rewrite i'bj.
+      rewrite get_set_neqE //=.            
+      move => stnn.
+      admit. (* Injectivity *)
+    case (i' = (b,j){2}) => i'bj.
+    + admit. (* injectivity *)
+    smt(get_set_neqE).
+  auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 kpuq inm.
+  admit. (* Injectivity same as above *)
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
   match => //.
@@ -1283,40 +1265,31 @@ call (: Red_ROM2.AKE_O.badq
   sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
   if => //.
   + sp ^if & -1 ^if & -1; if => //.
-    + auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 notinm tag. 
-      split; move => i0 st0 pt0 k ir0.
-      + case (i0 = i{2}) => eqi.
-        + rewrite eqi get_set_sameE //=.
-          admit. (* need that traces are unique and there is no collision with tq *)
-        by rewrite get_set_neqE //#.
-      case (i0 = i{2}) => eqi.
-      + rewrite eqi get_set_sameE //=.
-        admit. (* need that traces are unique and there is no collision with tq *)
-      admit.
-    auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inm tag.
-    split; move =>  i0 st0 pt0 k ir0.
-    + case (i0 = i{2}) => eqi.
-      + by rewrite eqi get_set_sameE //=.
-      by rewrite get_set_neqE //#.
-    case (i0 = i{2}) => eqi.
-    + by rewrite eqi get_set_sameE //=.
-    admit.
-  auto => /> &1 &2 map1 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8.
-  split; move => tag.
-  + split; move => i0 st0 pt0 k ir0.
-    + case (i0 = i{2}) => eqi.
-      + rewrite eqi get_set_sameE //=.
-        admit. (* need that traces are unique and there is no collision with tq *)
-      by rewrite get_set_neqE //#.
-    case (i0 = i{2}) => eqi.
-    + rewrite eqi get_set_sameE //=.
-      admit. (* need that traces are unique and there is no collision with tq *)
-    admit. 
-  split; move => i0 st0 pt0 k ir0.
-  + case (i0 = i{2}) => eqi.
-    + by rewrite eqi get_set_sameE //=.
-    by rewrite get_set_neqE //#.
-  admit.
+    + auto => /> &1 &2 kps bad stm _ stsk _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 notinm i0 i'.
+      case (i0 = i{2}) => i0i.
+      + rewrite i0i get_set_sameE //=.
+        case (i' = i{2}) => i'i; 1: by rewrite i'i.
+        rewrite get_set_neqE //=.            
+        move => stnn.
+        admit. (* Injectivity *)
+      case (i' = i{2}) => i'i.
+      + admit. (* injectivity *)
+      smt(get_set_neqE).
+    auto => /> &1 &2 kps stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 notinm neq.
+    admit. (* Injectivity same as above *)
+  sp ^if & -1 ^if & -1; if => //.
+  + auto => /> &1 &2 kps bad stm _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inm eq i0 i'.
+    case (i0 = i{2}) => i0i.
+    + rewrite i0i get_set_sameE //=.
+      case (i' = i{2}) => i'i; 1: by rewrite i'i.
+      rewrite get_set_neqE //=.            
+      move => stnn.
+      admit. (* Injectivity *)
+    case (i' = i{2}) => i'i.
+    + admit. (* injectivity *)
+    smt(get_set_neqE).
+  auto => /> &1 &2 kps bad stm _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inm neq i0 i'.
+  admit. (* Injectivity same as above *)
 - move => &2 bad.
   proc; inline.
   sp; match; auto. 
@@ -1339,18 +1312,10 @@ call (: Red_ROM2.AKE_O.badq
   + smt().
   + auto => /> &1 &2 *.
     smt(get_setE mem_set).
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh inm.
-  have := inv4 i{2} st' t' k' ir'.
-  have -> : get_ir_test (oget Red_ROM2.AKE_O.c_smap{2}.[i{2}]) <> true; 1: by smt().
-  have -> : (Red_ROM2.AKE_O.c_smap{2}.[i{2}] = Some (Accepted st' t' k' ir')); 1: by smt().
-  simplify. 
-  move => nottq.
-  split; 1: by smt().
-  split; move => i0 st0 pt k0 ir.  
-  + case (i{2} = i0) => eqi.
-    + by rewrite eqi get_set_sameE //=.
-    by rewrite get_set_neqE //#.
-  admit.
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh inm.
+  split.
+  admit. (* here I need that this new instance cant collide with tq or have tq as partner *)
+  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1375,18 +1340,10 @@ call (: Red_ROM2.AKE_O.badq
   + smt().
   + auto => /> &1 &2 *.
     smt(get_setE mem_set).
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh inm.
-  have := inv5 (b, j){2} st' t' k' ir'.
-  have -> : get_ir_test (oget Red_ROM2.AKE_O.s_smap{2}.[(b, j){2}]) <> true; 1: by smt().
-  have -> : (Red_ROM2.AKE_O.s_smap{2}.[(b, j){2}] = Some (Accepted st' t' k' ir')); 1: by smt().
-  simplify. 
-  move => nottq.
-  split; 1: by smt(). 
-  split; move => i0 st0 pt k0 ir.  
-  + case ((b, j){2} = i0) => eqi.
-    + by rewrite eqi get_set_sameE //=.
-    by rewrite get_set_neqE //#.
-  admit.
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh inm.
+  split. 
+  admit. (* here I need that this new instance cant collide with tq or have tq as partner *)
+  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1410,19 +1367,10 @@ call (: Red_ROM2.AKE_O.badq
 - proc; inline.
   sp; match = => // st.
   match = => // [st' pt ir| st' pt k ir].
-  + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 unto. 
-    split; move => i0 st0 pt0 k ir0.
-    + case (i0 = i{2}) => eqi.
-      + rewrite eqi get_set_sameE //=.
-      by rewrite get_set_neqE //#.
-    admit.
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh. 
-  split; move => i0 st0 pt0 k0 ir0.
-  + have := inv4 i{2} st' pt k ir.
-    case (i0 = i{2}) => eqi.
-    + rewrite eqi get_set_sameE /#.
-    by rewrite get_set_neqE /#.  
-  admit.
+  + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 unto. 
+    admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh. 
+  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1434,12 +1382,7 @@ call (: Red_ROM2.AKE_O.badq
   sp; match = => // st.
   match = => // st' pt k ir.
   auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh.
-  split; move => i0 st0 pt0 k0 ir0.
-  + have := inv5 (b, j){2} st' pt k ir.
-    case (i0 = (b, j){2}) => eqi.
-    + by rewrite eqi get_set_sameE /#.
-    by rewrite get_set_neqE /#.
-  admit.
+  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
