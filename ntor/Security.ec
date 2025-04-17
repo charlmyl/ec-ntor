@@ -1368,9 +1368,9 @@ call (: Red_ROM2.AKE_O.badq
   sp; match = => // st.
   match = => // [st' pt ir| st' pt k ir].
   + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 unto. 
-    admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+    smt(get_setE).
   auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh. 
-  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+  smt(get_setE).
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1382,7 +1382,7 @@ call (: Red_ROM2.AKE_O.badq
   sp; match = => // st.
   match = => // st' pt k ir.
   auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh.
-  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+  smt(get_setE).
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1402,40 +1402,11 @@ call (: Red_ROM2.AKE_O.badq
   seq 0 1: (#pre /\ r0{2} \in dkey). auto => />.
   sp 3 4; if{2} => //.
   + sp 0 2.
-    seq 4 1: (#pre /\ ={ks} /\ x{1} \in ROSc.I2.RO.m{1}). 
-    + rcondt{1} ^if; 1: by auto => /#.
-      sp; seq 1 1: (#pre /\ r{1} = ks{2}). auto => />.
-      auto => /> &1 &2 *.
-      split. admit.
-      smt(get_setE mem_set).
-    auto => /> &1 &2 *.    
-    split.
+    rcondt{1} ^if; 1: by auto => /#.
+    auto => /> &1 &2 *.
     smt(get_setE mem_set).
-    split. 
-    move => i0 st0 pt k0 ir. 
-    case (i0 = i{2}) => eqi.
-    + rewrite eqi get_set_sameE //=.
-    rewrite get_set_neqE //=.
-    admit. (* need that traces are unique and there is no collision with tq *)
-    split. 
-    move => i0 st0 pt k0 ir. 
-    admit. (* need that traces are unique and there is no collision with tq *)
-    smt(get_setE).
+  auto => /> &1 &2 *.    
   (* this side is only possible when badq happens since instance cannot be tested or seskey revealed - TODO: could be added as invariant? *)
-  sp 0 1.
-  seq 4 1: (#pre /\ ={ks} /\ x{1} \in ROSc.I2.RO.m{1}).
-  + rcondf{1} ^if; 1: by auto => /#.  
-    admit. (* How to prove that the already sampled value has the same distribution as ks? *)
-  auto => /> &1 &2 *.
-  split; 1: by smt().
-  split.
-  + move => i0 st0 pt k0 ir. 
-    case (i0 = i{2}) => eqi.
-    + rewrite eqi get_set_sameE //=.
-    rewrite get_set_neqE //=.
-    admit. (* need that traces are unique and there is no collision with tq *)
-  split; move => i0 st0 pt k0 ir. 
-  + admit. (* need that traces are unique and there is no collision with tq *)
   admit.
 - move => &2 bad.
   proc; inline; sp; if => //; sp; match; 1: by auto. 
@@ -1462,7 +1433,16 @@ call (: Red_ROM2.AKE_O.badq
   if => //.
   rcondt{1} ^if; 1: by auto.
   rcondf{2} ^if; 1: by auto.
-  admit. (* same as above *)
+  inline{2}. swap {2} ^r0<$ @ 1.
+  seq 0 1: (#pre /\ r0{2} \in dkey). auto => />.
+  sp 3 4; if{2} => //.
+  + sp 0 2.
+    rcondt{1} ^if; 1: by auto => /#.
+    auto => /> &1 &2 *.
+    smt(get_setE mem_set).
+  auto => /> &1 &2 *.    
+  (* this side is only possible when badq happens since instance cannot be tested or seskey revealed - TODO: could be added as invariant? *)
+  admit.
 - move => &2 bad.
   proc; inline; sp; if => //; sp; match; 1: by auto. 
   match; auto.
