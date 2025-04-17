@@ -1148,6 +1148,11 @@ apply (StdOrder.RealOrder.ler_trans
 by rewrite !(game1_game2 _) !game2_delay.
 qed. 
 
+op log : pkey -> pkey -> skey.
+op root : skey -> pkey -> pkey.
+
+axiom logC pk sk: log (pk ^ sk) pk = sk.
+axiom rootC pk sk: root sk (pk ^ sk) = pk.
 
 
 lemma interestingbit &m: `|Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(false) @ &m : res] - Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(true) @ &m : res]| <= Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(false) @ &m : Red_ROM2.AKE_O.badq].
@@ -1169,6 +1174,19 @@ call (: Red_ROM2.AKE_O.badq
         /\ (forall i t i', Red_ROM2.AKE_O.s_smap.[i] <> None /\ get_trace (oget Red_ROM2.AKE_O.s_smap.[i]) = t
                 => Red_ROM2.AKE_O.s_smap.[i'] <> None /\ get_trace (oget Red_ROM2.AKE_O.s_smap.[i']) = t
                 => i = i'){2}
+      (*  /\ (forall i st pt k ir, Game2.c_smap.[i] = Some (Accepted st pt k ir)
+                => ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I1.RO.m){2}
+        /\ (forall i st pt k ir, Game2.s_smap.[i] = Some (Accepted st pt k ir)
+                => (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m){2}*)
+        /\ (forall x, x \in ROSc.I2.RO.m => x \in ROSc.I1.RO.m){2}
+        /\ (forall x, x \in ROSc.I2.RO.m
+                => (exists i ir, Red_ROM2.AKE_O.c_smap.[i] = Some (Accepted (x.`3, root (log x.`1 x.`5) x.`2, x.`4, (log x.`1 x.`5))
+                                  (x.`4, Some (x.`5, (oget ROSc.I1.RO.m.[x]))) (oget ROSc.I2.RO.m.[x]) ir)
+                   /\ (ir.`2 \/ ir.`3))
+                \/ (exists i ir, Red_ROM2.AKE_O.s_smap.[i] = Some (Accepted (x.`3, (log x.`2 x.`4), Some (log x.`1 x.`4))
+                                  (x.`4, Some (x.`5, (oget ROSc.I1.RO.m.[x]))) (oget ROSc.I2.RO.m.[x]) ir)
+                   /\ (ir.`2 \/ ir.`3))
+                \/ x \in Red_ROM2.AKE_O.hq){2}
         /\ Red_ROM2.AKE_O.b0{1} = false /\ Red_ROM2.AKE_O.b0{2} = true
         /\ (forall x, x \in ROSc.I2.RO.m{1} <=> x \in ROSc.I2.RO.m{2})
       , ={badq}(Red_ROM2.AKE_O, Red_ROM2.AKE_O)) => //; try sim />.
@@ -1179,7 +1197,8 @@ call (: Red_ROM2.AKE_O.badq
   sp; seq 1 1: (#pre /\ r{1} = r{2}); 1: by auto=> />.
   if => //.
   + auto => /> &1 &2 badqr hqr *.
-    split. move => *. smt(get_setE).
+    split. move => *. split. move => *.  split. smt(get_setE). split. smt(). split. smt(get_setE). split. smt(get_setE). smt(get_setE in_fsetU1 mem_set).
+    move => *. smt(get_setE in_fsetU1 mem_set).
     move => *. split. smt(get_setE).
     move => *. case (Red_ROM2.AKE_O.tq{2} = None) => ?; 1: by smt().
     have: (oget Red_ROM2.AKE_O.tq{2} \notin hqr `|` fset1 x{2}); 1: by smt().
@@ -1187,13 +1206,10 @@ call (: Red_ROM2.AKE_O.badq
     have: oget Red_ROM2.AKE_O.tq{2} <> x{2}; 1: by smt(@FSet).
     by smt().
   auto => /> &1 &2 badqr hqr *.
-  split; 1: by smt(get_setE).
+  split. move => *. split. move => *.  split. smt(get_setE). split. smt(). split. smt(get_setE). split. smt(get_setE). smt(get_setE in_fsetU1 mem_set).
+  move => *. smt(get_setE in_fsetU1 mem_set).
   move => *. split; 1: by smt(get_setE).
-  move => *. case (Red_ROM2.AKE_O.tq{2} = None) => ?; 1: by smt().
-  have: (oget Red_ROM2.AKE_O.tq{2} \notin hqr `|` fset1 x{2}); 1: by smt().
-  move => ?.
-  have: oget Red_ROM2.AKE_O.tq{2} <> x{2}; 1: by smt(@FSet).
-  by smt().
+  move => *. smt(get_setE in_fsetU1 mem_set).
 - move => &2 badq; proc*; inline. auto => />. 
   rewrite dkey_ll dtag_ll //=. smt().
 - move => &1; proc*; inline; auto.
@@ -1216,7 +1232,8 @@ call (: Red_ROM2.AKE_O.badq
   sp; if => //.
   sp; match = => // [|st].
   + auto => /> &1 &2 *.
-    admit. (* injectivity *)
+    split. admit.  (* injectivity *)
+    smt(get_setE).
   match = => // st' pt' ir'.
   auto => /> &1 &2 *.
   smt(get_setE).
@@ -1238,18 +1255,28 @@ call (: Red_ROM2.AKE_O.badq
   sp 1 1; if => //.
   sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
   if => //.
-  + auto => /> &1 &2 kps bad stm _ stsk _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 kpuq notinm i i'.
-    case (i = (b,j){2}) => ibj.
-    + rewrite ibj get_set_sameE //=.
-      case (i' = (b,j){2}) => i'bj; 1: by rewrite i'bj.
-      rewrite get_set_neqE //=.            
-      move => stnn.
-      admit. (* Injectivity *)
-    case (i' = (b,j){2}) => i'bj.
-    + admit. (* injectivity *)
-    smt(get_set_neqE).
-  auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 kpuq inm.
-  admit. (* Injectivity same as above *)
+  + auto => /> &1 &2 kps bad stm _ stsk _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 kpuq notinm. 
+    split.
+    + move => // i i'.
+      case (i = (b,j){2}) => ibj.
+      + rewrite ibj get_set_sameE //=.
+        case (i' = (b,j){2}) => i'bj; 1: by rewrite i'bj.
+        rewrite get_set_neqE //=.            
+        move => stnn.
+        admit. (* Injectivity *)
+      case (i' = (b,j){2}) => i'bj.
+      + admit. (* injectivity *)
+      smt(get_set_neqE).
+    split; 1: by smt(get_setE). 
+    move => x2. 
+    case (x2 = (m2{2} ^ kp{2}.`2, m2{2} ^ sk, b{2}, m2{2}, kp{2}.`1)) => x2eq; 1: by smt(get_setE). 
+    rewrite get_set_neqE //=. 
+    rewrite get_set_sameE. 
+    admit. (* can I use fmapP and mem_set? *)
+  auto => /> &1 &2 kps bad stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 kpuq inm.
+  split. admit. (* Injectivity same as above *)
+  move => x2. 
+  admit. (* can I use fmapP and mem_set? *)
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
   match => //.
@@ -1265,7 +1292,29 @@ call (: Red_ROM2.AKE_O.badq
   sp; seq 1 1: (#pre /\ ={r0}); 1: by auto=> />.
   if => //.
   + sp ^if & -1 ^if & -1; if => //.
-    + auto => /> &1 &2 kps bad stm _ stsk _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 notinm i0 i'.
+    + auto => /> &1 &2 kps bad stm _ stsk _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 kpsv.
+      split.
+      + move => i0 i'.
+        case (i0 = i{2}) => i0i.
+        + rewrite i0i get_set_sameE //=.
+          case (i' = i{2}) => i'i; 1: by rewrite i'i.
+          rewrite get_set_neqE //=.            
+          move => stnn.
+          admit. (* Injectivity *)
+        case (i' = i{2}) => i'i.
+        + admit. (* injectivity *)
+        smt(get_set_neqE).
+      split; 1: by smt(get_setE).
+      move => x2. 
+      case (x2 = (m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m3{2}.`1)) => x2eq; 1: by smt(get_setE). 
+      rewrite get_set_neqE //=. 
+      admit. (* can I use fmapP and mem_set? *) 
+    auto => /> &1 &2 kps stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 notinm neq.
+    admit. (* Injectivity same as above *)
+  sp ^if & -1 ^if & -1; if => //.
+  + auto => /> &1 &2 kps bad stm _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inm eq.
+    split. 
+    + move => i0 i'.
       case (i0 = i{2}) => i0i.
       + rewrite i0i get_set_sameE //=.
         case (i' = i{2}) => i'i; 1: by rewrite i'i.
@@ -1275,20 +1324,10 @@ call (: Red_ROM2.AKE_O.badq
       case (i' = i{2}) => i'i.
       + admit. (* injectivity *)
       smt(get_set_neqE).
-    auto => /> &1 &2 kps stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 notinm neq.
-    admit. (* Injectivity same as above *)
-  sp ^if & -1 ^if & -1; if => //.
-  + auto => /> &1 &2 kps bad stm _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inm eq i0 i'.
-    case (i0 = i{2}) => i0i.
-    + rewrite i0i get_set_sameE //=.
-      case (i' = i{2}) => i'i; 1: by rewrite i'i.
-      rewrite get_set_neqE //=.            
-      move => stnn.
-      admit. (* Injectivity *)
-    case (i' = i{2}) => i'i.
-    + admit. (* injectivity *)
-    smt(get_set_neqE).
-  auto => /> &1 &2 kps bad stm _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inm neq i0 i'.
+    move => x2.
+    case (x2 = (m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m3{2}.`1)) => x2eq; 1: by smt(get_setE).
+     admit. (* can I use fmapP and mem_set? *)
+  auto => /> &1 &2 kps bad stm _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inm neq.
   admit. (* Injectivity same as above *)
 - move => &2 bad.
   proc; inline.
@@ -1311,11 +1350,19 @@ call (: Red_ROM2.AKE_O.badq
   sp 2 2; if => //.
   + smt().
   + auto => /> &1 &2 *.
+    split.  smt(get_setE mem_set).
+    split.  smt(get_setE mem_set).
+    split.  smt(get_setE mem_set).
+    split.  smt(get_setE mem_set).
+    split. admit. (* add to invariant: when accepted then I am in I1 *)
+    split. move => x1. case (x1 = ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1)) => x1eq. 
+    + rewrite x1eq mem_set get_set_sameE //=. (* exists i{2}. rewrite get_set_sameE. rewrite logC rootC. *)admit. (* reconstruction of state correct? *)
+    + rewrite mem_set x1eq //=. admit. (* again ignore update - if it exists before it exists after - I CANT OVERRIDE STATE SINCE INPUT UNIQUE*)
     smt(get_setE mem_set).
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh inm.
-  split.
-  admit. (* here I need that this new instance cant collide with tq or have tq as partner *)
-  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 fresh inm.
+  split. admit. (* here I need that this new instance cant collide with tq or have tq as partner *)
+  split. admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+  admit. (* here again the update does not change exists *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1339,11 +1386,11 @@ call (: Red_ROM2.AKE_O.badq
   sp 2 2; if => //.
   + smt().
   + auto => /> &1 &2 *.
-    smt(get_setE mem_set).
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh inm.
-  split. 
-  admit. (* here I need that this new instance cant collide with tq or have tq as partner *)
-  admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+    admit. (* same as above *)
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 fresh inm.
+  split. admit. (* here I need that this new instance cant collide with tq or have tq as partner *)
+  split. admit. (* Injectivity - the trace gets actually not changed so I should be able to apply invariant from before *)
+  admit. (* here again the update does not change exists *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1367,10 +1414,12 @@ call (: Red_ROM2.AKE_O.badq
 - proc; inline.
   sp; match = => // st.
   match = => // [st' pt ir| st' pt k ir].
-  + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 unto. 
-    smt(get_setE).
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 fresh. 
-  smt(get_setE).
+  + auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 unto. 
+    split; 1: by smt(get_setE).
+    admit. (* here again the update does not change exists *)
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 fresh. 
+  split; 1: by smt(get_setE).
+  admit. (* here again the update does not change exists *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1381,8 +1430,9 @@ call (: Red_ROM2.AKE_O.badq
 - proc; inline.
   sp; match = => // st.
   match = => // st' pt k ir.
-  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 fresh.
-  smt(get_setE).
+  auto => /> &1 &2 stm _ stnn _ neqb inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 fresh.
+  split; 1: by smt(get_setE).
+  admit. (* here again the update does not change exists *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
@@ -1404,8 +1454,13 @@ call (: Red_ROM2.AKE_O.badq
   + sp 0 2.
     rcondt{1} ^if; 1: by auto => /#.
     auto => /> &1 &2 *.
+    split. smt(get_setE mem_set).
+    split. smt(get_setE mem_set).
+    split. smt(get_setE mem_set).
+    split. admit.
+    split. admit.
     smt(get_setE mem_set).
-  auto => /> &1 &2 *.    
+  auto => /> &1 &2 *. 
   (* this side is only possible when badq happens since instance cannot be tested or seskey revealed - TODO: could be added as invariant? *)
   admit.
 - move => &2 bad.
