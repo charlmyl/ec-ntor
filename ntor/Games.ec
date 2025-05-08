@@ -438,14 +438,45 @@ print Game2.
 
 (* Step3: Replacing key computation on real side with sampling *)
 module Game3 = Game2 with {
+  proc send_msg2 [
+    ^match#Some.^match#None.^if.^ks<$ ~ {sk <- witness;}
+    [^match#Some.^match#None.^if.^if{2} - ^sk<-] -
+  ]
+
+  proc send_msg3 [
+    ^match#Some.^match#Pending.^ks<$ ~ {sk <- witness;}
+    [^match#Some.^match#Pending.^if{2} - ^sk<-] -
+  ]
+
+  proc c_rev_skey [
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); 
+                                            ks <$ dkey;
+                                            if (x \notin h2m) {h2m.[x] <- ks;} 
+                                            k <- h2m.[x];}
+  ]
+
+  proc s_rev_skey [
+    var ks : key
+    var x : pkey * pkey * s_id * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1);
+                                            ks <$ dkey;
+                                            if (x \notin h2m) {h2m.[x] <- ks;} 
+                                            k <- h2m.[x];}
+  ]
+
   proc c_test [
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; k <- Some ks;}
-    ^if.^match#Some.^match#Accepted.^if.^if.^c_smap<- ~ {c_smap.[i] <- set_ir_test (Accepted st' t' ks ir');}
+    var ks2 : key
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];}
+
   ]
 
   proc s_test [
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; k <- Some ks;}
-    ^if.^match#Some.^match#Accepted.^if.^if.^s_smap<- ~ {s_smap.[(b, j)] <- set_ir_test (Accepted st' t' ks ir');}
+    var ks2 : key
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];}
   ]
 }.
 
