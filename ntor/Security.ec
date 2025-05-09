@@ -1217,20 +1217,23 @@ h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap) =
         /\ (forall i t i', csm.[i] <> None /\ get_trace (oget csm.[i]) = t
                 => csm.[i'] <> None /\ get_trace (oget csm.[i']) = t
                 => i = i')
-        /\ (forall pk, forall sk i m1 tag, (pk,sk) \notin kp_set /\ csm.[i] <> None
+    (*    /\ (forall pk, forall sk i m1 tag, (pk,sk) \notin kp_set /\ csm.[i] <> None
                 => get_trace (oget csm.[i]) <> Some (m1, Some (pk, tag)) 
-                  /\ get_trace (oget csm.[i]) <> Some (pk, Some (witness, witness)))
+                  /\ get_trace (oget csm.[i]) <> Some (pk, Some (witness, witness)))*)
         /\ (forall i tr pk, csm.[i] <> None 
                 => get_trace (oget csm.[i]) = Some (pk, tr) 
                 => exists sk, (pk, sk) \in kp_set)
-        /\ (forall i tr pk tag, csm.[i] <> None 
+       (* /\ (forall i tr pk tag, csm.[i] <> None 
                 => get_trace (oget csm.[i]) = Some (tr, Some (pk, tag)) 
-                => exists sk, (pk, sk) \in kp_set)
+                => exists sk, (pk, sk) \in kp_set)  - not ture since message could come from the adversary *)
         /\ (forall i t i', ssm.[i] <> None /\ get_trace (oget ssm.[i]) = t
                 => ssm.[i'] <> None /\ get_trace (oget ssm.[i']) = t
                 => i = i')
-        /\ (forall pk, forall sk i m1 tag, (pk,sk) \notin kp_set /\ ssm.[i] <> None
-                => get_trace (oget ssm.[i]) <> Some (m1, Some (pk, tag)))
+        /\ (forall i tr pk tag, ssm.[i] <> None 
+                => get_trace (oget ssm.[i]) = Some (tr, Some (pk, tag)) 
+                => exists sk, (pk, sk) \in kp_set)
+       (* /\ (forall pk, forall sk i m1 tag, (pk,sk) \notin kp_set /\ ssm.[i] <> None
+                => get_trace (oget ssm.[i]) <> Some (m1, Some (pk, tag)))*)
         /\ (forall i st pt k ir, csm.[i] = Some (Accepted st pt k ir)
                 => (pt.`1 = st.`3))
         (*/\ (forall i st pt k ir, Game2.s_smap.[i] = Some (Accepted st pt k ir)
@@ -1264,7 +1267,7 @@ call (: Game3.badq
 
 - auto => />.
 split; 1: by smt(emptyE).
-move => injc trc pk1ins pk2ins injs trs eqpk inv rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr. 
+move => injc pkins injs trs eqpk inv rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr. 
 by case : (!bqr) => />. 
 
 - exact A_ll.
@@ -1305,7 +1308,7 @@ by case : (!bqr) => />.
 - proc; inline.
   sp; if => //.
   sp; match = => // [|st].
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv ? ? ? ? ? ? ? kp *.
+  + auto => /> &1 &2 ? ? ? ? ? ? ? ? inv ? ? ? ? ? ? kp *.
     split; 1: by smt().
     split.
     + move => // i0 i'.
@@ -1324,24 +1327,9 @@ by case : (!bqr) => />.
       move => stnn.
       rewrite i'eq !get_set_sameE //=.
       admit. (* I need to talk about there is only one sk to each pk *)
-    split.
-    smt(get_setE in_fsetU1).
-    split.
-    + move => i0.
-      case (i0 = i{2}) => ieq.
-      + rewrite ieq get_set_sameE //=.
-        smt(in_fsetU1).
-      rewrite get_set_neqE //=.
-      smt(in_fsetU1).
-    split.
-    + move => i0.
-      case (i0 = i{2}) => ieq.
-      + rewrite ieq get_set_sameE //=.
-      rewrite get_set_neqE //=.
-      smt(in_fsetU1).
-    smt(get_setE in_fsetU1).
+    split; by smt(get_setE in_fsetU1).
   match = => // st' pt ir.
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? inv *.
   split; 1: by smt(). 
   split.
   (* Injectivity for updating with Aborted state *)
@@ -1350,19 +1338,11 @@ by case : (!bqr) => />.
     + rewrite ieq get_set_sameE //=.
       case (i' = i{2}) => i'eq; 1: by rewrite i'eq.
       rewrite get_set_neqE //=.
-      by smt(). (* Why does this go through here but not later? *)
+      by smt().
     case (i' = i{2}) => i'eq; 2: by smt(get_set_neqE).
     rewrite i'eq get_set_sameE get_set_neqE //=.
     by smt().
-  split; 1: by smt(get_setE in_fsetU1).
-  split. 
-  + move => i0.
-    case (i0 = i{2}) => ieq.
-    + rewrite ieq get_set_sameE //=.
-      smt(in_fsetU1).
-    rewrite get_set_neqE //=.
-    smt(in_fsetU1).
-  by smt(get_setE in_fsetU1).
+  split; by smt(get_setE in_fsetU1).
 - move => &2 bad.
   proc; sp; if => //; sp. 
   match; auto => />.
@@ -1381,61 +1361,36 @@ by case : (!bqr) => />.
   sp 1 1; if => //.
   sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
   if => //.
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
+  + auto => /> &1 &2 kps ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
     split; 1: by smt(get_setE in_fsetU1).
     split; 1: by smt(get_setE in_fsetU1).
-    split; 1: by smt(get_setE in_fsetU1).
-    split; 1: by smt(get_setE in_fsetU1).
-    split.
-    + move => // i i'.
-      case (i = (b,j){2}) => ibj.
-      + rewrite ibj get_set_sameE //=.
-        case (i' = (b,j){2}) => i'bj; 1: by rewrite i'bj.
-        rewrite get_set_neqE //=.            
-        move => stnn.
-        rewrite get_set_sameE.
-        have := (inv kp{2}.`1 kp{2}.`2 i' m2{2} (oget (Some ts{2}))).
-        by smt().
-      case (i' = (b,j){2}) => i'bj.
-      + rewrite get_set_neqE //=.
-        move => stnn.
-        rewrite i'bj !get_set_sameE //=.
-        have := (inv kp{2}.`1 kp{2}.`2 i' m2{2} (oget (Some ts{2}))).
-        by smt().
-      by smt(get_set_neqE).
-    split.
-    + move => pk sk0 i m1 tag. case (i = (b,j){2}) => ieq. rewrite !ieq !get_set_sameE //=. 
-      case ((pk, sk0) = (kp.`1, kp.`2){2}) => kpeq; 1: by smt(in_fsetU1).
-      rewrite !negb_and. move => *. right. left. admit. (* What Kristian says about two secrets could have the same public keys *)
-      rewrite get_set_neqE //=. smt(in_fsetU1).   
+    split. 
+    + move => // i0 i'.
+      case (i0 = (b, j){2}) => ieq.
+      + rewrite ieq get_set_sameE //=.
+        case (i' = (b, j){2}) => i'eq; 1: by rewrite i'eq.
+        rewrite get_set_sameE get_set_neqE //=.
+        move => stnn trs.
+        have := inv i' m2{2} kp{2}.`1 ts{2}.
+        rewrite stnn trs //=.
+        have : !(exists (sk : skey), (kp{2}.`1, sk) \in kps); rewrite negb_exists.
+        + admit. (* I need to talk about there is only one sk to each pk - why don't I have Game3.kp_set here? *)
+        smt().
+      case (i' = (b, j){2}) => i'eq; 2: by smt(get_set_neqE).
+      rewrite get_set_neqE //=.
+      move => stnn.
+      rewrite i'eq !get_set_sameE //=.
+      admit. (* I need to talk about there is only one sk to each pk *)
+    split; 1: by smt(get_setE in_fsetU1).  
     move => x2. 
     case (x2 = (m2{2} ^ kp{2}.`2, m2{2} ^ sk, b{2}, m2{2}, kp{2}.`1)) => x2neq; 1: by smt(get_setE). 
     rewrite get_set_sameE.
     admit. (* inductive invariant *)   
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
   split; 1: by smt(get_setE in_fsetU1).
   split; 1: by smt(get_setE in_fsetU1).
+  split. admit. (*1: by smt(get_setE in_fsetU1). breaks when changing trace invaraint for servers - Injectivity *)
   split; 1: by smt(get_setE in_fsetU1).
-  split; 1: by smt(get_setE in_fsetU1).
-  split.
-  (* Injectivity for updating with Accepted state *)
-  + move => // i i'.
-    case (i = (b,j){2}) => ibj.
-    + rewrite ibj get_set_sameE //=.
-      case (i' = (b,j){2}) => i'bj; 1: by rewrite i'bj.
-      rewrite get_set_neqE //=.            
-      have := (inv kp{2}.`1 kp{2}.`2 i' m2{2} (oget (Some ts{2}))).
-      by smt().
-    case (i' = (b,j){2}) => i'bj; 2: by smt(get_set_neqE).
-    rewrite get_set_neqE //=.
-    rewrite i'bj !get_set_sameE //=.
-    have := (inv kp{2}.`1 kp{2}.`2 i' m2{2} (oget (Some ts{2}))).
-    by smt().
-  split.
-  + move => pk sk0 i m1 tag. case (i = (b,j){2}) => ieq. rewrite !ieq !get_set_sameE //=. 
-    case ((pk, sk0) = (kp.`1, kp.`2){2}) => kpeq; 1: by smt(in_fsetU1).
-    rewrite !negb_and. move => *. right. left. admit. (* What Kristian says about two secrets could have the same public keys *)
-    rewrite get_set_neqE //=. smt(in_fsetU1).
   admit. (* inductive invariant *)
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
@@ -1452,7 +1407,7 @@ by case : (!bqr) => />.
   sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
   if => //.
   + sp ^if & -1 ^if & -1; if => //.
-    + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? inv *.
+    + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? inv *.
       split; 1: by smt().
       split.
       (* Injectivity for updating with Accepted state *)
@@ -1465,16 +1420,14 @@ by case : (!bqr) => />.
         case (i' = i{2}) => i'i; 2: smt(get_set_neqE).
         rewrite  i'i get_set_sameE get_set_neqE //=.
         admit. (* injectivity - do I need collision resistance of tags here? *)
-      split.
-      + move => pk sk0 i0 m1 tag nins. 
-        case (i0 = i{2}) => ieq. 
-        + rewrite !ieq !get_set_sameE //=.
-          admit. (* ?????????? *)
-        smt(get_set_neqE).
       split; 1: by smt(get_setE).
-      split. admit.
-      split. admit. (* Probably need to fix the game? *)
-      admit. (* cannot overwrite *)
+      split. 
+      + move => i0 st0 pt0 k ir0.
+        case (i0 = i{2}) => i0i.
+        + rewrite i0i get_set_sameE //=.
+          admit. (* Probably need to fix the game? *)
+        by smt(get_set_neqE).
+      admit. (* inductive invariant *)
     (* In the case tags are not equal and session gets aborted *)
     auto => /> &1 &2 *.
     split; 1: by smt().
@@ -1484,33 +1437,22 @@ by case : (!bqr) => />.
       + rewrite ieq get_set_sameE //=.
         case (i' = i{2}) => i'eq; 1: by rewrite i'eq.
         rewrite get_set_neqE //=.
-        admit. (* Something is different here than above... *)
+        admit. (*  Injectivity - do I need collision resistance of tags here? *)
       case (i' = i{2}) => i'eq; 2: by smt(get_set_neqE).
       rewrite i'eq get_set_sameE get_set_neqE //=.
-      admit. (* Something is different here than above... *)
-    split.
-    + move => pk sk0 i0 m1 tag nins. 
-      case (i0 = i{2}) => ieq. 
-      + rewrite !ieq !get_set_sameE //=.
-        admit. (* ?????????? *)
-      smt(get_set_neqE).
-    split; 1: by smt(get_setE in_fsetU1).
-    split. 
-    + move => i0.
-      case (i0 = i{2}) => ieq.
-      + rewrite ieq get_set_sameE //=.
-        admit.
-      rewrite get_set_neqE //=.
-      smt(in_fsetU1).
-    by smt(get_setE in_fsetU1).
+      admit. (*  Injectivity - do I need collision resistance of tags here? *)
+    split; by smt(get_setE in_fsetU1).
   sp ^if & -1 ^if & -1; if => //.
   + auto => /> &1 &2 *.
     split; 1: by smt().
     split. admit. (* Injectivity *)
-    split. admit. (* keys in trace are in kp set *)
-    split. admit. (* keys in trace are in kp set *)
-    split. admit. (* keys in trace are in kp set *)
-    split. admit. (* pk in trace is same as in state *)
+    split. smt(get_setE).
+    split.
+    + move => i0 st0 pt0 k ir0.
+      case (i0 = i{2}) => i0i.
+      + rewrite i0i get_set_sameE //=.
+        admit. (* Probably need to fix the game? *)
+      by smt(get_set_neqE).
     admit. (* inductive invariant *)
   (* In the case tags are not equal and session gets aborted *)
   auto => /> &1 &2 *.
@@ -1521,25 +1463,11 @@ by case : (!bqr) => />.
     + rewrite ieq get_set_sameE //=.
       case (i' = i{2}) => i'eq; 1: by rewrite i'eq.
       rewrite get_set_neqE //=.
-      admit. (* Something is different here than above... *)
+      admit. (* Injectivity - do I need collision resistance of tags here? *)
     case (i' = i{2}) => i'eq; 2: by smt(get_set_neqE).
     rewrite i'eq get_set_sameE get_set_neqE //=.
-    admit. (* Something is different here than above... *)
-  split.
-  + move => pk sk0 i0 m1 tag nins. 
-    case (i0 = i{2}) => ieq. 
-    + rewrite !ieq !get_set_sameE //=.
-      admit. (* ?????????? *)
-    smt(get_set_neqE).
-  split; 1: by smt(get_setE in_fsetU1).
-  split. 
-  + move => i0.
-    case (i0 = i{2}) => ieq.
-    + rewrite ieq get_set_sameE //=.
-      admit.
-    rewrite get_set_neqE //=.
-    smt(in_fsetU1).
-  by smt(get_setE in_fsetU1).
+    admit. (* Injectivity - do I need collision resistance of tags here? *)
+  split; by smt(get_setE in_fsetU1).
 - move => &2 bad.
   proc; inline.
   sp; match; auto. 
@@ -1568,8 +1496,6 @@ by case : (!bqr) => />.
     + split; 1: by smt().
       split. smt(get_setE).
       split. smt(get_setE).
-      split. smt(get_setE). 
-      split. smt(get_setE).
       split. smt(get_setE).
       admit. (* inductive invariant *)
     smt(get_setE mem_set).
@@ -1580,8 +1506,6 @@ by case : (!bqr) => />.
     smt().
   split; 1: by smt().
   split. smt(get_setE). 
-  split. smt(get_setE).
-  split. smt(get_setE).
   split. smt(get_setE).
   split. smt(get_setE).
   admit. (* inductive invariant *)
@@ -1639,12 +1563,8 @@ by case : (!bqr) => />.
     split; 1: by smt(get_setE).
     split; 1: by smt(get_setE).
     split; 1: by smt(get_setE).
-    split; 1: by smt(get_setE).
-    split; 1: by smt(get_setE).
     admit. (* inductive invariant *)
   auto => /> &1 &2 *. 
-  split; 1: by smt(get_setE).
-  split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
@@ -1663,7 +1583,7 @@ by case : (!bqr) => />.
   auto => /> &1 &2 *.
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE). 
-  split. admit. (* key not in kp cannot be in state *)
+  split; 1: by smt(get_setE). 
   admit. (* inductive invariant *)
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
@@ -1692,8 +1612,6 @@ by case : (!bqr) => />.
     split. 
     + split; 1: by smt(get_setE).
       split; 1: by smt(get_setE).
-      split; 1: by smt(get_setE).
-      split; 1: by smt(get_setE). 
       split; 1: by smt(get_setE).
       admit. (* inductive invariant *)
     smt(get_setE mem_set).
