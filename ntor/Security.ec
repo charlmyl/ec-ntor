@@ -1353,7 +1353,7 @@ by case : (!bqr) => />.
   sp; match; auto => />.
   + by rewrite dkp_ll.
   by smt().
- 
+
 - proc; inline.
   sp; match = => // sk.
   match = => //.
@@ -1361,7 +1361,7 @@ by case : (!bqr) => />.
   sp 1 1; if => //.
   sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
   if => //.
-  + auto => /> &1 &2 kps ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
+  + auto => /> &1 &2 kps ? ? ? ? ? ? ? ? ? ? ? ? ? inv ? inv2 *.
     split; 1: by smt(get_setE in_fsetU1).
     split; 1: by smt(get_setE in_fsetU1).
     split. 
@@ -1381,17 +1381,30 @@ by case : (!bqr) => />.
       move => stnn.
       rewrite i'eq !get_set_sameE //=.
       admit. (* I need to talk about there is only one sk to each pk *)
-    split; 1: by smt(get_setE in_fsetU1).  
-    move => x2. 
-    case (x2 = (m2{2} ^ kp{2}.`2, m2{2} ^ sk, b{2}, m2{2}, kp{2}.`1)) => x2neq; 1: by smt(get_setE). 
-    rewrite get_set_sameE.
-    admit. (* inductive invariant *)   
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
+    split; 1: by smt(get_setE in_fsetU1).
+    smt(get_setE).
+  auto => /> &1 &2 kps ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
   split; 1: by smt(get_setE in_fsetU1).
   split; 1: by smt(get_setE in_fsetU1).
-  split. admit. (*1: by smt(get_setE in_fsetU1). breaks when changing trace invaraint for servers - Injectivity *)
+  split.
+  + move => // i0 i'.
+    case (i0 = (b, j){2}) => ieq.
+    + rewrite ieq get_set_sameE //=.
+      case (i' = (b, j){2}) => i'eq; 1: by rewrite i'eq.
+      rewrite get_set_neqE //=.
+      move => stnn trs.
+      have := inv i' m2{2} kp{2}.`1 ts{2}.
+      rewrite stnn trs //=.
+      have : !(exists (sk : skey), (kp{2}.`1, sk) \in kps); rewrite negb_exists.
+      + admit. (* I need to talk about there is only one sk to each pk - why don't I have Game3.kp_set here? *)
+      smt().
+    case (i' = (b, j){2}) => i'eq; 2: by smt(get_set_neqE).
+    rewrite get_set_neqE //=.
+    move => stnn.
+    rewrite i'eq !get_set_sameE //=.
+    admit. (* I need to talk about there is only one sk to each pk *)
   split; 1: by smt(get_setE in_fsetU1).
-  admit. (* inductive invariant *)
+  smt(get_setE).
 - move => &2 bad.
   proc; inline; sp; match; auto => />.
   match => //.
@@ -1558,18 +1571,30 @@ by case : (!bqr) => />.
 - proc; inline.
   sp; match = => // st.
   match = => // [st' pt ir| st' pt k ir].
-  + auto => /> &1 &2 *. 
+  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *. 
     split; 1: by smt(get_setE).
     split; 1: by smt(get_setE).
     split; 1: by smt(get_setE).
     split; 1: by smt(get_setE).
-    admit. (* inductive invariant *)
-  auto => /> &1 &2 *. 
+    move => x2 x2in.
+    have := inv x2.
+    rewrite x2in //=.
+    move => [H1|[H2|H3]].
+    + left. admit. (* cannot overwrite an Accepted session with Pending *)
+    + smt().
+    smt().
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *. 
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
-  admit. (* inductive invariant *)
+  move => x2 x2in.
+  have := inv x2.
+  rewrite x2in //=.
+  move => [H1|[H2|H3]].
+  + left. admit. (* How to case over i0 in H1 and conclusion? *)
+  + smt().
+  smt().
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
   match; auto => />.
