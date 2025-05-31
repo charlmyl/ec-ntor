@@ -161,10 +161,10 @@ module Game0 : GAKE_out_i = {
             (b, pk_b, pk_ce, sk_ce) <- st;
             (t_A, sk) <@ h(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
             if (t_A = m3.`2) {
-              c_smap.[i] <- Accepted st (pt, Some m3) sk ir;
+              c_smap.[i] <- Accepted st (pk_ce, Some m3) sk ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
+              c_smap.[i] <- Aborted (Some st) (Some (pk_ce, Some m3)) ir;
             }
           }
         | Accepted _ _ _ _ => { }
