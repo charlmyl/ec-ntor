@@ -1455,7 +1455,7 @@ by case : (!bqr) => />.
   seq 1 1: (#pre /\ ={ks}); 1: by auto=> />.
   sp 1 1; if => //.
   + smt().
-(* case that the handle was not yet in h2m *)
+(************ case that the handle was not yet in h2m ************)
   + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
     split; 1: by smt(get_setE mem_set).
     split; 1: by smt(get_setE mem_set).
@@ -1483,12 +1483,12 @@ by case : (!bqr) => />.
         smt(get_setE).
       by smt().
     by smt(get_setE mem_set).
-(* case that the handle was in h2m *)
+(************ case that the handle was in h2m ************)
   auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv3 ? ? ? ? ? inv2 ? inv *.
   split.
   + case (Game3.tested{2}) => test; 2: by smt().
     case (((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1) = oget Game3.tq{2}) => tqeq; 2: by smt().
-    admit.
+    admit. (* here I need that this new instance cant collide with tq or have tq as partner *)
   split; 1: by smt().
   split; 1: by smt(get_setE). 
   split; 1: by smt(get_setE).
@@ -1533,7 +1533,7 @@ by case : (!bqr) => />.
   seq 1 1: (#pre /\ ={ks}); 1: by auto=> />.
   sp 1 1; if => //.
   + smt().
-(* case that the handle was not yet in h2m *)
+(************ case that the handle was not yet in h2m ************)
   + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? _ ? ? ? inv2 ? ? ? inv *.
     split; 1: by smt(get_setE mem_set).
     split; 1: by smt(get_setE mem_set).
@@ -1570,7 +1570,7 @@ by case : (!bqr) => />.
         smt(get_setE).
       by smt().
     by smt(get_setE mem_set).
-(* case that the handle was in h2m *)
+(************ case that the handle was in h2m ************)
   auto => /> &1 &2 stbj ? ? ? ? ? ? ? ? _ ? ? ? ? ? ? ? inv *.
   split. 
   + case (Game3.tested{2}).
@@ -1583,13 +1583,14 @@ by case : (!bqr) => />.
     + rewrite ieq get_set_sameE //=.
       case (i' = (b, j){2}) => i'eq; 1: by rewrite i'eq.
       rewrite get_set_neqE //=.
-      admit. (* works on client side *)
+      have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+      smt().
     case (i' = (b, j){2}) => i'eq; 2: by smt(get_set_neqE).
     rewrite get_set_neqE //=.
     move => m1 m2 tag m1' tag' stnn.
     rewrite i'eq !get_set_sameE.
-    
-    admit. (* works on client side *)
+    have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+    smt().
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
   move => x2 x2in.
@@ -1606,12 +1607,9 @@ by case : (!bqr) => />.
       + by smt().
       + right; left. 
         move : H2 => [i'] t k ir H2.
-        exists i'.
-        case (i' = (b,j){2}) => i'eq.
-        + exists (oget t'.`2).`2 k' (ir'.`1, true, ir'.`3). 
-          rewrite i'eq get_set_sameE //=.
-          admit. (* works on client side *)
-        by smt(get_set_neqE).
+        exists i' t k ir.
+        have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+        smt(get_setE).
       by smt().
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
@@ -1664,7 +1662,7 @@ by case : (!bqr) => />.
   move => [H1|H2].
   + left. 
     move : H1 => [i'] t k' ir' H1.
-    exists i'. 
+    exists i'.
     by smt(get_setE).
   by smt().
 - move => &2 bad.
@@ -1676,7 +1674,7 @@ by case : (!bqr) => />.
 
 - proc; inline.
   sp; match = => // st.
-  match = => // st' pt k ir.
+  match = => // st' t' k' ir'.
   auto => /> &1 &2 ? ? ? ? ? ? ? ? ? _ ? ? ? ? ? ? ? inv *.
   split; 1: by smt(get_setE).
   split.
@@ -1699,8 +1697,9 @@ by case : (!bqr) => />.
   move => [H1|[H2|H3]].
   + by smt().
   + right; left.
-    move : H2 => [i'] t k' ir' H2.
-    exists i'.
+    move : H2 => [i'] t k'' ir'' H2.
+    exists i' t k'' ir''.
+    have : get_trace (oget (Some (Accepted st' t' k' (true, ir'.`2, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
     admit. (* works on client side *) 
   by smt().
 - move => &2 bad.
@@ -1823,8 +1822,8 @@ by case : (!bqr) => />.
       + smt().      
       + right; left.
         move : H2 => [i'] t k'' ir'' H2.
-        exists i'.
-        admit. (* works on client side *)
+        exists i' t k'' ir''.
+        smt(get_setE).
       by smt().
     smt(get_setE mem_set).
   rcondf {1} ^if. auto => /#.
