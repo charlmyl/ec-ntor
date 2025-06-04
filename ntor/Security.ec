@@ -1062,9 +1062,10 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
 - proc; inline.
     sp; match => //.
     move => stl str.
-    match = => // kp.
+    match = => //; 1: smt().
+    move => kp.
     if => //.
-    + move => /> &1 &2 hkp _ sstl sstr c_clear s_clear inv1 inv2 inv3 inv4 eq_dom.
+    + move => /> &1 &2 hkp _ c_clear s_clear inv1 inv2 inv3 inv4 eq_dom.
       split.
       + move => + j - /(_ j). 
         rewrite !domE -s_clear => />.
@@ -1455,7 +1456,7 @@ by case : (!bqr) => />.
   sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
   if => //.
   + sp ^if & -1 ^if & -1; if => //.
-    + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? inv2 ? _ _ *.
+    + auto => /> &1 &2 ? ? ? ? ? ? ?  ? inv2 ? _ _ *.
       split; 1: by smt(get_setE).
       split. 
       + move => x tqeq.
@@ -1470,12 +1471,12 @@ by case : (!bqr) => />.
       split. smt(get_setE).
       split; 1: by smt(get_setE).
       smt(get_setE).
-    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? _ *.
+    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? _ *.
     smt(get_setE).
   sp ^if & -1 ^if & -1; if => //.
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ *. 
+  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? _ *. 
     smt(get_setE).
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? _ *.
   smt(get_setE).
 - move => &2 bad.
   proc; inline.
@@ -1498,7 +1499,7 @@ by case : (!bqr) => />.
   sp 1 1; if => //.
   + smt().
 (************ case that the handle was not yet in h2m ************)
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? ? ? ? ? ? ? ? ? ? inv *.
+  + auto => /> &1 &2 ? ? ? ? ? ? ? inv2 ? ? ? ? ? ? ? ? ? ? inv *.
     split; 1: by smt(get_setE mem_set).
     split; 1: by smt(get_setE mem_set).
     split; 1: by smt(get_setE mem_set).
@@ -1537,15 +1538,21 @@ by case : (!bqr) => />.
       by smt().
     by smt(get_setE mem_set).
 (************ case that the handle was in h2m ************)
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? ? ? ? ? ? ? ? ? ? inv *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? inv2 ? ? ? ? ? inv3 ? ? ? ? inv ? fresh *.
   split.
   + case (Game3.tested{2}) => test; 2: by smt().
     case (Some ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1) = Game3.tq{2}) => tqeq; 2: by smt().
     have := inv2 ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1).
     rewrite //= logC rootC tqeq some_oget //=; 1: smt().
     move => [] tqin [[i0 t k ir [H1 H2]]|[i0 t k ir [H1 H2]]].
-    have : get_trace (oget Game3.c_smap{2}.[i0]) = get_trace (oget Game3.c_smap{2}.[i{2}]); smt().
-    admit. (* match state of partners *)
+    + have : get_trace (oget Game3.c_smap{2}.[i0]) = get_trace (oget Game3.c_smap{2}.[i{2}]); smt().
+    have : untested_partner_c t' Game3.s_smap{2} = Some false.
+    + rewrite /untested_partner_c.
+      rewrite /get_partners_c.
+      have : t = (oget t'.`2).`2. admit.
+      move => teq.
+      admit.
+      smt().
   split; 1: by smt().
   split.
   + move => x tqeq.
@@ -1602,7 +1609,7 @@ by case : (!bqr) => />.
   sp 1 1; if => //.
   + smt().
 (************ case that the handle was not yet in h2m ************)
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
+  + auto => /> &1 &2 ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
     split; 1: by smt(get_setE mem_set).
     split; 1: by smt(get_setE mem_set).
     split; 1: by smt(get_setE mem_set).
@@ -1650,7 +1657,7 @@ by case : (!bqr) => />.
       by smt().
     by smt(get_setE mem_set).
 (************ case that the handle was in h2m ************)
-  auto => /> &1 &2 stbj ? ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
+  auto => /> &1 &2 stbj ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
   split.
   + case (Game3.tested{2}) => test; 2: by smt().
     case (Some (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1) = Game3.tq{2}) => tqeq; 2: by smt().
@@ -1733,8 +1740,8 @@ by case : (!bqr) => />.
 
 - proc; inline.
   sp; match = => // st.
-  match = => // [st' pt ir| st' pt k ir].
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
+  match = => // [st' pt ir| st' t k ir].
+  + auto => /> &1 &2 ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
     split; 1: by smt(get_setE).
     split. 
     + move => x tqeq.
@@ -1747,8 +1754,8 @@ by case : (!bqr) => />.
       by smt(get_setE).     
       smt(). 
     split; 1: by smt(get_setE).
-    split; 1: by smt(get_setE).
-    split; 1: by smt(get_setE).
+    split; 1: by smt(get_setE oget_some).
+    split; 1: by smt(get_setE oget_some).
     split; 1: by smt(get_setE).
     split. smt(get_setE).
     move => x2 x2in.
@@ -1760,7 +1767,7 @@ by case : (!bqr) => />.
       exists i'. 
       by smt(get_setE).
     by smt().
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *. 
+  auto => /> &1 &2 ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *. 
   split; 1: by smt(get_setE).
   split.
   + move => x tqeq.
@@ -1768,7 +1775,7 @@ by case : (!bqr) => />.
     move => [H1] [H2|H3].
     split. smt().
     left.
-    move : H2 => [i'] t k' ir' H2.
+    move : H2 => [i'] t' k' ir' H2.
     exists i'. 
     by smt(get_setE).     
     smt(). 
@@ -1782,7 +1789,7 @@ by case : (!bqr) => />.
   rewrite x2in //=.
   move => [H1|H2].
   + left. 
-    move : H1 => [i'] t k' ir' H1.
+    move : H1 => [i'] t' k' ir' H1.
     exists i'.
     by smt(get_setE).
   by smt().
@@ -1796,7 +1803,7 @@ by case : (!bqr) => />.
 - proc; inline.
   sp; match = => // st.
   match = => // st' t' k' ir'.
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
   split; 1: by smt(get_setE).
   split. 
   + move => x tqeq.
@@ -1864,7 +1871,7 @@ by case : (!bqr) => />.
   case (x{2} \notin Game3.h2m{2}).
   + rcondt {1} ^if. auto => /#.
     rcondt {2} ^if. auto => /#.
-    auto => /> &1 &2 badq tq ? ? ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
+    auto => /> &1 &2 badq tq ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
     split. smt(get_setE mem_set).
     split. smt(get_setE mem_set).
     split. 
@@ -1897,7 +1904,7 @@ by case : (!bqr) => />.
     smt(get_setE mem_set).
   rcondf {1} ^if. auto => /#.
   rcondf {2} ^if. auto => /#.
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? _ inv2 ? ? ? ? ? ? inv ? ? fresh ? x2in *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ inv2 ? ? ? ? ? ? inv ? ? fresh ? x2in *.
   suff //=:false.
   have := inv ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1).
   rewrite x2in //=.
@@ -1964,7 +1971,7 @@ by case : (!bqr) => />.
   case (x{2} \notin Game3.h2m{2}).
   + rcondt {1} ^if. auto => /#.
     rcondt {2} ^if. auto => /#.
-    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? ? ? ? ? ? inv *.
+    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? ? ? ? ? ? inv *.
     split. smt(get_setE mem_set).
     split. smt(get_setE mem_set).
     split. 
@@ -2008,7 +2015,7 @@ by case : (!bqr) => />.
     by smt(get_setE mem_set).
   rcondf {1} ^if. auto => /#.
   rcondf {2} ^if. auto => /#.
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? inv2 ? ? ? ? inv ? ? fresh ? x2in *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? inv2 ? ? ? ? inv ? ? fresh ? x2in *.
   suff //=:false.
   have := inv (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1).
   rewrite x2in //=.

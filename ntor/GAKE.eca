@@ -354,8 +354,8 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
 
     match c_smap.[i] with
     | None => { } (* Abort? *)
-    | Some _ => {
-        match oget c_smap.[i] with
+    | Some st => {
+        match st with
         | Pending st pt ir => {
             resp <@ C.complete_session(st, m3);
             if (resp is Some r') {
@@ -381,10 +381,10 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
 
     match c_smap.[i] with
     | None => { }
-    | Some _ => {
+    | Some st => {
         (* only accepted client instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
-        if (oget c_smap.[i] is Accepted st' t' k' ir') {
+        if (st is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
             k <- Some k';
             c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
@@ -400,10 +400,10 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
 
     match s_smap.[(b, j)] with
     | None => { }
-    | Some _ => {
+    | Some st => {
         (* only accepted server instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
-        if (oget s_smap.[b, j] is Accepted st' t' k' ir') {
+        if (st is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
             s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
@@ -419,10 +419,10 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
 
     match servers.[b] with
     | None => { }
-    | Some _ => {
+    | Some st => {
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
-        if (oget servers.[b] is Honest kp) {
+        if (st is Honest kp) {
           if (forall j,
                 (b, j) \in s_smap (* just checking instances of b *)
                 => !(   (   get_ir_test (oget s_smap.[b, j])
@@ -443,8 +443,8 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
 
     match c_smap.[i] with
     | None => { }
-    | Some _ => {
-        match oget c_smap.[i] with
+    | Some st => {
+        match st with
           (* client instances can be ephkey revealed when pending if there isn't 
              a tested origin partner (agreeing on first message *)
         | Pending st pk_e ir => {
@@ -473,10 +473,10 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
 
     match s_smap.[b, j] with
     | None => { }
-    | Some _ => {
+    | Some st => {
         (* only accepted server instances that are not ltkey revealed in case they 
            or all partners are tested can be ephkey revealed *)
-        if (oget s_smap.[b, j] is Accepted st t k ir) { (* No Pending on Server side *)
+        if (st is Accepted st t k ir) { (* No Pending on Server side *)
           if (!((   get_ir_test (oget s_smap.[b, j])
                  \/ untested_partner_s t c_smap = Some false)
                 /\ get_sr_ltk (oget servers.[b]))) {
@@ -496,10 +496,10 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
     if (!GAKEb.tested) {
       match GAKEb.c_smap.[i] with
       | None => { }
-      | Some _ => {
+      | Some st => {
           (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
              and not all partner instances are unfresh can be tested *)
-          if (oget GAKEb.c_smap.[i] is Accepted st' t' k' ir') {
+          if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget GAKEb.c_smap.[i]) \/ get_ir_eph (oget GAKEb.c_smap.[i]) 
                   \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false)) {
               if (b0 = false) {
@@ -526,10 +526,10 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
     if (!GAKEb.tested) {
       match GAKEb.s_smap.[(b, j)] with
       | None => { }
-      | Some _ => {
+      | Some st => {
           (* only accepted server instances that are not sesskey revealed, not trivially broken
              and not all partner instances are unfresh can be tested *)
-          if (oget GAKEb.s_smap.[b, j] is Accepted st' t' k' ir') {
+          if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget GAKEb.s_smap.[b, j]) 
                   \/ (get_ir_eph (oget GAKEb.s_smap.[b, j]) /\ get_sr_ltk (oget GAKEb.servers.[b]))
                   \/ fresh_partner_s t' GAKEb.c_smap = Some false)) {
