@@ -1799,17 +1799,20 @@ by case : (!bqr) => />.
   auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
   split; 1: by smt(get_setE).
   split. 
-    + move => x tqeq.
-      have := inv2 x tqeq.
-      move => [H1] [H2|H3]. 
-      smt().
-      split. smt().
-      right.
-      move : H3 => [i'] t k ir'' H3.
-      exists i' t k ir''. 
-      have : get_trace (oget (Some (Accepted st' t' k' (true, ir'.`2, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
-      move => H. split. admit. smt(get_setE).
-    (* works on client side *) 
+  + move => x tqeq.
+    have := inv2 x tqeq.
+    move => [H1] [H2|H3]. 
+    smt().
+    split. smt().
+    right.
+    move : H3 => [i'] t k ir'' H3.
+    case ((b, j){2} = i') => i'eq.
+    + have : Game3.s_smap{2}.[b{2}, j{2}] = Game3.s_smap{2}.[i']; 1: by smt().
+      move => H2.
+      exists i' t k' (true, ir'.`2, ir'.`3).
+      by smt(get_setE).
+    exists i' t k ir''.
+    by smt(get_setE).
   split; 1: by smt(get_setE).
   split.
   + move => // i0 i'.
@@ -1832,10 +1835,13 @@ by case : (!bqr) => />.
   + by smt().
   + right; left.
     move : H2 => [i'] t k'' ir'' H2.
+    case ((b, j){2} = i') => i'eq.
+      have : Game3.s_smap{2}.[b{2}, j{2}] = Game3.s_smap{2}.[i']; 1: by smt().
+      move => H1.
+      exists i' t k' (true, ir'.`2, ir'.`3).
+      by smt(get_setE).
     exists i' t k'' ir''.
-    have : get_trace (oget (Some (Accepted st' t' k' (true, ir'.`2, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
-    move => H. split. admit. smt(get_setE).
-    (* works on client side *) 
+    by smt(get_setE). 
   by smt().
 - move => &2 bad.
   proc; sp; match; 1: by auto. 
