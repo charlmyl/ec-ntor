@@ -137,7 +137,7 @@ module (Red_ROM (D : A_GAKE) : ROc.IdealAll.RO_Distinguisher) (O : ROc.IdealAll.
 }.
 
 module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
-  module AKE_O : GAKE_out = Game2 with {
+  module AKE_O : GAKE_out = Game3 with {
     proc init_mem [
       ^h1m<- ~ {O1.init();}
       ^h2m<- -
@@ -199,7 +199,7 @@ module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, -Game2, -Game3, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2 }.
+declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, -Game2, -Game3, -Game4, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2 }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -818,12 +818,142 @@ call (: ={b0, servers, c_smap, s_smap, tested, kp_set, bad}(Red_ROM.AKE_O, Game2
 + proc; inline.
   sp 1 1; match = => // st.
   match = => // st' pt ir.
-  sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
+  sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto => />.
   auto => />.
   smt(mem_set).
 
 auto => />.
 smt(emptyE).
+qed.
+
+
+
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 3: Removing case of adversary guessing right tag. *)
+lemma game2_game3 b &m: `| Pr[E_GAKE(Game2, A).run(b) @ &m : res] - Pr[E_GAKE(Game3, A).run(b) @ &m : res] | <= Pr[E_GAKE(Game2, A).run(b) @ &m : Game2.badt].
+proof.
+rewrite StdOrder.RealOrder.distrC.
+byequiv (: _ ==> _) : Game3.badt => //; first last.
++ smt().
+symmetry; proc; inline*.
+call (: Game3.badt
+      , ={b0, servers, c_smap, s_smap, tested, kp_set, hm, bad, h1m, h2m, hq, tq, badq, badt}(Game2, Game3)
+      , ={badt}(Game2, Game3)) => //; try sim />; last first.
+
+auto => />.
+move => rl rr al bl csl btl kpl h1ml h2ml hql kpsl ssl sl tl tql ar br csr btr kpr h1mr h2mr hqr kpsr ssr sr tr tqr. 
+by case : (!btr) => />.
+
+- exact A_ll.
+
+- move => &2 bad; proc; auto => />. 
+  by rewrite dkey_ll dtag_ll.
+- move => &1; proc; auto.
+  by rewrite dkey_ll dtag_ll.
+
+- move => &2 bad.
+  proc; if; auto.
+  rewrite dkp_ll //=.
+- move => &1.
+  proc; if => //.
+  islossless. admit.
+
+- move => &2 bad.
+  proc; auto => />.
+- move => &1. 
+  proc; auto => />. 
+
+- move => &2 bad.
+  proc; sp; if => //; sp. 
+  match; auto => />.
+  + rewrite dkp_ll. smt().
+  by smt().
+- move => &1. 
+  proc; sp; if => //. 
+  sp; match; auto => />.
+  + by rewrite dkp_ll.
+  by smt().
+
+- move => &2 bad. admit.
+- move => &1. 
+  admit.
+
+- admit.
+- move => &2 bad.
+  proc; inline.
+  sp; match; auto => />. 
+  match; auto => /> &hr *.
+  rewrite dkey_ll dtag_ll //=. admit.
+- move => &1.
+  proc; inline*; auto => />.
+  sp; match; auto => />.
+  match; auto => />.
+  by rewrite dkey_ll dtag_ll.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- move => &2 bad.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+- move => &1.
+  proc; sp; match; 1: by auto. 
+  match; auto => />.
+
+- move => &2 bad.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; if => //.
+  + auto => />.
+  auto => />.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; if => //.
+  + auto => />.
+  auto => />.
+  by rewrite dkey_ll.
+
+- move => &2 bad.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; if => //.
+  + auto => />.
+  auto => />.
+  by rewrite dkey_ll.
+- move => &1.
+  proc; sp; if => //; sp; match; 1: by auto. 
+  match; auto.
+  if => //; if => //.
+  + auto => />.
+  auto => />.
+  by rewrite dkey_ll.
 qed.
 
 
@@ -925,7 +1055,7 @@ rewrite !mem_filter !domE -eqsm.
 by case: (sml.[x])=> /> [] @/c_clear_k /#.
 qed.
 
-lemma game2_delay bit &m: Pr[E_GAKE(Game2, A).run(bit) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res].
+lemma game3_delay bit &m: Pr[E_GAKE(Game3, A).run(bit) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res].
 proof. 
 byequiv (: ={glob A, glob Red_ROM2} /\ arg{1} = bit /\ arg{2} = bit ==> _)  => //.
 proc*.
@@ -933,19 +1063,19 @@ proc*.
 rewrite equiv [{2} 1 -(ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) _)]; 2: by move => _; exact dkey_ll.
 
 + inline; wp.
-  call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq}(Game2, Red_ROM2.AKE_O)
-          /\ Game2.h1m{1} = ROSc.I1.RO.m{2} /\ Game2.h2m{1} = ROSc.I2.RO.m{2}
-          /\ (forall h, omap (fun v => c_clear_k v) Game2.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
-          /\ (forall h, omap (fun v => s_clear_k v) Game2.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
-          /\ (forall i st pt ir, Game2.c_smap{1}.[i] = Some (Pending st pt ir) 
+  call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, badt}(Game3, Red_ROM2.AKE_O)
+          /\ Game3.h1m{1} = ROSc.I1.RO.m{2} /\ Game3.h2m{1} = ROSc.I2.RO.m{2}
+          /\ (forall h, omap (fun v => c_clear_k v) Game3.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
+          /\ (forall h, omap (fun v => s_clear_k v) Game3.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
+          /\ (forall i st pt ir, Game3.c_smap{1}.[i] = Some (Pending st pt ir) 
                 => (exists b, ir = (b, false, false)))
-          /\ (forall i st pt ir, Game2.s_smap{1}.[i] = Some (Pending st pt ir) 
+          /\ (forall i st pt ir, Game3.s_smap{1}.[i] = Some (Pending st pt ir) 
                 => ir = (false, false, false))
-          /\ (forall i st pt k ir, Game2.c_smap{1}.[i] = Some (Accepted st pt k ir)
+          /\ (forall i st pt k ir, Game3.c_smap{1}.[i] = Some (Accepted st pt k ir)
                 => (exists k', Red_ROM2.AKE_O.c_smap{2}.[i] = Some (Accepted st pt k' ir))
                    /\ ((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
                    /\ k = oget ROSc.I2.RO.m{2}.[((oget pt.`2).`1 ^ st.`4, st.`2 ^ st.`4, st.`1, st.`3, (oget pt.`2).`1)])
-          /\ (forall i st pt k ir, Game2.s_smap{1}.[i] = Some (Accepted st pt k ir)
+          /\ (forall i st pt k ir, Game3.s_smap{1}.[i] = Some (Accepted st pt k ir)
                 => (exists k', Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k' ir))
                    /\ (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
                    /\ k = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
@@ -1006,12 +1136,12 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
       + rcondt {1} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
-        by auto=> />; smt(mem_set get_setE).
+        admit. (* by auto=> />; smt(mem_set get_setE).*)
       + rcondf {1} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
-        by auto=> />; smt(mem_set get_setE).
-    if=> //. 
+        admit. (*by auto=> />; smt(mem_set get_setE).*)
+    if=> //. admit. (*
     + auto=> /> &1 &2.
       case _: (Game2.c_smap{1}.[i{2}])=> /> c_smap1_i.
       case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
@@ -1025,7 +1155,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
       move=> c_clear s_clear inv1 inv2 inv3 eq_dom mem_ro.
       move: c_smap2_i; rewrite -c_clear.
       rewrite c_smap1_i=> />.
-      by smt(get_setE).
+      by smt(get_setE).*)
 
 - proc; inline.
     sp; match=> //.
@@ -1038,7 +1168,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     + auto=> />. smt(c_eq_partners_ck).
     rcondf{2} ^if; 1: by auto => /#.
     auto => /> &1 &2.
-    case _: (Game2.c_smap{1}.[i{2}])=> /> c_smap1_i.
+    case _: (Game3.c_smap{1}.[i{2}])=> /> c_smap1_i.
     case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
     move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom _ k _. 
     smt(get_setE mem_set).
@@ -1054,7 +1184,7 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     + auto=> />. smt(s_eq_partners_ck).
     rcondf{2} ^if; 1: by auto => /#.
     auto => /> &1 &2.
-    case _: (Game2.s_smap{1}.[(b, j){2}])=> /> s_smap1_i.
+    case _: (Game3.s_smap{1}.[(b, j){2}])=> /> s_smap1_i.
     case _: (Red_ROM2.AKE_O.s_smap.[(b, j)]{2})=> /> s_smap2_i.
     move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom _ k _.
     smt(get_setE mem_set).
@@ -1069,11 +1199,11 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
       split.
       + move => + j - /(_ j). 
         rewrite !domE -s_clear => />.
-        case : (Game2.s_smap.[b{2}, j]{1}) => />.
+        case : (Game3.s_smap.[b{2}, j]{1}) => />.
         smt(s_eq_partners_ck). 
       move => + j - /(_ j). 
       rewrite !domE -s_clear => />.
-      case : (Game2.s_smap.[b{2}, j]{1}) => />.
+      case : (Game3.s_smap.[b{2}, j]{1}) => />.
       smt(s_eq_partners_ck).
     auto => />.
   
@@ -1138,23 +1268,13 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
 qed.
 
 
-lemma sofar &m: `| Pr[E_GAKE(GAKEb(NTOR_S(RO), NTOR_C(RO), RO), A).run(false) @ &m : res] - Pr[E_GAKE(GAKEb(NTOR_S(RO), NTOR_C(RO), RO), A).run(true) @ &m : res]|
-  <= `|Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(false) @ &m : res] - Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(true) @ &m : res]|
-      + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
-proof. 
-rewrite !(gake_game0 _).
-apply (StdOrder.RealOrder.ler_trans 
-        (`|Pr[E_GAKE(Game1, A).run(false) @ &m : res] - Pr[E_GAKE(Game1, A).run(true) @ &m : res]| + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp))).
-+ smt(game0_game1 game0_bad).
-by rewrite !(game1_game2 _) !game2_delay.
-qed. 
 
-lemma red_game3 bit &m: Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res] = Pr[E_GAKE(Game3, A).run(bit) @ &m : res].
+lemma red_game4 bit &m: Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res] = Pr[E_GAKE(Game4, A).run(bit) @ &m : res].
 proof.
 byequiv => //.
 proc*.
 inline; wp.
-call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq}(Red_ROM2.AKE_O, Game3) /\ ROSc.I1.RO.m{1} = Game3.h1m{2} /\ ROSc.I2.RO.m{1} = Game3.h2m{2}); 
+call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, badt}(Red_ROM2.AKE_O, Game4) /\ ROSc.I1.RO.m{1} = Game4.h1m{2} /\ ROSc.I2.RO.m{1} = Game4.h2m{2}); 
     try sim />.
 
 + proc; inline; auto => />.
@@ -1169,7 +1289,7 @@ call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq}(Re
   sp 1 1; match = => // st.
   match = => // st' pt ir.
   sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
-  auto => />.
+  auto => />. admit.
 
 + proc; inline.
   sp 1 1; match = => // st.
@@ -1207,13 +1327,13 @@ axiom rootC pk sk: root sk (pk ^ sk) = pk.
 
 axiom sk_uq pk sk sk': (pk, sk) \in dkp /\ (pk, sk') \in dkp => sk = sk'.
 
-op inv_Game3 (tested : bool, 
+op inv_Game4 (tested : bool, 
 tq : (pkey * pkey * s_id * pkey * pkey) option, 
 badq : bool, 
 kp_set : ((pkey * skey)) fset, 
 ssm : (s_id * int, pr_st_server instance_state) fmap, 
 hq : (pkey * pkey * s_id * pkey * pkey) fset, 
-csm : (int, pr_st_client instance_state) fmap, 
+csm : (int, pr_st_client instance_state) fmap,
 h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap) = 
        (!tested <=> tq = None)
         /\ (badq = true <=> (tq <> None /\ oget tq \in hq))
@@ -1256,25 +1376,25 @@ h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap) =
                   \/ x \in hq).
 
 
-lemma interestingbit &m: `|Pr[E_GAKE(Game3, A).run(false) @ &m : res] - Pr[E_GAKE(Game3, A).run(true) @ &m : res]| <= Pr[E_GAKE(Game3, A).run(false) @ &m : Game3.badq].
+lemma interestingbit &m: `|Pr[E_GAKE(Game4, A).run(false) @ &m : res] - Pr[E_GAKE(Game4, A).run(true) @ &m : res]| <= Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq].
 proof.
 rewrite StdOrder.RealOrder.distrC.
-byequiv (: _ ==> _) : Game3.badq => //; first last.
+byequiv (: _ ==> _) : Game4.badq => //; first last.
 + smt().
 symmetry; proc; inline.
 wp.
-call (: Game3.badq
-      , ={servers, c_smap, s_smap, tested, kp_set, hm, bad, h1m, hq, tq, badq}(Game3, Game3)
-        /\ (Game3.tq{1} = None => ={Game3.h2m})
-        /\ (forall x, Game3.tq{1} = Some x => eq_except (pred1 x) Game3.h2m{1} Game3.h2m{2})
-        /\ Game3.b0{1} = false /\ Game3.b0{2} = true
-        /\ (inv_Game3 Game3.tested Game3.tq Game3.badq Game3.kp_set Game3.s_smap Game3.hq Game3.c_smap Game3.h2m){2}
-        /\ (forall x, x \in Game3.h2m{1} <=> x \in Game3.h2m{2})
-      , ={badq}(Game3, Game3)) => //; last first.
+call (: Game4.badq
+      , ={servers, c_smap, s_smap, tested, kp_set, hm, bad, h1m, hq, tq, badq, badt}(Game4, Game4)
+        /\ (Game4.tq{1} = None => ={Game4.h2m})
+        /\ (forall x, Game4.tq{1} = Some x => eq_except (pred1 x) Game4.h2m{1} Game4.h2m{2})
+        /\ Game4.b0{1} = false /\ Game4.b0{2} = true
+        /\ (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.kp_set Game4.s_smap Game4.hq Game4.c_smap Game4.h2m){2}
+        /\ (forall x, x \in Game4.h2m{1} <=> x \in Game4.h2m{2})
+      , ={badq}(Game4, Game4)) => //; last first.
 
 - auto => />.
 split; 1: by smt(emptyE in_fset0).
-move => ntc nts ninkps injc pkins injs trs pc acc acs inv rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr. 
+move => ntc nts ninkps injc pkins injs trs pc acc acs inv rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml btl ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr btr. 
 by case : (!bqr) => />. 
 
 - exact A_ll.
@@ -1333,7 +1453,7 @@ by case : (!bqr) => />.
         move => m10 m2 m2' stnn trs.
         have := inv i' None kp.`1.
         rewrite stnn trs //=.
-        have : !(exists (sk : skey), (kp.`1, sk) \in Game3.kp_set{2}); rewrite negb_exists.
+        have : !(exists (sk : skey), (kp.`1, sk) \in Game4.kp_set{2}); rewrite negb_exists.
         + smt(sk_uq).
         smt().
       case (i' = i{2}) => i'eq; 2: by smt(get_set_neqE).
@@ -1432,7 +1552,7 @@ by case : (!bqr) => />.
   split; 1: by smt(get_setE in_fsetU1).
   move => x2 x2in.
   have := inv x2.
-  have->: x2 \in Game3.h2m{2}; 1: by smt(mem_set). 
+  have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set). 
   simplify.
   move => [H1|[H2|H3]].
   + smt().
@@ -1455,8 +1575,8 @@ by case : (!bqr) => />.
   match = => // st' pt ir.
   sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
   if => //.
-  + sp ^if & -1 ^if & -1; if => //.
-    + auto => /> &1 &2 ? ? ? ? ? ? ?  ? inv2 ? _ _ *.
+  + sp ^if & -1 ^if & -1; if => //. if => //.
+    + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? inv2 ? _ _ *.
       split; 1: by smt(get_setE).
       split. 
       + move => x tqeq.
@@ -1471,12 +1591,12 @@ by case : (!bqr) => />.
       split. smt(get_setE).
       split; 1: by smt(get_setE).
       smt(get_setE).
-    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? _ *.
+    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ *.
     smt(get_setE).
-  sp ^if & -1 ^if & -1; if => //.
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? _ *. 
+  sp ^if & -1 ^if & -1; if => //. if => //.
+  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? _ *. 
     smt(get_setE).
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? _ *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? _ *.
   smt(get_setE).
 - move => &2 bad.
   proc; inline.
@@ -1528,7 +1648,7 @@ by case : (!bqr) => />.
         rewrite x2eq //= logC rootC //=. 
         by smt(). 
       have := inv x2.
-      have->: x2 \in Game3.h2m{2}; 1: by smt(mem_set). 
+      have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set). 
       simplify.
       move => [H1|H2].
       + left. 
@@ -1540,19 +1660,19 @@ by case : (!bqr) => />.
 (************ case that the handle was in h2m ************)
   auto => /> &1 &2 ? ? ? ? ? ? ? inv2 ? ? ? ? ? inv3 ? ? ? ? inv ? fresh *.
   split.
-  + case (Game3.tested{2}) => test; 2: by smt().
-    case (Some ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1) = Game3.tq{2}) => tqeq; 2: by smt().
+  + case (Game4.tested{2}) => test; 2: by smt().
+    case (Some ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1) = Game4.tq{2}) => tqeq; 2: by smt().
     have := inv2 ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1).
     rewrite //= logC rootC tqeq some_oget //=; 1: smt().
     move => [] tqin [[i0 t k ir [H1 H2]]|[i0 t k ir [H1 H2]]].
-    + have : get_trace (oget Game3.c_smap{2}.[i0]) = get_trace (oget Game3.c_smap{2}.[i{2}]); smt().
-    have : untested_partner_c t' Game3.s_smap{2} = Some false.
+    + have : get_trace (oget Game4.c_smap{2}.[i0]) = get_trace (oget Game4.c_smap{2}.[i{2}]); smt().
+    have : untested_partner_c t' Game4.s_smap{2} = Some false.
     + rewrite /untested_partner_c.
       rewrite /get_partners_c.
       have : t = (oget t'.`2).`2. admit.
       move => teq.
       admit.
-      smt().
+    smt().
   split; 1: by smt().
   split.
   + move => x tqeq.
@@ -1578,7 +1698,7 @@ by case : (!bqr) => />.
     have->: st'.`3 = t'.`1; 1: by smt().
     by smt().
   have := inv x2.
-  have->: x2 \in Game3.h2m{2}; 1: by smt(mem_set). 
+  have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set). 
   simplify.
   move => [H1|H2].
   + left.
@@ -1623,7 +1743,7 @@ by case : (!bqr) => />.
         right.
         move : H3 => [i'] t k ir'' H3.
         exists i' t k ir''. 
-        have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+        have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by smt().
         by smt(get_setE).
       split; 1: by smt(get_setE).
       split.
@@ -1646,7 +1766,7 @@ by case : (!bqr) => />.
         rewrite x2eq //= !logC //=. 
         by smt(get_setE). 
       have := inv x2.
-      have->: x2 \in Game3.h2m{2}; 1: by smt(mem_set). 
+      have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set). 
       simplify.
       move => [H1|[H2|H3]].
       + by smt().
@@ -1659,18 +1779,18 @@ by case : (!bqr) => />.
 (************ case that the handle was in h2m ************)
   auto => /> &1 &2 stbj ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
   split.
-  + case (Game3.tested{2}) => test; 2: by smt().
-    case (Some (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1) = Game3.tq{2}) => tqeq; 2: by smt().
+  + case (Game4.tested{2}) => test; 2: by smt().
+    case (Some (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1) = Game4.tq{2}) => tqeq; 2: by smt().
     have := inv2 (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1).
     rewrite //= !logC tqeq some_oget //=; 1: smt().
     move => [] tqin [[i0 t k ir [H1 H2]]|[i0 t k ir [H1 H2]]].
     admit. (* match state of partners *)
     have : t = (oget t'.`2).`2. admit. move => teq.
-    have : get_trace (oget Game3.s_smap{2}.[i0]) = get_trace (oget Game3.s_smap{2}.[(b, j){2}]). smt().
+    have : get_trace (oget Game4.s_smap{2}.[i0]) = get_trace (oget Game4.s_smap{2}.[(b, j){2}]). smt().
     move => treq.
     have: i0 = (b,j){2}. smt().
     move => i0eq.
-    have : ir.`3 = get_ir_test (oget Game3.s_smap{2}.[b{2}, j{2}]). rewrite -i0eq. smt(). smt().
+    have : ir.`3 = get_ir_test (oget Game4.s_smap{2}.[b{2}, j{2}]). rewrite -i0eq. smt(). smt().
   split; 1: by smt().
   split.
   + move => x tqeq.
@@ -1680,7 +1800,7 @@ by case : (!bqr) => />.
     right.
     move : H3 => [i'] t k ir'' H3.
     exists i' t k ir''. 
-    have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+    have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by smt().
     by smt(get_setE).
   split; 1: by smt(get_setE).
   split.
@@ -1689,13 +1809,13 @@ by case : (!bqr) => />.
     + rewrite ieq get_set_sameE //=.
       case (i' = (b, j){2}) => i'eq; 1: by rewrite i'eq.
       rewrite get_set_neqE //=.
-      have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+      have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by smt().
       smt().
     case (i' = (b, j){2}) => i'eq; 2: by smt(get_set_neqE).
     rewrite get_set_neqE //=.
     move => m1 m2 tag m1' tag' stnn.
     rewrite i'eq !get_set_sameE.
-    have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+    have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by smt().
     smt().
   split; 1: by smt(get_setE).
   split; 1: by smt(get_setE).
@@ -1707,14 +1827,14 @@ by case : (!bqr) => />.
         rewrite x2eq //= !logC //=. 
         by smt(get_setE).
       have := inv x2.
-      have->: x2 \in Game3.h2m{2}; 1: by smt(mem_set). 
+      have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set). 
       simplify.
       move => [H1|[H2|H3]].
       + by smt().
       + right; left. 
         move : H2 => [i'] t k ir H2.
         exists i' t k ir.
-        have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by smt().
+        have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by smt().
         smt(get_setE).
       by smt().
 - move => &2 bad.
@@ -1814,7 +1934,7 @@ by case : (!bqr) => />.
     right.
     move : H3 => [i'] t k ir'' H3.
     case ((b, j){2} = i') => i'eq.
-    + have : Game3.s_smap{2}.[b{2}, j{2}] = Game3.s_smap{2}.[i']; 1: by smt().
+    + have : Game4.s_smap{2}.[b{2}, j{2}] = Game4.s_smap{2}.[i']; 1: by smt().
       move => H2.
       exists i' t k' (true, ir'.`2, ir'.`3).
       by smt(get_setE).
@@ -1843,7 +1963,7 @@ by case : (!bqr) => />.
   + right; left.
     move : H2 => [i'] t k'' ir'' H2.
     case ((b, j){2} = i') => i'eq.
-      have : Game3.s_smap{2}.[b{2}, j{2}] = Game3.s_smap{2}.[i']; 1: by smt().
+      have : Game4.s_smap{2}.[b{2}, j{2}] = Game4.s_smap{2}.[i']; 1: by smt().
       move => H1.
       exists i' t k' (true, ir'.`2, ir'.`3).
       by smt(get_setE).
@@ -1868,7 +1988,7 @@ by case : (!bqr) => />.
   inline{2}. swap {2} ^ks2<$ @ 1.
   seq 0 1: (#pre /\ ks2{2} \in dkey). auto => />.
   sp 3 3.
-  case (x{2} \notin Game3.h2m{2}).
+  case (x{2} \notin Game4.h2m{2}).
   + rcondt {1} ^if. auto => /#.
     rcondt {2} ^if. auto => /#.
     auto => /> &1 &2 badq tq ? ? ? ? ? ? ? inv2 ? ? _ ? ? ? ? ? ? ? inv *.
@@ -1893,7 +2013,7 @@ by case : (!bqr) => />.
         rewrite x2eq get_set_sameE //= logC rootC //=.
         smt().
       have := inv x2.
-      have->: x2 \in Game3.h2m{2}; 1: by smt(mem_set).
+      have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set).
       simplify.
       move => [H1|H2].
       + left.
@@ -1920,7 +2040,7 @@ by case : (!bqr) => />.
     rewrite negb_exists.
     move => ir.
     rewrite negb_and.
-    case (Game3.c_smap{2}.[int] = Some (Accepted (st'.`1, st'.`2, st'.`3, st'.`4) (st'.`3, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
+    case (Game4.c_smap{2}.[int] = Some (Accepted (st'.`1, st'.`2, st'.`3, st'.`4) (st'.`3, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
     simplify. 
     move => stint.
     have := inv2 int i{2} t'.`1 (Some ((oget t'.`2).`1, t)) t'.`2.
@@ -1935,7 +2055,7 @@ by case : (!bqr) => />.
     rewrite negb_exists.
     move => ir.
     rewrite negb_and.
-    case (Game3.s_smap{2}.[int] = Some (Accepted (st'.`1, log (st'.`2 ^ st'.`4) st'.`3, Some (log ((oget t'.`2).`1 ^ st'.`4) st'.`3)) (st'.`3, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
+    case (Game4.s_smap{2}.[int] = Some (Accepted (st'.`1, log (st'.`2 ^ st'.`4) st'.`3, Some (log ((oget t'.`2).`1 ^ st'.`4) st'.`3)) (st'.`3, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
     simplify.
     move => stint.
     admit. (* difficult since values come from the partner *)
@@ -1968,7 +2088,7 @@ by case : (!bqr) => />.
   inline{2}. swap {2} ^ks2<$ @ 1.
   seq 0 1: (#pre /\ ks2{2} \in dkey). auto => />.
   sp 3 3.
-  case (x{2} \notin Game3.h2m{2}).
+  case (x{2} \notin Game4.h2m{2}).
   + rcondt {1} ^if. auto => /#.
     rcondt {2} ^if. auto => /#.
     auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? ? ? ? ? ? inv *.
@@ -2003,7 +2123,7 @@ by case : (!bqr) => />.
         rewrite x2eq get_set_sameE //= !logC //=.
         smt().
       have := inv x2.
-      have->: x2 \in Game3.h2m{2}; 1: by smt(mem_set).
+      have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set).
       simplify.
       move => [H1|[H2|H3]].
       + smt().      
@@ -2030,7 +2150,7 @@ by case : (!bqr) => />.
     rewrite negb_exists.
     move => ir.
     rewrite negb_and.
-    case (Game3.c_smap{2}.[int] = Some (Accepted (st'.`1, root (log (t'.`1 ^ oget st'.`3) (oget t'.`2).`1) (t'.`1 ^ st'.`2), t'.`1, log (t'.`1 ^ oget st'.`3) (oget t'.`2).`1) (t'.`1, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
+    case (Game4.c_smap{2}.[int] = Some (Accepted (st'.`1, root (log (t'.`1 ^ oget st'.`3) (oget t'.`2).`1) (t'.`1 ^ st'.`2), t'.`1, log (t'.`1 ^ oget st'.`3) (oget t'.`2).`1) (t'.`1, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
     simplify. 
     move => stint.
     admit. (* difficult since values come from the partner *)
@@ -2045,16 +2165,16 @@ by case : (!bqr) => />.
     rewrite negb_exists.
     move => ir.
     rewrite negb_and.
-    case (Game3.s_smap{2}.[int] = Some (Accepted (st'.`1, st'.`2, Some (oget st'.`3)) (t'.`1, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
+    case (Game4.s_smap{2}.[int] = Some (Accepted (st'.`1, st'.`2, Some (oget st'.`3)) (t'.`1, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
     simplify.
     move => stint.
     have : int = (b,j){2}; 1: by have := inv2 int (b,j){2} t'.`1 (oget t'.`2).`1 t t'.`1 (oget t'.`2).`2; smt().
     move => inteq.
     rewrite negb_or.
     split. 
-    + have : ir.`2 = get_ir_sess (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by rewrite -inteq /#.
+    + have : ir.`2 = get_ir_sess (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by rewrite -inteq /#.
       smt().
-    have : ir.`3 = get_ir_test (oget Game3.s_smap{2}.[b{2}, j{2}]); 1: by rewrite -inteq /#.
+    have : ir.`3 = get_ir_test (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by rewrite -inteq /#.
     smt().
   smt().
 - move => &2 bad.

@@ -379,9 +379,10 @@ module Game2 = Game1 with {
   var hq : (pkey * pkey * s_id * pkey * pkey) fset
   var tq : (pkey * pkey * s_id * pkey * pkey) option
   var badq : bool
+  var badt : bool
 
   proc init_mem [
-    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; }
+    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; badt <- false; }
   ]
 
   proc h [
@@ -402,7 +403,7 @@ module Game2 = Game1 with {
                                       t_B <- oget h1m.[x];
                                       ks <$ dkey;
                                       if (x \notin h2m) {h2m.[x] <- ks;} 
-                                      sk <- oget h2m.[x];}
+                                      sk <- oget h2m.[x]; }
   ]
 
   proc send_msg3 [
@@ -415,7 +416,8 @@ module Game2 = Game1 with {
                                      t_A <- oget h1m.[x];
                                      ks <$ dkey;
                                      if (x \notin h2m) {h2m.[x] <- ks;} 
-                                     sk <- oget h2m.[x];}
+                                     sk <- oget h2m.[x];
+                                     badt <- badt \/ x \notin h1m; }
 
   ]
   
@@ -436,8 +438,19 @@ module Game2 = Game1 with {
 
 print Game2. 
 
-(* Step3: Replacing key computation on real side with sampling *)
+
+(* Step3: Removing case of adversary guessing the right tag *)
 module Game3 = Game2 with {
+  proc send_msg3 [
+    [^match#Some.^match#Pending.^badt<- - 3] + (!badt)
+  ]
+}.
+
+print Game3.
+
+
+(* Step4: Replacing key computation on real side with sampling *)
+module Game4 = Game3 with {
   proc send_msg2 [
     ^match#Some.^match#None.^if.^ks<$ ~ {sk <- witness;}
     [^match#Some.^match#None.^if.^if{2} - ^sk<-] -
@@ -480,7 +493,7 @@ module Game3 = Game2 with {
   ]
 }.
 
-print Game3.
+print Game4.
 
 (* TO DO : Fix following game definitions!
 
