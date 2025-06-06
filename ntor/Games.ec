@@ -379,10 +379,11 @@ module Game2 = Game1 with {
   var hq : (pkey * pkey * s_id * pkey * pkey) fset
   var tq : (pkey * pkey * s_id * pkey * pkey) option
   var badq : bool
+  var tags : (pkey * pkey * s_id * pkey * pkey) fset
   var badt : bool
 
   proc init_mem [
-    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; badt <- false; }
+    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; tags <- fset0; badt <- false; }
   ]
 
   proc h [
@@ -403,7 +404,8 @@ module Game2 = Game1 with {
                                       t_B <- oget h1m.[x];
                                       ks <$ dkey;
                                       if (x \notin h2m) {h2m.[x] <- ks;} 
-                                      sk <- oget h2m.[x]; }
+                                      sk <- oget h2m.[x]; 
+                                      tags <- tags `|` fset1 x; }
   ]
 
   proc send_msg3 [
@@ -417,7 +419,7 @@ module Game2 = Game1 with {
                                      ks <$ dkey;
                                      if (x \notin h2m) {h2m.[x] <- ks;} 
                                      sk <- oget h2m.[x];
-                                     badt <- badt \/ x \notin h1m; }
+                                     badt <- badt \/ x \notin tags; }
 
   ]
   

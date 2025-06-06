@@ -837,11 +837,11 @@ byequiv (: _ ==> _) : Game3.badt => //; first last.
 + smt().
 symmetry; proc; inline*.
 call (: Game3.badt
-      , ={b0, servers, c_smap, s_smap, tested, kp_set, hm, bad, h1m, h2m, hq, tq, badq, badt}(Game2, Game3)
+      , ={b0, servers, c_smap, s_smap, tested, kp_set, hm, bad, h1m, h2m, hq, tq, badq, tags, badt}(Game2, Game3)
       , ={badt}(Game2, Game3)) => //; try sim />; last first.
 
 auto => />.
-move => rl rr al bl csl btl kpl h1ml h2ml hql kpsl ssl sl tl tql ar br csr btr kpr h1mr h2mr hqr kpsr ssr sr tr tqr. 
+move => rl rr al bl csl btl kpl h1ml h2ml hql kpsl ssl sl tgsl tl tql ar br csr btr kpr h1mr h2mr hqr kpsr ssr sr tgsr tr tqr. 
 by case : (!btr) => />.
 
 - exact A_ll.
@@ -856,7 +856,8 @@ by case : (!btr) => />.
   rewrite dkp_ll //=.
 - move => &1.
   proc; if => //.
-  islossless. admit.
+  auto => />.
+  by rewrite dkp_ll.
 
 - move => &2 bad.
   proc; auto => />.
@@ -874,16 +875,27 @@ by case : (!btr) => />.
   + by rewrite dkp_ll.
   by smt().
 
-- move => &2 bad. admit.
+- move => &2 bad.
+  proc; sp.
+  match; auto => />. 
+  match; auto => />.
+  islossless.
 - move => &1. 
-  admit.
+  proc; sp.
+  match; auto => />.
+  match; auto => />.
+  islossless.
 
-- admit.
+- proc; inline. 
+  sp; match = => // st.
+  match = => // st' pt' ir'.
+  auto => />.
 - move => &2 bad.
   proc; inline.
   sp; match; auto => />. 
-  match; auto => /> &hr *.
-  rewrite dkey_ll dtag_ll //=. admit.
+  match; auto => />.
+  rewrite dkey_ll dtag_ll //=. 
+  by smt().
 - move => &1.
   proc; inline*; auto => />.
   sp; match; auto => />.
@@ -1055,7 +1067,7 @@ rewrite !mem_filter !domE -eqsm.
 by case: (sml.[x])=> /> [] @/c_clear_k /#.
 qed.
 
-lemma game3_delay bit &m: Pr[E_GAKE(Game3, A).run(bit) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res].
+lemma game3_RO bit &m: Pr[E_GAKE(Game3, A).run(bit) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res].
 proof. 
 byequiv (: ={glob A, glob Red_ROM2} /\ arg{1} = bit /\ arg{2} = bit ==> _)  => //.
 proc*.
@@ -1063,7 +1075,7 @@ proc*.
 rewrite equiv [{2} 1 -(ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) _)]; 2: by move => _; exact dkey_ll.
 
 + inline; wp.
-  call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, badt}(Game3, Red_ROM2.AKE_O)
+  call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, tags, badt}(Game3, Red_ROM2.AKE_O)
           /\ Game3.h1m{1} = ROSc.I1.RO.m{2} /\ Game3.h2m{1} = ROSc.I2.RO.m{2}
           /\ (forall h, omap (fun v => c_clear_k v) Game3.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
           /\ (forall h, omap (fun v => s_clear_k v) Game3.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
@@ -1111,7 +1123,7 @@ rewrite equiv [{2} 1 -(ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) _)]; 2
       + rcondt {1} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#. 
-        auto => /> &1 &2.
+        auto => /> &1 &2 * .
         smt(mem_set get_setE).
       + rcondf {1} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
@@ -1135,27 +1147,20 @@ oget ROSc.I2.RO.m{2}.[m3{2}.`1 ^ sk_ce{2}, pk_b{2} ^ sk_ce{2}, b{2}, pk_ce{2}, m
     + if {1} => //.
       + rcondt {1} ^if; 1: by auto => /#.
         rcondt {2} ^if; 1: by auto => /#.
-        rcondt {2} ^if; 1: by auto => /#.
-        admit. (* by auto=> />; smt(mem_set get_setE).*)
+        rcondt {2} ^if; 1: by auto => /#. 
+        by auto=> />; smt(mem_set get_setE).
       + rcondf {1} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
         rcondf {2} ^if; 1: by auto => /#.
-        admit. (*by auto=> />; smt(mem_set get_setE).*)
-    if=> //. admit. (*
-    + auto=> /> &1 &2.
-      case _: (Game2.c_smap{1}.[i{2}])=> /> c_smap1_i.
-      case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-      move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom mem_ro.
-      move: c_smap2_i; rewrite -c_clear.
-      rewrite c_smap1_i=> />. 
-      smt(get_setE).
-    + auto=> /> &1 &2.
-      case _: (Game2.c_smap{1}.[i{2}])=> /> c_smap1_i.
-      case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-      move=> c_clear s_clear inv1 inv2 inv3 eq_dom mem_ro.
-      move: c_smap2_i; rewrite -c_clear.
-      rewrite c_smap1_i=> />.
-      by smt(get_setE).*)
+        by auto=> />; smt(mem_set get_setE).
+    if=> //.
+    auto=> /> &1 &2.
+    case _: (Game3.c_smap{1}.[i{2}])=> /> c_smap1_i.
+    case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
+    move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom mem_ro.
+    move: c_smap2_i; rewrite -c_clear.
+    rewrite c_smap1_i=> />. 
+    smt(get_setE).
 
 - proc; inline.
     sp; match=> //.
@@ -1269,12 +1274,12 @@ qed.
 
 
 
-lemma red_game4 bit &m: Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res] = Pr[E_GAKE(Game4, A).run(bit) @ &m : res].
+lemma LRO_game4 bit &m: Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res] = Pr[E_GAKE(Game4, A).run(bit) @ &m : res].
 proof.
 byequiv => //.
 proc*.
 inline; wp.
-call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, badt}(Red_ROM2.AKE_O, Game4) /\ ROSc.I1.RO.m{1} = Game4.h1m{2} /\ ROSc.I2.RO.m{1} = Game4.h2m{2}); 
+call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, tags, badt}(Red_ROM2.AKE_O, Game4) /\ ROSc.I1.RO.m{1} = Game4.h1m{2} /\ ROSc.I2.RO.m{1} = Game4.h2m{2}); 
     try sim />.
 
 + proc; inline; auto => />.
@@ -1288,21 +1293,21 @@ call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, ba
 + proc; inline.
   sp 1 1; match = => // st.
   match = => // st' pt ir.
-  sp. seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
-  auto => />. admit.
+  sp; seq 1 1: (#pre /\ r0{1} = ts{2}); 1: by auto.
+  auto => />.
 
 + proc; inline.
   sp 1 1; match = => // st.
   match = => // st' pt k ir.
   if => //.
-  sp. seq 1 1: (#pre /\ r{1} = ks{2}); 1: by auto.
+  sp; seq 1 1: (#pre /\ r{1} = ks{2}); 1: by auto.
   if => //; auto => />; smt(get_setE).
 
 + proc; inline.
   sp 1 1; match = => // st.
   match = => // st' pt k ir.
   if => //.
-  sp. seq 1 1: (#pre /\ r{1} = ks{2}); 1: by auto.
+  sp; seq 1 1: (#pre /\ r{1} = ks{2}); 1: by auto.
   if => //; auto => />; smt(get_setE).
 
 + proc; inline.
@@ -1384,7 +1389,7 @@ byequiv (: _ ==> _) : Game4.badq => //; first last.
 symmetry; proc; inline.
 wp.
 call (: Game4.badq
-      , ={servers, c_smap, s_smap, tested, kp_set, hm, bad, h1m, hq, tq, badq, badt}(Game4, Game4)
+      , ={servers, c_smap, s_smap, tested, kp_set, hm, bad, h1m, hq, tq, badq, tags, badt}(Game4, Game4)
         /\ (Game4.tq{1} = None => ={Game4.h2m})
         /\ (forall x, Game4.tq{1} = Some x => eq_except (pred1 x) Game4.h2m{1} Game4.h2m{2})
         /\ Game4.b0{1} = false /\ Game4.b0{2} = true
@@ -1394,12 +1399,11 @@ call (: Game4.badq
 
 - auto => />.
 split; 1: by smt(emptyE in_fset0).
-move => ntc nts ninkps injc pkins injs trs pc acc acs inv rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml btl ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr btr. 
+move => ntc nts ninkps injc pkins injs trs pc acc acs inv rl rr al bl bql csl hql kpl ssl sl tl tql h1ml h2ml btl tgsl ar br bqr csr hqr kpr ssr sr tr tqr h1mr h2mr btr tgsr. 
 by case : (!bqr) => />. 
 
 - exact A_ll.
 
-- admit. admit. admit. (*
 - proc; inline.  
   sp; seq 1 1: (#pre /\ t{1} = t{2}); 1: by auto=> />.
   if => //.
@@ -1414,9 +1418,8 @@ by case : (!bqr) => />.
 - move => &2 badq; proc*; inline. auto => />. 
   rewrite dkey_ll dtag_ll //=. smt().
 - move => &1; proc*; inline; auto.
-  rewrite dkey_ll dtag_ll //=. smt(). *)
+  rewrite dkey_ll dtag_ll //=. smt(). 
 
-- admit. admit. admit. (*
 - proc. 
   if => //.
   auto => /> &1 &2 *.
@@ -1427,14 +1430,13 @@ by case : (!bqr) => />.
 - move => &1. 
   proc; if => //.
   auto => />. 
-  by rewrite dkp_ll. *)
+  by rewrite dkp_ll.
 
-- admit. admit. admit. (*
 - sim />.
 - move => &2 badq.
   proc; auto => />.
 - move => &1. 
-  proc; auto => />.*)
+  proc; auto => />.
  
 - proc; inline.
   sp; if => //.
