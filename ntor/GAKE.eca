@@ -162,6 +162,7 @@ fdom (
   (fun bj (val: pr_st_server instance_state) =>
        get_trace val = Some t                                               (* Partners share the same trace *)
     /\ get_ir_test val = false                                              (* Partner is not tested *)
+    /\ get_ir_sess val = false                                              (* Partner is not revealed *)
     /\ (get_ir_eph val = false \/ get_sr_ltk (oget fmap2.[fst bj]) = false) (* Partner is not trivially broken *)
   )
   fmap1
@@ -175,6 +176,7 @@ fdom (
        (* CHECK: we consider *any* client that has sent this first message to be a pre-partner *)
        (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
     /\ get_ir_test val = false                         (* Partner is not tested *)
+    /\ get_ir_sess val = false                         (* Partner is not revealed *)
     /\ get_ir_eph val = false                          (* Partner is not trivially broken *)
   )
   fmap
