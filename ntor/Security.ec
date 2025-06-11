@@ -1879,9 +1879,9 @@ by case : (!bqr) => />.
         move => [j'] st'' k'' ir'' H2.
         exists j'. 
         by smt(get_setE).
-      move => x0 H1. 
-      have:= inv4 x0 H1.
-      move => [H2] [H3] [j'] st'' k'' ir'' H4.
+      move => x0 x0in. 
+      have:= inv4 x0 x0in.
+      move => [H1] [H2] [j'] st'' k'' ir'' H3.
       split; 1: by smt(get_setE).
       split; 1: by smt(get_setE).
       exists j'. 
@@ -2235,27 +2235,29 @@ by case : (!bqr) => />.
     simplify.
     move => stint.
     rewrite negb_or.
-    have := inv3 i{2} st' t' k' ir' stc.
-    move => [j' st'' k'' ir''] H1.
-    have := inv4 j' int t'.`1 (oget t'.`2).`1 (oget t'.`2).`2 t'.`1 t.
-    move => H2.
-    have := fresh.
-    rewrite !negb_or.
-    move => [#] _ _.
-    rewrite /fresh_partner_c.
-    have->: (get_origins_c t' Game4.s_smap{2}) = fset1 j'.
-    + rewrite /get_origins_c.
-      apply in_eq_fset1.
+    case (ir.`2) => rev.
+    + have : fresh_partner_c t' Game4.s_smap{2} Game4.servers{2} = Some false; 2: by smt().
+      rewrite /fresh_partner_c.
+      have : (int \in (get_origins_c t' Game4.s_smap{2})).
+      + rewrite /get_origins_c.
+        rewrite mem_fdom mem_filter /=.
+        split; 1: by smt().
+        exists (Some ((oget t'.`2).`1, t)).
+        smt().
+      move => H3.
+      have->: 1 <= card (get_origins_c t' Game4.s_smap{2}) by smt(@FMap).
+      have->: (get_fresh_partners_c t' Game4.s_smap{2} Game4.servers{2}) = fset0; 2: by smt(fcards0).
+      rewrite /get_fresh_partners_c.
+      apply in_eq_fset0.
       move => x0.
-      rewrite mem_fdom mem_filter /=.
-      split.  admit.
-      smt().
-    rewrite fcard1 //=.
-    have : card (get_fresh_partners_c t' Game4.s_smap{2} Game4.servers{2}) = 1. admit.
-    move => H3 H4.
-    have : (exists a, (get_fresh_partners_c t' Game4.s_smap{2} Game4.servers{2}) = fset1 a). smt(fcard_eq1). 
-    admit. 
-  smt().
+      rewrite mem_fdom mem_filter !negb_and /=. 
+      case (x0 = int) => x0eq; 1: by smt().
+      case (get_trace (oget Game4.s_smap{2}.[x0]) = Some t'); 2: by smt().
+      have:= (inv4 x0 int t'.`1 (oget t'.`2).`1 (oget t'.`2).`2 t'.`1 t). 
+      by smt().
+    case (ir.`3) => tes; 2: by done.
+    by smt().
+  by smt().
 - move => &2 bad.
   proc; inline; sp; if => //; sp; match; 1: by auto. 
   match; auto.
@@ -2287,7 +2289,7 @@ by case : (!bqr) => />.
   case (x{2} \notin Game4.h2m{2}).
   + rcondt {1} ^if. auto => /#.
     rcondt {2} ^if. auto => /#.
-    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? ? ? ? ? ? inv *.
+    auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? ? ? ? ? ? inv ? inv2*.
     split. smt(get_setE mem_set).
     split. smt(get_setE mem_set).
     split. 
@@ -2312,26 +2314,35 @@ by case : (!bqr) => />.
         by smt().
       split; 1: by smt(get_setE).
       split; 1: by smt(get_setE).
-      move => x2 x2in.
-      case (x2 = (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1)) => x2eq.
-      + right; left.
-        exists (b, j){2}.
-        rewrite x2eq get_set_sameE //= !logC //=.
-        smt().
-      have := inv x2.
-      have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set).
-      simplify.
-      move => [H1|[H2|H3]].
-      + smt().      
-      + right; left.
-        move : H2 => [i'] t k'' ir'' H2.
-        exists i' t k'' ir''.
-        smt(get_setE).
-      by smt().
+      split.
+      + move => x2 x2in.
+        case (x2 = (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1)) => x2eq.
+        + right; left.
+          exists (b, j){2}.
+          rewrite x2eq get_set_sameE //= !logC //=.
+          smt().
+        have := inv x2.
+        have->: x2 \in Game4.h2m{2}; 1: by smt(mem_set).
+        simplify.
+        move => [H1|[H2|H3]].
+        + smt().      
+        + right; left.
+          move : H2 => [i'] t k'' ir'' H2.
+          exists i' t k'' ir''.
+          smt(get_setE).
+        by smt().
+      split; 1: by smt(get_setE).
+      move => x0 x0in.
+      have:= inv2 x0 x0in.
+      move => [H1] [H2] [j'] st'' k'' ir'' H3.
+      split; 1: by smt(get_setE).
+      split; 1: by smt(get_setE).
+      exists j'. 
+      by smt(get_setE).
     by smt(get_setE mem_set).
   rcondf {1} ^if. auto => /#.
   rcondf {2} ^if. auto => /#.
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ ? ? inv2 ? ? ? ? inv ? ? fresh ? x2in *.
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? _ inv3 ? inv2 ? ? ? ? inv ? ? ? ? fresh ? x2in *.
   suff //=:false.
   have := inv (t'.`1 ^ oget st'.`3, t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1).
   rewrite x2in //=.
@@ -2349,7 +2360,29 @@ by case : (!bqr) => />.
     case (Game4.c_smap{2}.[int] = Some (Accepted (st'.`1, root (log (t'.`1 ^ oget st'.`3) (oget t'.`2).`1) (t'.`1 ^ st'.`2), t'.`1, log (t'.`1 ^ oget st'.`3) (oget t'.`2).`1) (t'.`1, Some ((oget t'.`2).`1, t)) k ir)); 2: by done.
     simplify. 
     move => stint.
-    admit. (* difficult since values come from the partner *)
+    rewrite negb_or.
+    case (ir.`2) => rev.
+    + have : fresh_partner_s t' Game4.c_smap{2} = Some false; 2: by smt().
+      rewrite /fresh_partner_s.
+      have : (int \in (get_origins_s t' Game4.c_smap{2})).
+      + rewrite /get_origins_s.
+        rewrite mem_fdom mem_filter /=.
+        split; 1: by smt().
+        exists (Some ((oget t'.`2).`1, t)).
+        smt().
+      move => H3.
+      have->: 1 <= card (get_origins_s t' Game4.c_smap{2}) by smt(@FMap).
+      have->: (get_fresh_partners_s t' Game4.c_smap{2}) = fset0; 2: by smt(fcards0).
+      rewrite /get_fresh_partners_s.
+      apply in_eq_fset0.
+      move => x0.
+      rewrite mem_fdom mem_filter !negb_and /=. 
+      case (x0 = int) => x0eq; 1: by smt().
+      case (exists (m2o : (pkey * tag) option), get_trace (oget Game4.c_smap{2}.[x0]) = Some (t'.`1, m2o)) ; 2: by smt().
+      have:= (inv3 int x0 t'.`1 (Some ((oget t'.`2).`1, t))). 
+      by smt().
+    case (ir.`3) => tes; 2: by done.
+    by smt().
   split.
   + rewrite !logC //=.
     rewrite negb_exists. 
