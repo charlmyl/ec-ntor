@@ -12,6 +12,12 @@ type sid = (s_id * pkey) * trace.
 
 type ir_status = bool * bool * bool.
 
+type h_input = pkey * pkey * s_id * pkey * pkey.
+type tested_instance = [
+  Client of int
+| Server of (s_id * int)
+].
+
 type pr_st_client = s_id * pkey * pkey * skey.
 type pr_st_server = s_id * skey * skey option.
 
@@ -216,7 +222,7 @@ module type Client = {
 (* oracles that are exposed to the adversary *)
 module type GAKE_out = {
   (* random oracle *)
-  proc h(input: pkey * pkey * s_id * pkey * pkey) : tag * key
+  proc h(input: h_input) : tag * key
 
   (* server management *)
   proc init_s(b: s_id) : pkey option
@@ -240,7 +246,7 @@ module type GAKE_out = {
 
 (* Rondom oracle *)
 clone import PROM.FullRO as HROc with
-  type in_t    <= pkey * pkey * s_id * pkey * pkey,
+  type in_t    <= h_input,
   type out_t   <= tag * key,
   op   dout _  <= dtag `*` dkey,
   type d_in_t  <= unit,
@@ -266,7 +272,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
   var c_smap: (int, pr_st_client instance_state) fmap
   var s_smap: (s_id * int, pr_st_server instance_state) fmap
   
-  var tested: bool
+  var tested: tested_instance option
 
   proc init_mem(b: bool) : unit = {
     b0 <- b;
@@ -274,7 +280,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
     servers <- empty;
     c_smap <- empty;
     s_smap <- empty;
-    tested <- false;
+    tested <- None;
   }
 
   (* random oracle *)
@@ -495,7 +501,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
     var ks;
     var k <- None;
 
-    if (!GAKEb.tested) {
+    if (GAKEb.tested = None) {
       match GAKEb.c_smap.[i] with
       | None => { }
       | Some st => {
@@ -512,7 +518,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
                 k <- Some ks;
                 GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
-              GAKEb.tested <- true;
+              GAKEb.tested <- Some (Client i);
            }
           }
         }
@@ -525,7 +531,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
     var ks;
     var k <- None;
 
-    if (!GAKEb.tested) {
+    if (GAKEb.tested = None) {
       match GAKEb.s_smap.[(b, j)] with
       | None => { }
       | Some st => {
@@ -543,7 +549,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
                 k <- Some ks;
                 GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
-              GAKEb.tested <- true;
+              GAKEb.tested <- Some (Server (b, j));
             }
           }
         }

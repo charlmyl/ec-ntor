@@ -48,7 +48,7 @@ module Game0 : GAKE_out_i = {
   var c_smap : (int, pr_st_client instance_state) fmap
   var s_smap : (s_id * int, pr_st_server instance_state) fmap
   
-  var tested : bool
+  var tested : tested_instance option
   
   var kp_set : ((pkey * skey)) fset
   var bad : bool
@@ -60,7 +60,7 @@ module Game0 : GAKE_out_i = {
     servers <- empty;
     c_smap <- empty;
     s_smap <- empty;
-    tested <- false;
+    tested <- None;
     kp_set <- fset0;
     bad <- false;
   }
@@ -294,7 +294,7 @@ module Game0 : GAKE_out_i = {
     var ks;
     var k <- None;
 
-    if (!tested) {
+    if (tested = None) {
       match c_smap.[i] with
       | None => { }
       | Some st => {
@@ -311,7 +311,7 @@ module Game0 : GAKE_out_i = {
                 k <- Some ks;
                 c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
-              tested <- true;
+              tested <- Some (Client i);
            }
           }
         }
@@ -324,7 +324,7 @@ module Game0 : GAKE_out_i = {
     var ks;
     var k <- None;
 
-    if (!tested) {
+    if (tested = None) {
       match s_smap.[(b, j)] with
       | None => { }
       | Some st => {
@@ -342,7 +342,7 @@ module Game0 : GAKE_out_i = {
                 k <- Some ks;
                 s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
-              tested <- true;
+              tested <- Some (Server (b, j));
             }
           }
         }
