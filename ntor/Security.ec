@@ -2446,6 +2446,95 @@ by rewrite !game3_RO !LRO_game4 interestingbit.
 qed. 
 
 
+(* Step 6: Split up probability into all possible test sessions *)
+
+
+lemma tested_nn &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = None] = 0%r.
+proof.
+byphoare => //; hoare.
+proc; inline.
+call (_: ! (Game4.badq /\ Game4.tested = None) /\ (Game4.tested = None <=> Game4.tq = None)); last first.
+
+auto => /> badq tested tq.
+
+- proc. auto => /#.
+
+- proc. 
+  if => //; auto => />.
+
+- proc. auto => />.
+
+- proc; inline.
+  sp; if => //; sp; match => //.
+  + auto => />.
+  match => //. auto => />.
+
+- proc; inline.
+  sp; match => //.
+  match => //. 
+  seq 1: (#pre /\ kp \in dkp); 1: by auto.
+  sp; if => //.
+  auto => />.
+
+- proc; inline.
+  sp; match => //.
+  match => //. 
+  sp; seq 1: (#pre /\ ts \in dtag); 1: by auto.
+  auto => />.
+
+- proc; inline.
+  sp; match => //.
+  match => //. 
+  if => //; sp; seq 1: (#pre /\ ks \in dkey); 1: by auto.
+  auto => />.
+
+- proc; inline.
+  sp; match => //.
+  match => //. 
+  if => //; sp; seq 1: (#pre /\ ks \in dkey); 1: by auto.
+  auto => />.
+
+- proc; inline.
+  sp; match => //.
+  match => //. 
+  auto => />.
+
+- proc; inline.
+  sp; match => //.
+  match => //; auto => />.
+
+- proc; inline.
+  sp; match => //.
+  match => //; auto => />.
+
+- proc; inline.
+  sp; if => //.
+  admit.
+
+- proc; inline.
+  sp; if => //.
+  admit.
+qed.
+
+lemma split_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] 
+                        + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists b j, Game4.tested = Some (Server (b,j)))].
+proof.
+have->: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = None] 
+               + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested <> None] by rewrite Pr[mu_split Game4.tested = None].
+have->: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested <> None] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] 
+               + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists b j, Game4.tested = Some (Server (b, j)))].
++ rewrite Pr[mu_split (exists i, Game4.tested = Some (Client i))].
+  congr; 1: by smt().
+  byequiv (: _ ==> ={Game4.badq, Game4.tested}) => //; 1: sim.
+  move => /> &1 &2 *. 
+  by smt().
+by smt(tested_nn).
+qed.
+
+
+
+
+
 end section.
 
 
