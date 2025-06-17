@@ -453,6 +453,17 @@ print Game3.
 
 (* Step4: Replacing key computation on real side with sampling *)
 module Game4 = Game3 with {
+  var counti : int
+  var handles_c : (int, int) fmap
+
+  proc init_mem [
+    -1 + { counti <- 0; handles_c <- empty; }
+  ]
+
+  proc send_msg1 [
+    ^if.^match#None.^if.^r<- + {counti <- counti + 1; handles_c.[counti] <- i;}
+  ]
+
   proc send_msg2 [
     ^match#Some.^match#None.^if.^ks<$ ~ {sk <- witness;}
     [^match#Some.^match#None.^if.^if{2} - ^sk<-] -

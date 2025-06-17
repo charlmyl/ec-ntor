@@ -1,6 +1,7 @@
 require import AllCore FSet FMap Distr DProd List SplitRO NTOR Games.
-import GAKEc HROc.
-require Birthday SplitRO.
+(*   *) import GAKEc HROc.
+require (*  *) Birthday SplitRO StdBigop StdOrder.
+(*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Reductions *)
@@ -2432,88 +2433,57 @@ lemma sofar &m: `| Pr[E_GAKE(GAKEb(NTOR_S(RO), NTOR_C(RO), RO), A).run(false) @ 
        + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp).
 proof. 
 rewrite !(gake_game0 _).
-apply (StdOrder.RealOrder.ler_trans 
-        (`|Pr[E_GAKE(Game1, A).run(false) @ &m : res] - Pr[E_GAKE(Game1, A).run(true) @ &m : res]| + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp))).
+apply (ler_trans (`|Pr[E_GAKE(Game1, A).run(false) @ &m : res] - Pr[E_GAKE(Game1, A).run(true) @ &m : res]| + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dkp (mode dkp))).
 + smt(game0_game1 game0_bad).
-rewrite StdOrder.RealOrder.ler_add2r.
+rewrite ler_add2r.
 rewrite !(game1_game2 _).
-apply (StdOrder.RealOrder.ler_trans 
-        (`|Pr[E_GAKE(Game3, A).run(false) @ &m : res] - Pr[E_GAKE(Game3, A).run(true) @ &m : res]| + Pr[E_GAKE(Game2, A).run(false) @ &m : Game2.badt] +
+apply (ler_trans (`|Pr[E_GAKE(Game3, A).run(false) @ &m : res] - Pr[E_GAKE(Game3, A).run(true) @ &m : res]| + Pr[E_GAKE(Game2, A).run(false) @ &m : Game2.badt] +
              Pr[E_GAKE(Game2, A).run(true) @ &m : Game2.badt])).
 + smt(game2_game3).
-rewrite !StdOrder.RealOrder.ler_add2r.
+rewrite !ler_add2r.
 by rewrite !game3_RO !LRO_game4 interestingbit.
 qed. 
 
 
+
+
+
 (* Step 6: Split up probability into all possible test sessions *)
-
-
 lemma tested_nn &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = None] = 0%r.
 proof.
 byphoare => //; hoare.
 proc; inline.
-call (_: ! (Game4.badq /\ Game4.tested = None) /\ (Game4.tested = None <=> Game4.tq = None)); last first.
+call (_: ! (Game4.badq /\ Game4.tested = None) /\ (Game4.tested = None <=> Game4.tq = None)); 2..11: conseq (: true) => //.
+
+- proc; auto => /#.
+
+- proc; inline.
+  sp; if => //.
+  exlim Game4.c_smap.[i] => csi.
+  case (csi = None).
+  + match None ^match => //.
+  match Some ^match => //.
+  + skip => /#.
+  match => //; if => //; if => //.
+  + sp; seq 1: (#pre /\ ks \in dkey); 1: by auto => />.
+    auto => />.
+  sp; seq 1: (#pre /\ ks2 \in dkey); 1: by auto => />.
+  auto => />.
+
+- proc; inline.
+  sp; if => //.
+  exlim Game4.s_smap.[(b, j)] => ssj.
+  case (ssj = None).
+  + match None ^match => //.
+  match Some ^match => //.
+  + skip => /#.
+  match => //; if => //; if => //.
+  + sp; seq 1: (#pre /\ ks \in dkey); 1: by auto => />.
+    auto => />.
+  sp; seq 1: (#pre /\ ks2 \in dkey); 1: by auto => />.
+  auto => />.
 
 auto => /> badq tested tq.
-
-- proc. auto => /#.
-
-- proc. 
-  if => //; auto => />.
-
-- proc. auto => />.
-
-- proc; inline.
-  sp; if => //; sp; match => //.
-  + auto => />.
-  match => //. auto => />.
-
-- proc; inline.
-  sp; match => //.
-  match => //. 
-  seq 1: (#pre /\ kp \in dkp); 1: by auto.
-  sp; if => //.
-  auto => />.
-
-- proc; inline.
-  sp; match => //.
-  match => //. 
-  sp; seq 1: (#pre /\ ts \in dtag); 1: by auto.
-  auto => />.
-
-- proc; inline.
-  sp; match => //.
-  match => //. 
-  if => //; sp; seq 1: (#pre /\ ks \in dkey); 1: by auto.
-  auto => />.
-
-- proc; inline.
-  sp; match => //.
-  match => //. 
-  if => //; sp; seq 1: (#pre /\ ks \in dkey); 1: by auto.
-  auto => />.
-
-- proc; inline.
-  sp; match => //.
-  match => //. 
-  auto => />.
-
-- proc; inline.
-  sp; match => //.
-  match => //; auto => />.
-
-- proc; inline.
-  sp; match => //.
-  match => //; auto => />.
-
-- proc; inline.
-  sp; if => //.
-  admit.
-
-- proc; inline.
-  sp; if => //.
-  admit.
 qed.
 
 lemma split_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] 
@@ -2530,6 +2500,13 @@ have->: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested <> None
   by smt().
 by smt(tested_nn).
 qed.
+
+print big.
+lemma sum_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] = 
+            big predT (fun i => Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some (Client i)]) .
+
+
+
 
 
 
