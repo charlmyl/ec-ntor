@@ -1,6 +1,6 @@
 require import AllCore FSet FMap Distr DProd List SplitRO NTOR Games.
 (*   *) import GAKEc HROc.
-require (*  *) Birthday SplitRO StdBigop StdOrder.
+require (*  *) Birthday SplitRO StdBigop StdOrder EventPartitioning.
 (*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder.
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -968,9 +968,6 @@ by case : (!btr) => />.
   auto => />.
   by rewrite dkey_ll.
 qed.
-
-
-
 
 
 
@@ -2501,13 +2498,51 @@ have->: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested <> None
 by smt(tested_nn).
 qed.
 
-print big.
+
+op max_qc : int.
+axiom max_qc : 0 < max_qc.
+
 lemma sum_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] = 
-            big predT (fun i => Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some (Client i)]) .
+            big predT (fun i => Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ oget Game4.tested = (Client i)]) (range 1 (max_qc + 1))
+          + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i)) /\ !mem (range 1 (max_qc + 1)) (get_test_int (oget Game4.tested))].
+proof.
+rewrite Pr[mu_split (mem (range 1 (max_qc + 1)) (get_test_int (oget Game4.tested)))]. congr.
+elim: (range 1 (max_qc + 1)) range_uniq => /=; 1: by rewrite big_nil Pr[mu_false].
+move => x xs ih * /=.
+rewrite {1}andb_orr Pr[mu_or] andbCA !andbA. 
+have ->: Pr[E_GAKE(Game4, A).run(false) @ &m : ((((Game4.badq /\ exists (i : int), Game4.tested = Some (Client i)) /\ Game4.badq) /\
+     exists (i : int), Game4.tested = Some (Client i)) /\ get_test_int (oget Game4.tested) = x) /\ (get_test_int (oget Game4.tested) \in xs)]
+       = Pr[E_GAKE(Game4, A).run(false) @ &m : false].
++ rewrite Pr[mu_eq] // => &hr.
+  admit.
+
+ andb_orr.
+
+admit.
+move => *.
+qed.
 
 
+  elim: P uniq_P=> /=; first by rewrite big_nil Pr[mu_false].
+  move=> x xs ih [] x_notin_xs uniq_xs /=.
+  rewrite {1}andb_orr Pr[mu_or] andbCA !andbA andbb.
+  have ->: Pr[M.f(i) @ &m: (   E i (glob M) res
+                            /\ phi i (glob M) res = x)
+                           /\ mem xs (phi i (glob M) res)]
+           = Pr[M.f(i) @ &m: false].
+  + by rewrite Pr[mu_eq] // => &hr /#.
+  by rewrite Pr[mu_false] //= big_cons {1}/predT /=; congr; exact/ih.
+  qed.
+  end section.
 
 
+    Pr[M.f(i) @ &m: E i (glob M) res]
+    = big predT (fun a =>
+                   Pr[M.f(i) @ &m: E i (glob M) res /\ phi i (glob M) res = a]) P
+      + Pr[M.f(i) @ &m: E i (glob M) res /\ !mem P (phi i (glob M) res)].
+  proof.
+
+lemma range_uniq: forall (m n : int), uniq (range m n).
 
 
 

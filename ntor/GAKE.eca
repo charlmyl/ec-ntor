@@ -18,6 +18,10 @@ type tested_instance = [
 | Server of (s_id * int)
 ].
 
+op get_test_int (t: tested_instance) : int =
+with t = Client i => i
+with t = Server bj => bj.`2.
+
 type pr_st_client = s_id * pkey * pkey * skey.
 type pr_st_server = s_id * skey * skey option.
 
