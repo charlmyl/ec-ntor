@@ -1073,7 +1073,7 @@ proc*.
 rewrite equiv [{2} 1 -(ROSc.I2.FullEager.RO_LRO (Red_ROM2(A, ROSc.I1.RO)) _)]; 2: by move => _; exact dkey_ll.
 
 inline; wp.
-call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, tags, badt}(Game3, Red_ROM2.AKE_O)
+call (: ={b0, hm, servers, kp_set, bad, hq, tq, badq, tags, badt}(Game3, Red_ROM2.AKE_O)
           /\ Game3.h1m{1} = ROSc.I1.RO.m{2} /\ Game3.h2m{1} = ROSc.I2.RO.m{2}
           /\ (forall h, omap (fun v => c_clear_k v) Game3.c_smap.[h]{1} = Red_ROM2.AKE_O.c_smap.[h]{2})
           /\ (forall h, omap (fun v => s_clear_k v) Game3.s_smap.[h]{1} = Red_ROM2.AKE_O.s_smap.[h]{2})
@@ -1089,7 +1089,8 @@ call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, tags, badt}(Game3,
                 => (exists k', Red_ROM2.AKE_O.s_smap{2}.[i] = Some (Accepted st pt k' ir))
                    /\ (pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1) \in ROSc.I2.RO.m{2}
                    /\ k = oget ROSc.I2.RO.m{2}.[(pt.`1 ^ oget st.`3, pt.`1 ^ st.`2, st.`1, pt.`1, (oget pt.`2).`1)])
-          /\ forall x, x \in ROSc.I1.RO.m{2} <=> x \in ROSc.I2.RO.m{2}).
+          /\ (forall x, x \in ROSc.I1.RO.m{2} <=> x \in ROSc.I2.RO.m{2})
+          /\ (Game3.tested{1} <> None <=> Red_ROM2.AKE_O.tested{2} <> None)).
 
 - proc; inline; auto => />; smt(mem_set get_setE).
 
@@ -1171,7 +1172,7 @@ call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, tags, badt}(Game3,
   auto => /> &1 &2.
   case _: (Game3.c_smap{1}.[i{2}])=> /> c_smap1_i.
   case _: (Red_ROM2.AKE_O.c_smap.[i]{2})=> /> c_smap2_i.
-  move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom _ k _. 
+  move=> c_clear s_clear inv1 inv2 inv3 inv4 inv5 eq_dom _ k _. 
   by smt(get_setE mem_set).
 
 - proc; inline.
@@ -1187,7 +1188,7 @@ call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, tags, badt}(Game3,
   auto => /> &1 &2.
   case _: (Game3.s_smap{1}.[(b, j){2}])=> /> s_smap1_i.
   case _: (Red_ROM2.AKE_O.s_smap.[(b, j)]{2})=> /> s_smap2_i.
-  move=> c_clear s_clear inv1 inv2 inv3 inv4 eq_dom _ k _.
+  move=> c_clear s_clear inv1 inv2 inv3 inv4 inv5 eq_dom _ k _.
   by smt(get_setE mem_set).
 
 - proc; inline.
@@ -1196,7 +1197,7 @@ call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, tags, badt}(Game3,
   match = => //; 1: smt().
   move => kp.
   if => //.
-  + move => /> &1 &2 hkp _ c_clear s_clear inv1 inv2 inv3 inv4 eq_dom.
+  + move => /> &1 &2 hkp _ c_clear s_clear inv1 inv2 inv3 inv4 inv5 eq_dom.
     split.
     + move => + j - /(_ j). 
       rewrite !domE -s_clear => />.
@@ -1261,7 +1262,7 @@ call (: ={b0, hm, servers, tested, kp_set, bad, hq, tq, badq, tags, badt}(Game3,
   + auto => />.
     by smt(s_eq_fresh_ck).
   if => //.
-  + auto => />.
+  + auto => /> &1 &2 *.
     by smt(get_setE).
   auto => />.
   by smt(get_setE).
@@ -1329,7 +1330,7 @@ axiom rootC pk sk: root sk (pk ^ sk) = pk.
 
 axiom sk_uq pk sk sk': (pk, sk) \in dkp /\ (pk, sk') \in dkp => sk = sk'.
 
-op inv_Game4 (tested : tested_instance option, 
+op inv_Game4 (tested : int option, 
 tq : (pkey * pkey * s_id * pkey * pkey) option, 
 badq : bool, 
 kp_set : ((pkey * skey)) fset, 
@@ -2483,17 +2484,13 @@ call (_: ! (Game4.badq /\ Game4.tested = None) /\ (Game4.tested = None <=> Game4
 auto => /> badq tested tq.
 qed.
 
-lemma split_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] 
-                        + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists b j, Game4.tested = Some (Server (b,j)))].
+
+lemma test_i_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some i)].
 proof.
 have->: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = None] 
                + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested <> None] by rewrite Pr[mu_split Game4.tested = None].
-have->: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested <> None] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] 
-               + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists b j, Game4.tested = Some (Server (b, j)))].
-+ rewrite Pr[mu_split (exists i, Game4.tested = Some (Client i))].
-  congr; 1: by smt().
-  byequiv (: _ ==> ={Game4.badq, Game4.tested}) => //; 1: sim.
-  move => /> &1 &2 *. 
+have->: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested <> None] = Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some i)].
++ rewrite Pr[mu_eq] // => &hr.
   by smt().
 by smt(tested_nn).
 qed.
@@ -2502,47 +2499,75 @@ qed.
 op max_qc : int.
 axiom max_qc : 0 < max_qc.
 
-lemma sum_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i))] = 
-            big predT (fun i => Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ oget Game4.tested = (Client i)]) (range 1 (max_qc + 1))
-          + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some (Client i)) /\ !mem (range 1 (max_qc + 1)) (get_test_int (oget Game4.tested))].
+lemma sum_pr &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some i)] = 
+                   big predT (fun i => Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i]) (range 1 (max_qc + 1))
+                   + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ (exists i, Game4.tested = Some i) /\ !mem (range 1 (max_qc + 1)) (oget Game4.tested)].
 proof.
-rewrite Pr[mu_split (mem (range 1 (max_qc + 1)) (get_test_int (oget Game4.tested)))]. congr.
-elim: (range 1 (max_qc + 1)) range_uniq => /=; 1: by rewrite big_nil Pr[mu_false].
-move => x xs ih * /=.
-rewrite {1}andb_orr Pr[mu_or] andbCA !andbA. 
-have ->: Pr[E_GAKE(Game4, A).run(false) @ &m : ((((Game4.badq /\ exists (i : int), Game4.tested = Some (Client i)) /\ Game4.badq) /\
-     exists (i : int), Game4.tested = Some (Client i)) /\ get_test_int (oget Game4.tested) = x) /\ (get_test_int (oget Game4.tested) \in xs)]
-       = Pr[E_GAKE(Game4, A).run(false) @ &m : false].
-+ rewrite Pr[mu_eq] // => &hr.
-  admit.
-
- andb_orr.
-
-admit.
-move => *.
+rewrite Pr[mu_split (mem (range 1 (max_qc + 1)) (oget Game4.tested))]. congr.
++ elim: (range 1 (max_qc + 1)) (range_uniq 1 (max_qc + 1)) => /=; 1: by rewrite big_nil Pr[mu_false].
+  move => x xs ih [] x_notin_xs uniq_xs /=.
+  rewrite {1}andb_orr Pr[mu_or] andbCA !andbA. 
+  have ->: Pr[E_GAKE(Game4, A).run(false) @ &m : ((((Game4.badq /\ exists (i : int), Game4.tested = Some i) /\ Game4.badq) /\
+     exists (i : int), Game4.tested = Some i) /\ oget Game4.tested = x) /\ (oget Game4.tested \in xs)]
+         = Pr[E_GAKE(Game4, A).run(false) @ &m : false].
+  + rewrite Pr[mu_eq] // => &hr.
+    by smt().
+  rewrite Pr[mu_false] //= big_cons {1}/predT /=. congr.
+  + rewrite Pr[mu_eq] // => &hr. 
+    by smt().
+  exact/ih.
+by rewrite andbA.
 qed.
 
 
-  elim: P uniq_P=> /=; first by rewrite big_nil Pr[mu_false].
-  move=> x xs ih [] x_notin_xs uniq_xs /=.
-  rewrite {1}andb_orr Pr[mu_or] andbCA !andbA andbb.
-  have ->: Pr[M.f(i) @ &m: (   E i (glob M) res
-                            /\ phi i (glob M) res = x)
-                           /\ mem xs (phi i (glob M) res)]
-           = Pr[M.f(i) @ &m: false].
-  + by rewrite Pr[mu_eq] // => &hr /#.
-  by rewrite Pr[mu_false] //= big_cons {1}/predT /=; congr; exact/ih.
-  qed.
-  end section.
+lemma test_ephrev_nn &m i: Pr[E_GAKE(Game4, A).run(false) @ &m : (Game4.badq /\ Game4.tested = Some i) /\ Game4.test_ephrev_s = None] = 0%r.
+proof.
+byphoare => //; hoare.
+proc; inline.
+call (_: ! (Game4.badq /\ Game4.tested = None /\ Game4.test_ephrev_s = None) /\ (Game4.test_ephrev_s = None <=> Game4.tq = None) /\ (Game4.tested = None <=> Game4.tq = None)); 2..11: conseq (: true) => //.
+
+- proc; auto => /#.
+
+- proc; inline.
+  sp; if => //.
+  exlim Game4.c_smap.[i{!hr}] => csi.
+  case (csi = None).
+  + match None ^match => //.
+  match Some ^match => //.
+  + skip => /#.
+  match => //; if => //; if => //.
+  + sp; seq 1: (#pre /\ ks \in dkey); 1: by auto => />.
+    auto => />.
+  sp; seq 1: (#pre /\ ks2 \in dkey); 1: by auto => />.
+  auto => />.
+
+- proc; inline.
+  sp; if => //.
+  exlim Game4.s_smap.[(b, j)] => ssj.
+  case (ssj = None).
+  + match None ^match => //.
+  match Some ^match => //.
+  + skip => /#.
+  match => //; if => //; if => //.
+  + sp; seq 1: (#pre /\ ks \in dkey); 1: by auto => />.
+    auto => />.
+  sp; seq 1: (#pre /\ ks2 \in dkey); 1: by auto => />.
+  auto => />.
+
+auto => /#.
+qed.
 
 
-    Pr[M.f(i) @ &m: E i (glob M) res]
-    = big predT (fun a =>
-                   Pr[M.f(i) @ &m: E i (glob M) res /\ phi i (glob M) res = a]) P
-      + Pr[M.f(i) @ &m: E i (glob M) res /\ !mem P (phi i (glob M) res)].
-  proof.
+lemma split_pr &m i: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i] = 
+                     Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i /\ Game4.test_ephrev_s <> None /\ oget Game4.test_ephrev_s] 
+                     + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i /\ Game4.test_ephrev_s <> None /\ !(oget Game4.test_ephrev_s)].
+proof.
+rewrite Pr[mu_split Game4.test_ephrev_s = None].
+rewrite test_ephrev_nn //=.
+rewrite Pr[mu_split oget Game4.test_ephrev_s].
+by rewrite !andbA.
+qed.
 
-lemma range_uniq: forall (m n : int), uniq (range m n).
 
 
 

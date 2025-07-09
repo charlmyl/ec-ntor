@@ -48,7 +48,7 @@ module Game0 : GAKE_out_i = {
   var c_smap : (int, pr_st_client instance_state) fmap
   var s_smap : (s_id * int, pr_st_server instance_state) fmap
   
-  var tested : tested_instance option
+  var tested : int option
   
   var kp_set : ((pkey * skey)) fset
   var bad : bool
@@ -311,7 +311,7 @@ module Game0 : GAKE_out_i = {
                 k <- Some ks;
                 c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
-              tested <- Some (Client i);
+              tested <- Some i;
            }
           }
         }
@@ -342,7 +342,7 @@ module Game0 : GAKE_out_i = {
                 k <- Some ks;
                 s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
-              tested <- Some (Server (b, j));
+              tested <- Some (pick (get_fresh_partners_s t' c_smap));
             }
           }
         }
@@ -455,9 +455,10 @@ print Game3.
 module Game4 = Game3 with {
   var counti : int
   var handles_c : (int, int) fmap
+  var test_ephrev_s : bool option
 
   proc init_mem [
-    -1 + { counti <- 0; handles_c <- empty; }
+    -1 + { counti <- 0; handles_c <- empty; test_ephrev_s <- None; }
   ]
 
   proc send_msg1 [
@@ -494,15 +495,20 @@ module Game4 = Game3 with {
 
   proc c_test [
     var ks2 : key
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];}
+    var p : (s_id * int)
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
+                                                    p <- pick (get_fresh_partners_c t' s_smap servers); 
+                                                    test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];
+                                                       p <- pick (get_fresh_partners_c t' s_smap servers); 
+                                                       test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
 
   ]
 
   proc s_test [
     var ks2 : key
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
   ]
 }.
 

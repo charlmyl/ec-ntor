@@ -13,14 +13,6 @@ type sid = (s_id * pkey) * trace.
 type ir_status = bool * bool * bool.
 
 type h_input = pkey * pkey * s_id * pkey * pkey.
-type tested_instance = [
-  Client of int
-| Server of (s_id * int)
-].
-
-op get_test_int (t: tested_instance) : int =
-with t = Client i => i
-with t = Server bj => bj.`2.
 
 type pr_st_client = s_id * pkey * pkey * skey.
 type pr_st_server = s_id * skey * skey option.
@@ -259,7 +251,6 @@ proof *.
 
 print RO.
 
-
 (* oracles that are exposed to the experiment *)
 module type GAKE_out_i = {
   include GAKE_out
@@ -276,7 +267,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
   var c_smap: (int, pr_st_client instance_state) fmap
   var s_smap: (s_id * int, pr_st_server instance_state) fmap
   
-  var tested: tested_instance option
+  var tested: int option
 
   proc init_mem(b: bool) : unit = {
     b0 <- b;
@@ -522,7 +513,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
                 k <- Some ks;
                 GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
               }
-              GAKEb.tested <- Some (Client i);
+              GAKEb.tested <- Some i;
            }
           }
         }
@@ -553,7 +544,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
                 k <- Some ks;
                 GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
-              GAKEb.tested <- Some (Server (b, j));
+              GAKEb.tested <- Some (pick (get_fresh_partners_s t' GAKEb.c_smap));
             }
           }
         }
