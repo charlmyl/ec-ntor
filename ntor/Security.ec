@@ -2559,18 +2559,21 @@ qed.
 
 
 lemma split_pr &m i: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i] = 
-                     Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i /\ Game4.test_ephrev_s <> None /\ oget Game4.test_ephrev_s] 
-                     + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i /\ Game4.test_ephrev_s <> None /\ !(oget Game4.test_ephrev_s)].
+                     Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i /\ Game4.test_ephrev_s = Some true] 
+                     + Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq /\ Game4.tested = Some i /\ Game4.test_ephrev_s = Some false].
 proof.
 rewrite Pr[mu_split Game4.test_ephrev_s = None].
 rewrite test_ephrev_nn //=.
-rewrite Pr[mu_split oget Game4.test_ephrev_s].
-by rewrite !andbA.
+rewrite Pr[mu_split Game4.test_ephrev_s = Some true].
+rewrite !andbA.
+congr; smt().
 qed.
 
 
+(* Step 7: Reduction to CDH assumption *)
 
 
+    
 
 end section.
 
