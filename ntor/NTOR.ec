@@ -1,10 +1,12 @@
 require import AllCore Distr List.
-require GAKE.
+require GAKE DiffieHellman.
 
-type s_id, pkey, skey.
-op [lossless] dkp : (pkey * skey) distr.
+clone DiffieHellman as DH.
+import DH.DDH DH.G DH.GP DH.FD.
 
-op (^) : pkey -> skey -> pkey.
+type s_id.
+type pkey = group.
+type skey = exp.
 
 type key_mac, key, tag.
 type trace = pkey * (pkey * tag) option.
@@ -25,17 +27,19 @@ clone import GAKE as GAKEc with
   type tag <- tag,
   type pr_st_client <- pr_st_client,
   type pr_st_server <- pr_st_server,
-  op dkp <- dkp,
+  op dskey <- dt,
   op dkey <- dkey,
   op dtag <- dtag.
 
 import HROc.
 
+
 module NTOR_S (H : RO) : Server = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
 
-    (pk_s, sk_s) <$ dkp;
+    sk_s <$ dt;
+    pk_s <- g ^ sk_s;
 
     return (pk_s, sk_s);
   }
@@ -48,8 +52,10 @@ module NTOR_S (H : RO) : Server = {
     match st with 
     | None => {}
     | Some st => {
-       (b, sk_b, sko) <- st;
-       (pk_se, sk_se) <$ dkp;
+        (b, sk_b, sko) <- st;
+        sk_se <$ dt;
+        pk_se <- g ^ sk_se;
+        
         (t_B, sk) <@ H.get(m2 ^ sk_se, m2 ^ sk_b, b, m2, pk_se);
         r <- Some ((b, sk_b, Some sk_se), (pk_se, t_B), sk);
       }
@@ -62,7 +68,8 @@ module NTOR_C (H : RO) : Client = {
   proc new_session(b, pk) : pr_st_client * pkey = {
     var pk_ce, sk_ce;
 
-    (pk_ce, sk_ce) <$ dkp;
+    sk_ce <$ dt;
+    pk_ce <- g ^ sk_ce;
 
     return ((b, pk, pk_ce, sk_ce), pk_ce);
   }

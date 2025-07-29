@@ -1,8 +1,9 @@
 require import AllCore FMap FSet Distr.
 require PROM.
 
-type s_id, tag, state, key, pkey, skey, key_sess.
-op [lossless] dkp : (pkey * skey) distr.
+type s_id, tag, state, key, key_sess, pkey, skey.
+
+op [lossless] dskey : skey distr.
 
 op [lossless] dtag : tag distr.
 op [lossless] dkey : key distr.
