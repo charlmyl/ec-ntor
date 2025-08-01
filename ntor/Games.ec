@@ -114,7 +114,7 @@ module Game0 : GAKE_out_i = {
           kp <- (g ^ sk, sk);
           bad <- bad \/ kp \in kp_set;
           kp_set <- kp_set `|` fset1 kp;
-          c_smap.[i] <- Pending (m1, pk_b, fst kp, snd kp) (fst kp) (false, false, false);
+          c_smap.[i] <- Pending (m1, pk_b, snd kp) (fst kp) (false, false, false);
           r <- Some (fst kp);
         }
       | Some st => {
@@ -153,7 +153,7 @@ module Game0 : GAKE_out_i = {
   }
 
   proc send_msg3(i: int, m3: pkey * tag) : unit option = {
-    var b, pk_b, pk_ce, sk_ce, t_A, key;
+    var b, pk_b, sk_ce, t_A, key;
     var r <- None;
 
     match c_smap.[i] with
@@ -161,13 +161,13 @@ module Game0 : GAKE_out_i = {
     | Some st => {
         match st with
         | Pending st pt ir => {
-            (b, pk_b, pk_ce, sk_ce) <- st;
-            (t_A, key) <@ h(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
+            (b, pk_b, sk_ce) <- st;
+            (t_A, key) <@ h(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1);
             if (t_A = m3.`2) {
-              c_smap.[i] <- Accepted st (pk_ce, Some m3) key ir;
+              c_smap.[i] <- Accepted st (pt, Some m3) key ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some st) (Some (pk_ce, Some m3)) ir;
+              c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
             }
           }
         | Accepted _ _ _ _ => { }
@@ -415,7 +415,7 @@ module Game2 = Game1 with {
     var ts : tag
     var ks : key
     var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, pk_ce, m3.`1);
+    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1);
                                      ts <$ dtag;
                                      if (x \notin h1m) {h1m.[x] <- ts;} 
                                      t_A <- oget h1m.[x];
@@ -430,8 +430,8 @@ module Game2 = Game1 with {
 
   proc c_test [
     var x : pkey * pkey * s_id * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`3, st'.`2 ^ st'.`3, st'.`1, g ^ st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`3, st'.`2 ^ st'.`3, st'.`1, g ^ st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 
   proc s_test [
@@ -481,7 +481,7 @@ module Game4 = Game3 with {
   proc c_rev_skey [
     var ks : key
     var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`4, st'.`2 ^ st'.`4, st'.`1, st'.`3, (oget t'.`2).`1); 
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`3, st'.`2 ^ st'.`3, st'.`1, g ^ st'.`3, (oget t'.`2).`1); 
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}

@@ -15,7 +15,7 @@ type ir_status = bool * bool * bool.
 
 type h_input = pkey * pkey * s_id * pkey * pkey.
 
-type pr_st_client = s_id * pkey * pkey * skey.
+type pr_st_client = s_id * pkey * skey.
 type pr_st_server = s_id * skey * skey option.
 
 op get_eph_c: pr_st_client -> skey.
@@ -364,10 +364,10 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
             resp <@ C.complete_session(st, m3);
             if (resp is Some r') {
               (st', k) <- r';
-              c_smap.[i] <- Accepted st' (st'.`3, Some m3) k ir;
+              c_smap.[i] <- Accepted st' (pt, Some m3) k ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some st) (Some (st.`3, Some m3)) ir;
+              c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
             }
           }
         | Accepted _ _ _ _ => { }
