@@ -2501,7 +2501,7 @@ by case : (!bqr) => />.
       case (x0 = int) => x0eq; 1: by smt().
       case (get_trace (oget Game4.s_smap{2}.[x0]) = Some t'); 2: by smt().
       have:= (inv4 x0 int t'.`1 (g ^ loge (oget t'.`2).`1) (oget t'.`2).`2 (g ^ st'.`3) t). 
-      admit.
+      by smt(expgK).
     case (ir.`3) => tes; 2: by smt().
     by smt().
   by smt().
@@ -2650,7 +2650,7 @@ by case : (!bqr) => />.
       case (x0 = int) => x0eq; 1: by smt().
       case (exists (m2o : (pkey * tag) option), get_trace (oget Game4.c_smap{2}.[x0]) = Some (t'.`1, m2o)) ; 2: by smt().
       have:= (inv3 int x0 (g ^ loge t'.`1) (Some (g ^ oget st'.`3, t))). 
-      admit.
+      by smt(expgK).
     case (ir.`3) => tes; 2: by smt().
     by smt().
   split.
@@ -2843,22 +2843,82 @@ qed.
 
 
 (* Step 7: Reduction to CDH assumption *)
-module Reduction (A : A_GAKE) (O : GAKE_out_i) (D : DDH_oracle) = {
-  var solution : pkey
+module type DDH_oracle = {
+  proc run(gx : group, gy : group, gz : group) : bool
+}.
 
-  module O' = {
-    include O.init_mem
+module DDH_O : DDH_oracle = {
+  proc run(gx, gy, gz : group) = {
+    return (gz = gy ^ (loge gx));
+  }
+}.
+
+print Game4.
+
+
+
+
+module Reduction_Ltk (A : A_GAKE) (D : DDH_oracle) = {
+  var solution : group option
+
+  module Red_O : GAKE_out_i = Game4 with {
+    var i : int
+    var b_hat : s_id
+    var ga, gb : group
+    var stop : bool
+
+    proc init_mem [
+      -1 + {stop <- false;}
+    ]
 
   }
 
-  proc solve(i : int, ga : pkey, gb : pkey) : pkey = {
+  proc solve(i : int, b_hat : s_id, ga, gb : group) : group option = {
+    var b' : bool;
+
     solution <- witness;
-    b' <@ A(O').distinguish;
+    Red_O.i <- i;
+    Red_O.b_hat <- b_hat;
+    Red_O.ga <- ga;
+    Red_O.gb <- gb;
+    Red_O.init_mem(true);
+    b' <@ A(Red_O).run();
     return solution;
   }
 }.
 
-    
+
+
+
+
+module Reduction_Eph (A : A_GAKE) (D : DDH_oracle) = {
+  var solution : group option
+
+  module Red_O : GAKE_out_i = Game4 with {
+    var i, j : int
+    var ga, gb : group
+
+    proc init_mem [
+      ^b0<- ~ {b0 <- true;}
+    ]
+  }
+
+  proc solve(i, j : int, ga, gb : group) : group option = {
+    var b' : bool;
+
+    solution <- witness;
+    Red_O.i <- i;
+    Red_O.j <- j;
+    Red_O.ga <- ga;
+    Red_O.gb <- gb;
+    b' <@ A(Red_O).run();
+    return solution;
+  }
+}.
+
+
+
+
 
 end section.
 

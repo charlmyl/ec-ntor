@@ -459,9 +459,11 @@ module Game4 = Game3 with {
   var counti : int
   var handles_c : (int, int) fmap
   var test_ephrev_s : bool option
+  var b_test : s_id option
+  var j_test : int option
 
   proc init_mem [
-    -1 + { counti <- 0; handles_c <- empty; test_ephrev_s <- None; }
+    -1 + { counti <- 0; handles_c <- empty; test_ephrev_s <- None; b_test <- None; j_test <- None; }
   ]
 
   proc send_msg1 [
@@ -501,17 +503,19 @@ module Game4 = Game3 with {
     var p : (s_id * int)
     ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
                                                     p <- pick (get_fresh_partners_c t' s_smap servers); 
-                                                    test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
+                                                    test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));
+                                                    b_test <- Some p.`1; j_test <- Some p.`2;}
     ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];
                                                        p <- pick (get_fresh_partners_c t' s_smap servers); 
-                                                       test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
+                                                       test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));
+                                                       b_test <- Some p.`1; j_test <- Some p.`2;}
 
   ]
 
   proc s_test [
     var ks2 : key
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1; b_test <- Some b; j_test <- Some j;}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1; b_test <- Some b; j_test <- Some j;}
   ]
 }.
 
