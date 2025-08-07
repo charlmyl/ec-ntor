@@ -357,6 +357,7 @@ module Game0 : GAKE_out_i = {
 
 print Game0.
 
+
 (* Step1: Removing key collisions *)
 module Game1 = Game0 with {
   proc init_s [
@@ -520,3 +521,66 @@ module Game4 = Game3 with {
 }.
 
 print Game4.
+
+
+
+
+module DDH_I = {
+  proc ddh_input(x : group * group * s_id * group * group, b : group) : (group option * group option) = {
+    var r, ddh1, ddh2;
+
+    ddh1 <- (x.`4 ^ (loge x.`5) = x.`1);
+    ddh2 <- (x.`4 ^ (loge b) = x.`2);
+    if (ddh1 /\ ddh2) {
+      r <- (None, None);
+    } else {
+      r <- (Some x.`1, Some x.`2);
+    }
+
+    return r;
+  }
+}.
+
+module GameDDH = Game4 with {
+  var h1mDDH : (pkey option * pkey option * s_id * pkey * pkey, tag) fmap
+  var h2mDDH : (pkey option * pkey option * s_id * pkey * pkey, key) fmap
+
+  proc init_mem [
+    -1 + { h1mDDH <- empty; h2mDDH <- empty; }
+  ]
+  
+  proc h [
+    var pk_s : group
+    var x1, x2 : group option
+
+    ^badq<- + {pk_s <- get_pkey (oget servers.[x.`3]); 
+               (x1, x2) <@ DDH_I.ddh_input(x, pk_s);}
+    ^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
+    ^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- t;}
+    ^if{2} ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if{2}.^h2m<- ~ {h2mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- k;}
+    ] res ~ (oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)], oget h2mDDH.[(x1, x2, x.`3, x.`4, x.`5)])
+
+  proc send_msg2 [
+    var pk_s : group
+    var x1, x2 : group option
+
+    ^match#Some.^match#None.^if.^ts<$ + {pk_s <- get_pkey (oget servers.[x.`3]); 
+                                        (x1, x2) <@ DDH_I.ddh_input(x, pk_s);}
+    ^match#Some.^match#None.^if.^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
+    ^match#Some.^match#None.^if.^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- ts;}
+    ^match#Some.^match#None.^if.^t_B<- ~ {t_B <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];} 
+  ]
+
+  proc send_msg3 [
+    var pk_s : group
+    var x1, x2 : group option
+
+    ^match#Some.^match#Pending.^ts<$ + {pk_s <- get_pkey (oget servers.[x.`3]); 
+                                        (x1, x2) <@ DDH_I.ddh_input(x, pk_s);}
+    ^match#Some.^match#Pending.^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
+    ^match#Some.^match#Pending.^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- ts;}
+    ^match#Some.^match#Pending.^t_A<- ~ {t_A <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
+  ]
+
+}.

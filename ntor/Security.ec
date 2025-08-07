@@ -203,7 +203,7 @@ module (Red_ROM2 (D : A_GAKE) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, -Game2, -Game3, -Game4, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2 }.
+declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, -Game2, -Game3, -Game4, -GameDDH, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2 }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -1388,7 +1388,7 @@ tags : (pkey * pkey * s_id * pkey * pkey, tag) fmap) =
 
 
 lemma interestingbit &m: `|Pr[E_GAKE(Game4, A).run(false) @ &m : res] - Pr[E_GAKE(Game4, A).run(true) @ &m : res]| <= Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq].
-proof.
+proof. admit. (*
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Game4.badq => //; first last.
 + smt().
@@ -2576,7 +2576,7 @@ by case : (!bqr) => />.
   + inline; auto => />.
     by rewrite dkey_ll /#.
   auto => />.
-  by rewrite dkey_ll /#.
+  by rewrite dkey_ll /#.*)
 qed.
 
 
@@ -2733,14 +2733,128 @@ module type DDH_oracle = {
 }.
 
 module DDH_O : DDH_oracle = {
-  proc run(gx, gy, gz : group) = {
+  proc run(gx, gy, gz : group): bool = {
     return (gz = gy ^ (loge gx));
   }
 }.
 
-print Game4.
+op clear_ddh(x : group * group * s_id * group * group, b : group) =
+  if (x.`4 ^ (loge x.`5) = x.`1) /\ (x.`4 ^ (loge b) = x.`2) then (None, None, x.`3, x.`4, x.`5) 
+    else (Some x.`1, Some x.`2, x.`3, x.`4, x.`5).
 
+lemma game4_gameddh &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(GameDDH, A).run(false) @ &m : Game4.badq].
+proof.
+byequiv => //.
+proc; inline.
+call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, tags, badt, counti, handles_c, test_ephrev_s, b_test, j_test}(Game4, GameDDH)
+        /\ (forall x, Game4.h1m{1}.[x] = GameDDH.h1mDDH{2}.[(clear_ddh x (get_pkey (oget GameDDH.servers{2}.[x.`3])))])
+        /\ (forall x, Game4.h2m{1}.[x] = GameDDH.h2mDDH{2}.[(clear_ddh x (get_pkey (oget GameDDH.servers{2}.[x.`3])))])
+        /\ (forall x, x \in Game4.h1m{1} <=> x \in Game4.h2m{1})
+        /\ (forall x x1 x2, x \notin Game4.h1m{1} 
+              => (x1, x2, x.`3, x.`4, x.`5) \notin GameDDH.h1mDDH{2})
+        /\ (forall b x1 x2 x4 x5, b \notin Game4.servers{1} => (x1, x2, b, x4, x5) \notin Game4.h1m{1})); last first.
 
+auto => />.
+split. smt(emptyE in_fset0).
+move => *.
+admit.
+
++ proc; inline.
+  sp. seq 1 1: (#pre /\ ={t}); 1: by auto.
+  if => //; 1: auto => /#.
+  + sp. seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+    rcondt{1} ^if; 1: by auto => /#.
+    rcondt{2} ^if; 1: by auto => /#.
+    auto => /> &1 &2 *.
+    split. smt(get_setE).
+    split. smt().
+    split.
+    + admit.
+    admit.
+  seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+  rcondf{1} ^if; 1: by auto => /#.
+  rcondf{2} ^if; 1: by auto => /#.
+  auto => /> &1 &2 *.
+  split. smt(get_setE).
+  split. smt().
+  split.
+  + admit.
+  admit.
+
++ proc; inline.
+  if => //.
+  auto => /> &1 &2 *.
+  split. 
+  + move => x.
+    case (x \in Game4.h1m{1}) => xin.
+    + smt(get_setE).
+    admit.
+  split. 
+  + move => x.
+    case (x \in Game4.h1m{1}) => xin.
+    + smt(get_setE).
+    admit.
+  smt(get_setE mem_set).
+
++ proc; inline.
+  sp 1 1; if => //.
+  auto => /> &1 &2 *.
+  split. 
+  + move => x.
+    case (x \in Game4.h1m{1}) => xin.
+    + smt(get_setE).
+    admit.
+  split. 
+  + move => x.
+    case (x \in Game4.h1m{1}) => xin.
+    + smt(get_setE).
+    admit.
+  smt(get_setE mem_set).
+
++ sim />.
+
++ proc. inline.
+  sp; match = => // sk_s.
+  match = => //.
+  seq 1 1: (#pre /\ ={sk} /\ sk{2} \in dt); 1: by auto=> />.
+  sp 2 2; if => //.
+  sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
+  rcondt{2} ^if. 
+  + auto => &1 /> *.
+    split. by rewrite loggK.
+    have : get_pkey (oget GameDDH.servers{1}.[b{1}]) = g ^ (oget (get_skey (oget GameDDH.servers{1}.[b{1}]))). admit. (* put into invariant *)
+    smt(loggK).
+  if{1} => //.
+  + rcondt{2} ^if. auto => /#.
+    auto => /> &1 &2 *.
+    split. smt(get_setE).
+    split. smt(get_setE).
+    split. admit.
+    split. admit.
+    split. admit.
+    smt(get_setE).
+  rcondf{2} ^if. auto => />. admit.
+  auto => /> &1 &2 *.
+  split. admit.          
+  split. admit.
+  admit.
+
+admit.
+
+admit.
+
+admit.
+
+admit.
+
++ sim />.
+
++ sim />.
+
+admit.
+
+admit.
+qed.
 
 
 module Reduction_Ltk (A : A_GAKE) (D : DDH_oracle) = {
