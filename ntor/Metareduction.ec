@@ -204,6 +204,9 @@ if 1 <= card (get_origins_mod_s t fmap) then Some (1 <= card (get_fresh_partners
 module type GAKE_mod_out = {
   proc h(input: h_mod_input) : tag * key
 
+  proc init_s() : pkey option
+  proc set_cert(pk: pkey) : unit option
+
   proc send_msg1(i: int, m1: pkey) : pkey option
   proc send_msg2(b: pkey, j: int, m2: pkey) : (pkey * tag) option
 
@@ -212,7 +215,7 @@ module type GAKE_mod_out = {
   proc s_rev_ephkey(b: pkey, j: int) : skey option
   proc s_test(b: pkey, j: int) : key option
 
-  include GAKE_out [init_s, set_cert, send_msg3, c_rev_skey, c_rev_ephkey, c_test]
+  include GAKE_out [send_msg3, c_rev_skey, c_rev_ephkey, c_test]
 }.
 
 module type GAKE_mod_out_i = {
@@ -224,8 +227,6 @@ module type GAKE_mod_out_i = {
 module GAKEb_mod (S: Server_mod) (C: Client_mod) (H : RO) : GAKE_mod_out = {
   var b0 : bool 
 
-  var servers : (s_id, server_state) fmap
-
   var s_kp : (pkey, skey option) fmap
   var c_smap : (int, pr_st_client_mod instance_state) fmap
   var s_smap : (pkey * int, pr_st_server_mod instance_state) fmap
@@ -235,7 +236,6 @@ module GAKEb_mod (S: Server_mod) (C: Client_mod) (H : RO) : GAKE_mod_out = {
   proc init_mem(b: bool) : unit = {
     b0 <- b;
     H.init();
-    servers <- empty;
     s_kp <- empty;
     c_smap <- empty;
     s_smap <- empty;
@@ -246,22 +246,23 @@ module GAKEb_mod (S: Server_mod) (C: Client_mod) (H : RO) : GAKE_mod_out = {
   proc h = H.get
   
   (* server management *)
-  proc init_s(b: s_id) : pkey option = {
+  proc init_s() : pkey option = {
     var kp;
-
-    if (b \notin servers) {
-      kp <@ S.keygen();
-      servers.[b] <- Honest kp;
-      s_kp.[kp.`1] <- Some kp.`2;
-    }
-    return omap get_pkey servers.[b];
-  }
-
-  proc set_cert(b: s_id, pk: pkey) : unit option = {
     var r <- None;
 
-    if (b \notin servers) {
-      servers.[b] <- Dishonest pk;
+    kp <@ S.keygen();
+    if (kp.`1 \notin s_kp) {
+      s_kp.[kp.`1] <- Some kp.`2;
+      r <- Some kp.`1;
+    }
+
+    return r;
+  }
+
+  proc set_cert(pk: pkey) : unit option = {
+    var r <- None;
+
+    if (pk \notin s_kp) {
       s_kp.[pk] <- None;
       r <- Some ();
     }
@@ -561,9 +562,21 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       return r;
     }
 
-    proc init_s = O.init_s
+    proc init_s(b: s_id) = {
+      var r;
 
-    proc set_cert = O.set_cert
+      r <@ O.init_s();
+
+      return r;
+    }
+
+    proc set_cert(b: s_id, pk: pkey) = {
+      var r;
+
+      r <@ O.set_cert(pk);
+
+      return r;
+    }
 
     proc send_msg1(i: int, m1: s_id) = {
       var pk; 
