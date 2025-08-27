@@ -541,6 +541,9 @@ module DDH_I = {
   }
 }.
 
+
+print Game4.
+
 module GameDDH = Game4 with {
   var h1mDDH : (pkey option * pkey option * s_id * pkey * pkey, tag) fmap
   var h2mDDH : (pkey option * pkey option * s_id * pkey * pkey, key) fmap
@@ -552,35 +555,65 @@ module GameDDH = Game4 with {
   proc h [
     var pk_s : group
     var x1, x2 : group option
+    var rt : tag
+    var rk : key
 
+    0 + ^  {rt <- oget h1mDDH.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)]; rk <- oget h2mDDH.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)];}
+    [0 - ^if{2}] + ^ (x \notin hq)
     ^badq<- + {pk_s <- get_pkey (oget servers.[x.`3]); 
                (x1, x2) <@ DDH_I.ddh_input(x, pk_s);}
     ^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
     ^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- t;}
+    ^if + {rt <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
     ^if{2} ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h2mDDH)
     ^if{2}.^h2m<- ~ {h2mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- k;}
-    ] res ~ (oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)], oget h2mDDH.[(x1, x2, x.`3, x.`4, x.`5)])
+    ^if{2} + {rk <- oget h2mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
+    
+    
+    ] res ~ (rt, rk)
 
   proc send_msg2 [
-    var pk_s : group
-    var x1, x2 : group option
-
-    ^match#Some.^match#None.^if.^ts<$ + {pk_s <- get_pkey (oget servers.[x.`3]); 
-                                        (x1, x2) <@ DDH_I.ddh_input(x, pk_s);}
-    ^match#Some.^match#None.^if.^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
-    ^match#Some.^match#None.^if.^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- ts;}
-    ^match#Some.^match#None.^if.^t_B<- ~ {t_B <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];} 
+    ^match#Some.^match#None.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h1mDDH)
+    ^match#Some.^match#None.^if.^if.^h1m<- ~ {h1mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ts;}
+    ^match#Some.^match#None.^if.^t_B<- ~ {t_B <- oget h1mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
   ]
 
   proc send_msg3 [
-    var pk_s : group
-    var x1, x2 : group option
+    ^match#Some.^match#Pending.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h1mDDH)
+    ^match#Some.^match#Pending.^if.^h1m<- ~ {h1mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ts;}
+    ^match#Some.^match#Pending.^t_A<- ~ {t_A <- oget h1mDDH.[(None, None, x.`3, x.`4, x.`5)];}
+  ]
 
-    ^match#Some.^match#Pending.^ts<$ + {pk_s <- get_pkey (oget servers.[x.`3]); 
-                                        (x1, x2) <@ DDH_I.ddh_input(x, pk_s);}
-    ^match#Some.^match#Pending.^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
-    ^match#Some.^match#Pending.^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- ts;}
-    ^match#Some.^match#Pending.^t_A<- ~ {t_A <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
+  proc c_rev_skey [
+    ^match#Some.^match#Accepted.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^match#Some.^match#Accepted.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^match#Some.^match#Accepted.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
+  ]
+
+  proc s_rev_skey [
+    ^match#Some.^match#Accepted.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^match#Some.^match#Accepted.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^match#Some.^match#Accepted.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
+  ]
+
+  proc c_test [
+    ^if.^match#Some.^match#Accepted.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
+    ^if.^match#Some.^match#Accepted.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
+    ^if.^match#Some.^match#Accepted.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
+  ]
+
+  proc s_test [
+    ^if.^match#Some.^match#Accepted.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
+    ^if.^match#Some.^match#Accepted.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
+    ^if.^match#Some.^match#Accepted.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
   ]
 
 }.
+
+print GameDDH.

@@ -2738,78 +2738,110 @@ module DDH_O : DDH_oracle = {
   }
 }.
 
+print GameDDH.
+
 op clear_ddh(x : group * group * s_id * group * group, b : group) =
   if (x.`4 ^ (loge x.`5) = x.`1) /\ (x.`4 ^ (loge b) = x.`2) then (None, None, x.`3, x.`4, x.`5) 
     else (Some x.`1, Some x.`2, x.`3, x.`4, x.`5).
 
-lemma game4_gameddh &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(GameDDH, A).run(false) @ &m : Game4.badq].
+lemma game4_gameddh &m: Pr[E_GAKE(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE(GameDDH, A).run(false) @ &m : GameDDH.badq].
 proof.
 byequiv => //.
 proc; inline.
 call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, tags, badt, counti, handles_c, test_ephrev_s, b_test, j_test}(Game4, GameDDH)
+        /\ (Game4.b0{1} = false)
         /\ (forall x, Game4.h1m{1}.[x] = GameDDH.h1mDDH{2}.[(clear_ddh x (get_pkey (oget GameDDH.servers{2}.[x.`3])))])
         /\ (forall x, Game4.h2m{1}.[x] = GameDDH.h2mDDH{2}.[(clear_ddh x (get_pkey (oget GameDDH.servers{2}.[x.`3])))])
-        /\ (forall x, x \in Game4.h1m{1} <=> x \in Game4.h2m{1})
-        /\ (forall x x1 x2, x \notin Game4.h1m{1} 
-              => (x1, x2, x.`3, x.`4, x.`5) \notin GameDDH.h1mDDH{2})
-        /\ (forall b x1 x2 x4 x5, b \notin Game4.servers{1} => (x1, x2, b, x4, x5) \notin Game4.h1m{1})); last first.
+        /\ (forall x, x \in GameDDH.h1mDDH{2} 
+              => (exists x1 x2, (x1, x2, x.`3, x.`4, x.`5) \in Game4.h1m{1}))
+        /\ (forall x, x \notin Game4.h1m{1} 
+              => (*(x1, x2, x.`3, x.`4, x.`5) \notin GameDDH.h1mDDH{2} /\ *)x \notin Game4.h2m{1})(* /\ (x1, x2, x.`3, x.`4, x.`5) \notin GameDDH.h2mDDH{2})*)
+        /\ (forall x, x \in Game4.h1m{1} 
+              => (((x.`1 <> x.`4 ^ loge x.`5 \/ x.`2 <> x.`4 ^ loge (get_pkey (oget GameDDH.servers{2}.[x.`3]))) /\ (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in GameDDH.h1mDDH{2}) \/ (x.`1 = x.`4 ^ loge x.`5 /\ (None, None, x.`3, x.`4, x.`5) \in GameDDH.h1mDDH{2})))
+       (* /\ (forall b x1 x2 x4 x5, b \notin Game4.servers{1} 
+              => (x1, x2, b, x4, x5) \notin Game4.h1m{1} /\ (x1, x2, b, x4, x5) \notin Game4.h2m{1})
+        /\ (forall pk sk x, (pk, sk) \notin GameDDH.kp_set{2} => (clear_ddh x pk) \notin GameDDH.h1mDDH{2} /\ (clear_ddh x pk) \notin GameDDH.h2mDDH{2})*)); last first.
 
 auto => />.
-split. smt(emptyE in_fset0).
-move => *.
-admit.
+smt(emptyE in_fset0).
 
 + proc; inline.
-  sp. seq 1 1: (#pre /\ ={t}); 1: by auto.
+  sp 2 7. 
+  if{2} => //.
+  + sp. seq 1 1: (#pre /\ ={t}); 1: by auto => />.
+    if => //; 1: auto => /#.
+    + sp. seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+      rcondt{1} ^if; 1: by auto => /#.
+      rcondt{2} ^if; 1: by auto => /#.
+      auto => /> &1 &2 *.
+      split. smt(get_setE).
+      split. smt(get_setE).
+      split. smt(get_setE).
+      split.
+      + move => x'.
+        rewrite mem_set.
+        move => [x'nin | x'neq]. smt(get_setE).
+        exists (x{2}.`4 ^ loge x{2}.`5) (x{2}.`4 ^ loge (get_pkey (oget GameDDH.servers{2}.[x{2}.`3]))). 
+        smt(get_setE).
+      split. smt(mem_set).
+      smt(mem_set).
+    seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+    if => //; 1: by auto => /#.
+    + auto => /> &1 &2 *.
+      split. smt(get_setE).
+      split. smt(get_setE mem_set).
+      smt(mem_set).
+    auto => /> &1 &2 *.
+    split. smt(get_setE).
+    smt(get_setE).
+  sp. seq 1 1: (#pre /\ ={t}); 1: by auto => />.
   if => //; 1: auto => /#.
   + sp. seq 1 1: (#pre /\ ={k}); 1: by auto => />.
     rcondt{1} ^if; 1: by auto => /#.
-    rcondt{2} ^if; 1: by auto => /#.
-    auto => /> &1 &2 *.
+    rcondt{2} ^if. auto => /#.
+    auto => /> &1 &2 ? ? ? ? ? ? ? ? noddh *.
     split. smt(get_setE).
-    split. smt().
+    split. smt(get_setE).
+    split. smt(get_setE).
     split.
-    + admit.
-    admit.
+    + move => x'.
+      rewrite mem_set.
+      move => [x'nin | x'neq]. smt(get_setE).
+      exists x{2}.`1 x{2}.`2. 
+      smt(mem_set).
+    split. smt(mem_set).
+    smt(mem_set).
   seq 1 1: (#pre /\ ={k}); 1: by auto => />.
-  rcondf{1} ^if; 1: by auto => /#.
-  rcondf{2} ^if; 1: by auto => /#.
+  if => //; 1: by auto => /#.
+  + auto => /> &1 &2 *.
+    split. smt(get_setE).
+    split. smt(get_setE mem_set).
+    smt(mem_set).
   auto => /> &1 &2 *.
   split. smt(get_setE).
-  split. smt().
-  split.
-  + admit.
-  admit.
+  smt(get_setE).
 
 + proc; inline.
   if => //.
   auto => /> &1 &2 *.
-  split. 
+  admit.
+(*  split. 
   + move => x.
-    case (x \in Game4.h1m{1}) => xin.
-    + smt(get_setE).
-    admit.
-  split. 
+    case : (b{2} = x.`3) => beq; 1,2: by smt(get_none get_setE).
+  split.
   + move => x.
-    case (x \in Game4.h1m{1}) => xin.
-    + smt(get_setE).
-    admit.
-  smt(get_setE mem_set).
+    case : (b{2} = x.`3) => beq; 1, 2: by smt(get_setE get_none). 
+  split.
+  + move => x.
+    case : (x.`3 = b{2}) => beq; 1: by smt(get_none get_setE). 
+    rewrite get_set_neqE //=. 
+    by smt().
+  smt(in_fsetU get_setE mem_set).*)
 
 + proc; inline.
   sp 1 1; if => //.
   auto => /> &1 &2 *.
-  split. 
-  + move => x.
-    case (x \in Game4.h1m{1}) => xin.
-    + smt(get_setE).
-    admit.
-  split. 
-  + move => x.
-    case (x \in Game4.h1m{1}) => xin.
-    + smt(get_setE).
-    admit.
-  smt(get_setE mem_set).
+  admit.
 
 + sim />.
 
@@ -2819,41 +2851,145 @@ admit.
   seq 1 1: (#pre /\ ={sk} /\ sk{2} \in dt); 1: by auto=> />.
   sp 2 2; if => //.
   sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
-  rcondt{2} ^if. 
-  + auto => &1 /> *.
-    split. by rewrite loggK.
-    have : get_pkey (oget GameDDH.servers{1}.[b{1}]) = g ^ (oget (get_skey (oget GameDDH.servers{1}.[b{1}]))). admit. (* put into invariant *)
-    smt(loggK).
   if{1} => //.
   + rcondt{2} ^if. auto => /#.
     auto => /> &1 &2 *.
     split. smt(get_setE).
     split. smt(get_setE).
-    split. admit.
-    split. admit.
-    split. admit.
-    smt(get_setE).
-  rcondf{2} ^if. auto => />. admit.
+    split.
+    + move => x'.
+      case ((m2{2} ^ sk{2}, m2{2} ^ sk_s, b{2}, m2{2}, g ^ sk{2}) = (x'.`1, x'.`2, x'.`3, x'.`4, x'.`5)) => [[] in1 in2 in3 in4 in5 | neq].
+      + rewrite in1 in2 in3 in4 in5.
+        have->: (clear_ddh x' (get_pkey (oget GameDDH.servers{2}.[x'.`3])) = (None, None, x'.`3, x'.`4, x'.`5)).
+        + rewrite /clear_ddh -in1 -in2 -in3 -in4 -in5 loggK.
+          have->: get_pkey (oget GameDDH.servers{2}.[b{2}]) = g ^ (oget (get_skey (oget GameDDH.servers{2}.[b{2}]))). admit. (* put into invariant *)
+          smt(loggK).
+        smt(get_setE).
+      rewrite get_set_neqE. smt().  
+      have: (clear_ddh x' (get_pkey (oget GameDDH.servers{2}.[x'.`3])) <> (None, None, b{2}, m2{2}, g ^ sk{2})).
+      + rewrite /clear_ddh.
+        case (x'.`4 ^ loge x'.`5 = x'.`1 /\  x'.`4 ^ loge (get_pkey (oget GameDDH.servers{2}.[x'.`3])) = x'.`2) => [[] ddh1 ddh2|noddh].
+        + case ((x'.`3, x'.`4, x'.`5) = (b{2}, m2{2}, g ^ sk{2})) => [[] x3eq x4eq x5eq|partneq]; 2: by smt().
+          have: x'.`1 = m2{2} ^ sk{2} by smt(loggK).
+          have: x'.`2 = m2{2} ^ sk_s by admit.
+          smt().
+        smt().
+      smt(get_setE).
+    split.
+    + move => x' x1' x2'.
+      rewrite mem_set negb_or.
+      move => [x'nin x'neq].
+      rewrite mem_set negb_or.       
+      split. split. smt(get_setE). admit. (* add another invariant *)
+      smt(get_setE).
+    split.
+    + move => x'.
+      rewrite mem_set.
+      move => [x'in|x'eq]; 1: by smt(get_setE).
+      by smt(mem_set loggK).
+    by smt(get_setE mem_set).
+  rcondf{2} ^if. auto => />; 1: smt(loggK).
   auto => /> &1 &2 *.
-  split. admit.          
-  split. admit.
+  have : oget Game4.h1m{1}.[m2{2} ^ sk{2}, m2{2} ^ sk_s, b{2}, m2{2}, g ^ sk{2}] = oget GameDDH.h1mDDH{2}.[None, None, b{2}, m2{2}, g ^ sk{2}]. 
+  + have->: (None, None, b{2}, m2{2}, g ^ sk{2}) = clear_ddh (m2{2} ^ sk{2}, m2{2} ^ sk_s, b{2}, m2{2}, g ^ sk{2}) (get_pkey (oget GameDDH.servers{2}.[b{2}])).
+    + rewrite /clear_ddh //=.
+      have->: get_pkey (oget GameDDH.servers{2}.[b{2}]) = g ^ (oget (get_skey (oget GameDDH.servers{2}.[b{2}]))). admit. (* put into invariant *)
+      smt(loggK).
+    smt().
+  smt().
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' pt ir.
+  sp; seq 1 1: (#pre /\ ={ts}); 1: by auto=> />.
+  if{1} => //.
+  + rcondt{2} ^if. auto => /#.
+    sp ^if & -1 ^if & -1; if => //. 
+    + if => //; 1: smt(get_setE).
+      + auto => /> &1 &2 *.
+        admit.
+      auto => /> &1 &2 *.
+      admit.
+    auto => /> &1 &2 *.
+    admit.
+  rcondf{2} ^if. auto => />; 1: smt(ComRing.mulrC expM expgK).
+  sp ^if & -1 ^if & -1; if => //. 
+  if => //. admit.
+  + auto => /> &1 &2 *.
+  auto => /> &1 &2 *.
+
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' t' k' ir'.
+  if => //.
+  swap{1} ^ks<$ @ 1.
+  swap{2} ^ks<$ @ 1.
+  seq 1 1: (#pre /\ ={ks}); 1: by auto=> />.
+  sp 1 1; if => //.
+  + admit.
+  + auto => /> &1 &2 *.
+    admit.
+  auto => /> &1 &2 *.
   admit.
 
-admit.
+- proc; inline.
+  sp; match = => // st.
+  match = => // st' t' k' ir'.
+  if => //.
+  swap{1} ^ks<$ @ 1.
+  swap{2} ^ks<$ @ 1.
+  seq 1 1: (#pre /\ ={ks}); 1: by auto=> />.
+  sp 1 1; if => //.
+  + admit.
+  + auto => /> &1 &2 *.
+    admit.
+  auto => /> &1 &2 *.
+  admit.
 
-admit.
-
-admit.
-
-admit.
+- proc.
+  sp; match = => // st.
+  match = => // kp.
+  if => //.
+  auto => /> &1 &2 *.
+  admit.
 
 + sim />.
 
 + sim />.
 
-admit.
+- proc; inline.
+  sp; if => //; sp; match = => // st.
+  match = => // st' t' k' ir'.
+  if => //.
+  rcondt{1} ^if. auto => />.
+  rcondt{2} ^if. auto => />.
+  swap{1} ^ks<$ @ 1.
+  swap{2} ^ks<$ @ 1.
+  seq 1 1: (#pre /\ ={ks}); 1: by auto=> />.
+  sp 3 3; if{1} => //.
+  + rcondt{2} ^if. auto => />. admit.
+    auto => /> &1 &2 *.
+    admit.
+  rcondf{2} ^if. auto => />. admit.
+  auto => /> &1 &2 *.
+  admit.
 
-admit.
+- proc; inline.
+  sp; if => //; sp; match = => // st.
+  match = => // st' t' k' ir'.
+  if => //.
+  rcondt{1} ^if. auto => />.
+  rcondt{2} ^if. auto => />.
+  swap{1} ^ks<$ @ 1.
+  swap{2} ^ks<$ @ 1.
+  seq 1 1: (#pre /\ ={ks}); 1: by auto=> />.
+  sp 3 3; if{1} => //.
+  + rcondt{2} ^if. auto => />. admit.
+    auto => /> &1 &2 *.
+    admit.
+  rcondf{2} ^if. auto => />. admit.
+  auto => /> &1 &2 *.
+  admit.
 qed.
 
 
