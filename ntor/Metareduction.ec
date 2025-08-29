@@ -204,7 +204,7 @@ if 1 <= card (get_origins_mod_s t fmap) then Some (1 <= card (get_fresh_partners
 module type GAKE_mod_out = {
   proc h(input: h_mod_input) : tag * key
 
-  proc init_s() : pkey option
+  proc init_s() : pkey
   proc set_cert(pk: pkey) : unit option
 
   proc send_msg1(i: int, m1: pkey) : pkey option
@@ -246,17 +246,15 @@ module GAKEb_mod (S: Server_mod) (C: Client_mod) (H : RO) : GAKE_mod_out = {
   proc h = H.get
   
   (* server management *)
-  proc init_s() : pkey option = {
+  proc init_s() : pkey = {
     var kp;
-    var r <- None;
 
     kp <@ S.keygen();
     if (kp.`1 \notin s_kp) {
       s_kp.[kp.`1] <- Some kp.`2;
-      r <- Some kp.`1;
     }
 
-    return r;
+    return kp.`1;
   }
 
   proc set_cert(pk: pkey) : unit option = {
@@ -544,28 +542,28 @@ module E_GAKE_mod (O: GAKE_mod_out_i) (A : A_GAKE_mod) = {
 
 module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
   module O_GAKE : GAKE_out = {
-    var b0 : bool 
 
-    var servers : (s_id, server_state) fmap
-
-    var c_smap: (int, pr_st_client instance_state) fmap
-    var s_smap: (s_id * int, pr_st_server instance_state) fmap
-  
-    var tested: int option
+    var servers : (s_id, pkey) fmap
 
     proc h(x : h_input) = {
       var pk, r;
 
-      pk <- get_pkey (oget servers.[x.`3]); (* what do I do with unregisted keys? *)
+      pk <- (oget servers.[x.`3]); 
+     (* What should I do with unregistered servers? *)
       r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
 
       return r;
     }
 
     proc init_s(b: s_id) = {
-      var r;
+      var pk;
+      var r <- None;
 
-      r <@ O.init_s();
+      if (b \notin servers) {
+        pk <@ O.init_s();
+        servers.[b] <- pk;
+        r <- Some pk;
+      }
 
       return r;
     }
@@ -574,6 +572,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var r;
 
       r <@ O.set_cert(pk);
+      servers.[b] <- pk;
 
       return r;
     }
@@ -583,7 +582,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var r <- None;
 
       if (m1 \in servers) {
-        pk <- get_pkey (oget servers.[m1]);
+        pk <- (oget servers.[m1]);
         r <@ O.send_msg1(i, pk);
       }
 
@@ -595,7 +594,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var r <- None;
 
       if (b \in servers) {
-        pk <- get_pkey (oget servers.[b]);
+        pk <- (oget servers.[b]);
         r <@ O.send_msg2(pk, j, m2);
       }
 
@@ -611,7 +610,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var r <- None;
 
       if (b \in servers) {
-        pk <- get_pkey (oget servers.[b]);
+        pk <- (oget servers.[b]);
         r <@ O.s_rev_skey(pk, j);
       }
 
@@ -623,7 +622,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var r <- None;
 
       if (b \in servers) {
-        pk <- get_pkey (oget servers.[b]);
+        pk <- (oget servers.[b]);
         r <@ O.rev_ltkey(pk);
       }
 
@@ -637,7 +636,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var r <- None;
 
       if (b \in servers) {
-        pk <- get_pkey (oget servers.[b]);
+        pk <- (oget servers.[b]);
         r <@ O.s_rev_ephkey(pk, j);
       }
 
@@ -651,7 +650,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var r <- None;
 
       if (b \in servers) {
-        pk <- get_pkey (oget servers.[b]);
+        pk <- (oget servers.[b]);
         r <@ O.s_test(pk, j);
       }
 
@@ -675,7 +674,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-GAKEb, -Game0, -Game1, -Game2, -Game3, -Game4, -GameDDH, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2 }.
+declare module A <: A_GAKE {-RO, -Meta_Red }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -693,8 +692,7 @@ declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.s_test =>
   islossless A(G).run.
 
-declare axiom A_bounded_qs: forall (G <: GAKE_out{-A}), hoare[A(Counter(G)).run: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis <= q_is /\ Counter.cm1 <= q_m1 /\ Counter.cm2 <= q_m2].
-
+lemma gake_mod 
 
 
 end section.
