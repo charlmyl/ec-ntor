@@ -3,7 +3,6 @@ require import AllCore FSet FMap Distr DProd List SplitRO NTOR Games.
 require (*  *) DiffieHellman.
 (*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder DH.G DH.GP DH.FD DH.GP.ZModE.
 
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Modified protocol and experiment *)
 (* ------------------------------------------------------------------------------------------ *)
@@ -65,7 +64,7 @@ module NTOR_S_mod (H : RO) : Server_mod = {
   }
 }.
 
-module NTOR_C (H : RO) : Client_mod = {
+module NTOR_C_mod (H : RO) : Client_mod = {
   proc new_session(pk) : pr_st_client_mod * pkey = {
     var pk_ce, sk_ce;
 
@@ -544,13 +543,20 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
   module O_GAKE : GAKE_out = {
 
     var servers : (s_id, pkey) fmap
+    var pk_set : pkey fset
+    
+    var stop : bool
 
     proc h(x : h_input) = {
       var pk, r;
 
-      pk <- (oget servers.[x.`3]); 
-     (* What should I do with unregistered servers? *)
-      r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
+      if (x.`3 \in servers /\ !stop /\ x.`4 \in pk_set /\ x.`5 \in pk_set) {
+        pk <- (oget servers.[x.`3]); 
+        r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
+      }
+      else {
+        r <- (witness, witness);
+      }
 
       return r;
     }
@@ -559,9 +565,11 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (b \notin servers) {
+      if (b \notin servers /\ !stop) {
         pk <@ O.init_s();
+        stop <- stop \/ pk \in pk_set;
         servers.[b] <- pk;
+        pk_set <- pk_set `|` fset1 pk;
         r <- Some pk;
       }
 
@@ -569,10 +577,15 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
     }
 
     proc set_cert(b: s_id, pk: pkey) = {
-      var r;
+      var r <- None;
 
-      r <@ O.set_cert(pk);
-      servers.[b] <- pk;
+      stop <- stop \/ pk \in pk_set;
+
+      if (!stop) {
+        r <@ O.set_cert(pk);
+        servers.[b] <- pk;
+        pk_set <- pk_set `|` fset1 pk;
+      }
 
       return r;
     }
@@ -581,9 +594,11 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk; 
       var r <- None;
 
-      if (m1 \in servers) {
+      if (m1 \in servers /\ !stop) {
         pk <- (oget servers.[m1]);
         r <@ O.send_msg1(i, pk);
+        stop <- stop \/ (r <> None /\ oget r \in pk_set);
+        pk_set <- pk_set `|` fset1 (oget r);
       }
 
       return r;
@@ -593,23 +608,45 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk; 
       var r <- None;
 
-      if (b \in servers) {
+      stop <- stop \/ m2 \notin pk_set;
+
+      if (b \in servers /\ !stop) {
         pk <- (oget servers.[b]);
         r <@ O.send_msg2(pk, j, m2);
+        stop <- stop \/ (r <> None /\ (oget r).`1 \in pk_set);
+        pk_set <- pk_set `|` fset1 (oget r).`1;  
       }
 
       return r;
     }
 
-    proc send_msg3 = O.send_msg3
+    proc send_msg3(i: int, m3: pkey * tag) = {
+      var r <- None;
 
-    proc c_rev_skey = O.c_rev_skey 
+      stop <- stop \/ m3.`1 \notin pk_set;
+
+      if (!stop) {
+         r <@ O.send_msg3(i, m3);
+      }
+
+      return r;
+    }
+
+    proc c_rev_skey(i: int) = {
+      var r <- None;
+
+      if (!stop) {
+        r <@ O.c_rev_skey(i);
+      }
+
+      return r;
+    }
 
     proc s_rev_skey(b: s_id, j: int) = {
       var pk;
       var r <- None;
 
-      if (b \in servers) {
+      if (b \in servers /\ !stop) {
         pk <- (oget servers.[b]);
         r <@ O.s_rev_skey(pk, j);
       }
@@ -621,7 +658,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (b \in servers) {
+      if (b \in servers /\ !stop) {
         pk <- (oget servers.[b]);
         r <@ O.rev_ltkey(pk);
       }
@@ -629,13 +666,21 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       return r;
     }
 
-    proc c_rev_ephkey = O.c_rev_ephkey
+    proc c_rev_ephkey(i : int) = {
+      var r <- None;
+
+      if (!stop) {
+        r <@ O.c_rev_ephkey(i);
+      }
+
+      return r;
+    }
 
     proc s_rev_ephkey(b: s_id, j: int) = {
       var pk;
       var r <- None;
 
-      if (b \in servers) {
+      if (b \in servers /\ !stop) {
         pk <- (oget servers.[b]);
         r <@ O.s_rev_ephkey(pk, j);
       }
@@ -643,13 +688,21 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       return r;     
     }
 
-    proc c_test = O.c_test
+    proc c_test(i : int) = {
+      var r <- None;
+
+      if (!stop) {
+        r <@ O.c_test(i);
+      }
+
+      return r;
+    }
 
     proc s_test(b: s_id, j: int) = {
       var pk;
       var r <- None;
 
-      if (b \in servers) {
+      if (b \in servers /\ !stop) {
         pk <- (oget servers.[b]);
         r <@ O.s_test(pk, j);
       }
@@ -660,6 +713,9 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
 
   proc run() : bool = {
     var b';
+
+    O_GAKE.servers <- empty;
+    O_GAKE.stop <- false;
 
     b' <@ A(O_GAKE).run();
 
@@ -674,7 +730,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-RO, -Meta_Red }.
+declare module A <: A_GAKE {-RO, -HROc.RO, -Meta_Red }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -692,7 +748,17 @@ declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.s_test =>
   islossless A(G).run.
 
-lemma gake_mod 
+lemma gake_mod b &m: `| Pr[E_GAKE(GAKEb(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(b) @ &m : res] - Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(b) @ &m : res] | <= Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(b) @ &m : ].
+proof. admit. (*
+rewrite StdOrder.RealOrder.distrC.
+byequiv (: _ ==> _) : Game1.bad => //; first last.
++ smt().
+symmetry; proc; inline*.
+call (: Game1.bad
+      , ={b0, servers, c_smap, s_smap, tested, kp_set, hm, bad}(Game0, Game1)
+      , ={bad}(Game0, Game1)) => //; try sim />.
+
+- exact A_ll.
 
 
 end section.
