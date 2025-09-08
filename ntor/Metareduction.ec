@@ -552,175 +552,6 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
 
       stop <- stop \/ x.`4 \notin pk_set \/ x.`5 \notin pk_set \/ x.`3 \notin servers;
 
-      pk <- (oget servers.[x.`3]); 
-      r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
-
-      return r;
-    }
-
-    proc init_s(b: s_id) = {
-      var pk;
-
-      if (b \notin servers) {
-        pk <@ O.init_s();
-        stop <- stop \/ pk \in pk_set;
-        servers.[b] <- pk;
-        pk_set <- pk_set `|` fset1 pk;
-      }
-
-      return servers.[b];
-    }
-
-    proc set_cert(b: s_id, pk: pkey) = {
-      var r <- None;
-
-      stop <- stop \/ pk \in pk_set;
-
-      r <@ O.set_cert(pk);
-      servers.[b] <- pk;
-      pk_set <- pk_set `|` fset1 pk;
-
-      return r;
-    }
-
-    proc send_msg1(i: int, m1: s_id) = {
-      var pk; 
-      var r <- None;
-
-      stop <- stop \/ m1 \notin servers;
-
-      pk <- (oget servers.[m1]);
-      r <@ O.send_msg1(i, pk);
-      stop <- stop \/ (r <> None /\ oget r \in pk_set);
-      pk_set <- pk_set `|` fset1 (oget r);
-
-      return r;
-    }
-
-    proc send_msg2(b: s_id, j: int, m2: pkey) = {
-      var pk; 
-      var r <- None;
-
-      stop <- stop \/ m2 \notin pk_set \/ b \notin servers;
-
-      pk <- (oget servers.[b]);
-      r <@ O.send_msg2(pk, j, m2);
-      stop <- stop \/ (r <> None /\ (oget r).`1 \in pk_set);
-      pk_set <- pk_set `|` fset1 (oget r).`1;  
-
-      return r;
-    }
-
-    proc send_msg3(i: int, m3: pkey * tag) = {
-      var r <- None;
-
-      stop <- stop \/ m3.`1 \notin pk_set;
-
-      r <@ O.send_msg3(i, m3);
-
-      return r;
-    }
-
-    proc c_rev_skey(i: int) = {
-      var r <- None;
-
-      r <@ O.c_rev_skey(i);
-
-      return r;
-    }
-
-    proc s_rev_skey(b: s_id, j: int) = {
-      var pk;
-      var r <- None;
-
-      stop <- stop \/ b \notin servers;
-
-      pk <- (oget servers.[b]);
-      r <@ O.s_rev_skey(pk, j);
-
-      return r;     
-    }
-
-    proc rev_ltkey(b: s_id) = {
-      var pk;
-      var r <- None;
-
-      stop <- stop \/ b \notin servers;
-
-      pk <- (oget servers.[b]);
-      r <@ O.rev_ltkey(pk);
-
-      return r;
-    }
-
-    proc c_rev_ephkey(i : int) = {
-      var r <- None;
-
-      r <@ O.c_rev_ephkey(i);
-
-      return r;
-    }
-
-    proc s_rev_ephkey(b: s_id, j: int) = {
-      var pk;
-      var r <- None;
-
-      stop <- stop \/ b \notin servers;
-
-      pk <- (oget servers.[b]);
-      r <@ O.s_rev_ephkey(pk, j);
-
-      return r;     
-    }
-
-    proc c_test(i : int) = {
-      var r <- None;
-
-      r <@ O.c_test(i);
-
-      return r;
-    }
-
-    proc s_test(b: s_id, j: int) = {
-      var pk;
-      var r <- None;
-
-      stop <- stop \/ b \notin servers;
-
-      pk <- (oget servers.[b]);
-      r <@ O.s_test(pk, j);
-
-      return r;
-    }
-  }
-
-  proc run() : bool = {
-    var b';
-
-    O_GAKE.servers <- empty;
-    O_GAKE.stop <- false;
-
-    b' <@ A(O_GAKE).run();
-
-    return b';
-  }
-}.
-
-
-module (Meta_Red_st (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
-  module O_GAKE : GAKE_out = {
-
-    var servers : (s_id, pkey) fmap
-    var pk_set : pkey fset
-    
-    var stop : bool
-
-    proc h(x : h_input) = {
-      var pk;
-      var r <- (witness, witness);
-
-      stop <- stop \/ x.`4 \notin pk_set \/ x.`5 \notin pk_set \/ x.`3 \notin servers;
-
       if (!stop) {
         pk <- (oget servers.[x.`3]); 
         r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
@@ -893,6 +724,7 @@ module (Meta_Red_st (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
     var b';
 
     O_GAKE.servers <- empty;
+    O_GAKE.pk_set <- fset0;
     O_GAKE.stop <- false;
 
     b' <@ A(O_GAKE).run();
@@ -902,13 +734,337 @@ module (Meta_Red_st (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
 }.
 
 
+(* Introduce stop in original game *)
+module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
+  var b0 : bool 
+
+  var servers : (s_id, server_state) fmap
+  var pk_set : pkey fset
+  var stop : bool
+
+  var c_smap: (int, pr_st_client instance_state) fmap
+  var s_smap: (s_id * int, pr_st_server instance_state) fmap
+  
+  var tested: int option
+
+  proc init_mem(b: bool) : unit = {
+    b0 <- b;
+    H.init();
+    servers <- empty;
+    pk_set <- fset0;
+    stop <- false;
+    c_smap <- empty;
+    s_smap <- empty;
+    tested <- None;
+  }
+
+  (* random oracle *)
+  proc h(x: h_input) = {
+    var r;
+
+    stop <- stop \/ x.`4 \notin pk_set \/ x.`5 \notin pk_set \/ x.`3 \notin servers;
+
+    r <@ H.get(x);
+
+    return r;
+  }
+  
+  (* server management *)
+  proc init_s(b: s_id) : pkey option = {
+    var kp;
+
+    if (b \notin servers) {
+      kp <@ S.keygen();
+      stop <- stop \/ kp.`1 \in pk_set;
+      pk_set <- pk_set `|` fset1 kp.`1;
+      servers.[b] <- Honest kp;
+    }
+    return omap get_pkey servers.[b];
+  }
+
+  proc set_cert(b: s_id, pk: pkey) : unit option = {
+    var r <- None;
+
+    stop <- stop \/ pk \in pk_set;
+
+    if (b \notin servers) {
+      servers.[b] <- Dishonest pk;
+      pk_set <- pk_set `|` fset1 pk;
+      r <- Some ();
+    }
+    return r;
+  }
+
+  proc send_msg1(i: int, m1: s_id) : pkey option = {
+    var st, pk_b, st', m2;
+    var r <- None;
+
+    stop <- stop \/ m1 \notin servers;
+
+    st <- c_smap.[i];
+    if (m1 \in servers) {
+      pk_b <- get_pkey (oget servers.[m1]);
+      match st with
+      | None => {
+          (st', m2) <@ C.new_session(m1, pk_b);
+           c_smap.[i] <- Pending st' m2 (false, false, false);
+          r <- Some m2;
+        }
+      | Some st => {
+          match st with
+          | Pending st pt ir => c_smap.[i] <- Aborted (Some st) (Some (pt, None)) ir;
+          | Accepted _ _ _ _ => { }
+          | Aborted _ _ _ => { }
+          end;
+        }
+      end;
+    }
+
+    stop <- stop \/ (r <> None /\ oget r \in pk_set);
+    pk_set <- pk_set `|` fset1 (oget r);
+
+    return r;
+  }
+
+  proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
+    var sko, resp, st', k, m3;
+    var r <- None;
+
+    stop <- stop \/ m2 \notin pk_set \/ b \notin servers;
+
+    sko <- obind get_skey servers.[b];
+    if (sko is Some sk) (* Server was initialised as honest *) {
+      match s_smap.[b, j] with
+      | None => {
+          resp <@ S.respond_session(Some (b, sk, None), m2);
+          if (resp is Some r') {
+            (st', m3, k) <- r';
+            s_smap.[(b, j)] <- Accepted st' (m2, Some m3) k (false, false, false);
+            r <- Some m3;
+          } else {
+            s_smap.[(b, j)] <- Aborted None (Some (m2, None)) (false, false, false);
+          }
+        }
+      | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
+      end;
+    }
+
+    stop <- stop \/ (r <> None /\ (oget r).`1 \in pk_set);
+    pk_set <- pk_set `|` fset1 (oget r).`1; 
+
+    return r;
+  }
+
+  proc send_msg3(i: int, m3: pkey * tag) : unit option = {
+    var resp, st', k;
+    var r <- None;
+
+    match c_smap.[i] with
+    | None => { } (* Abort? *)
+    | Some st => {
+        match st with
+        | Pending st pt ir => {
+            resp <@ C.complete_session(st, m3);
+            if (resp is Some r') {
+              (st', k) <- r';
+              c_smap.[i] <- Accepted st' (pt, Some m3) k ir;
+              r <- Some ();
+            } else {
+              c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
+            }
+          }
+        | Accepted _ _ _ _ => { }
+        | Aborted _ _ _ => { }
+        end;
+      }
+    end;
+    return r;
+  }
+
+  (* reveal and test *)
+  proc c_rev_skey(i: int) : key option = {
+    var k <- None;
+
+    match c_smap.[i] with
+    | None => { }
+    | Some st => {
+        (* only accepted client instances that are not tested and 
+           that not only have tested partners can be sesskey revealed *)
+        if (st is Accepted st' t' k' ir') {
+          if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
+            k <- Some k';
+            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+
+  proc s_rev_skey(b: s_id, j: int) : key option = {
+    var k <- None;
+
+
+    match s_smap.[(b, j)] with
+    | None => { }
+    | Some st => {
+        (* only accepted server instances that are not tested and 
+           that not only have tested partners can be sesskey revealed *)
+        if (st is Accepted st' t' k' ir') {
+          if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
+            k <- Some k';
+            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+          }
+        }
+      }
+    end;
+    return k;
+  }
+
+  proc rev_ltkey(b: s_id) : skey option = {
+    var ltk <- None;
+
+    match servers.[b] with
+    | None => { }
+    | Some st => {
+        (* a server can be ltkey revealed if no instance of it is ephkey revealed 
+           in case that instance or all its partners are tested *) 
+        if (st is Honest kp) {
+          if (forall j,
+                (b, j) \in s_smap (* just checking instances of b *)
+                => !(   (   get_ir_test (oget s_smap.[b, j])
+                            (* This is always OK (get_trace always Some on server side *)
+                         \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
+                     /\ get_ir_eph (oget s_smap.[b,j]))) {
+            ltk <- Some kp.`2; 
+            servers.[b] <- Corrupt kp; 
+          }
+        }
+      }
+    end;
+    return ltk;
+  }
+
+  proc c_rev_ephkey(i: int) : skey option = {
+    var ek <- None;
+
+    match c_smap.[i] with
+    | None => { }
+    | Some st => {
+        match st with
+          (* client instances can be ephkey revealed when pending if there isn't 
+             a tested origin partner (agreeing on first message *)
+        | Pending st pk_e ir => {
+            if (untested_origins_c (pk_e, None) s_smap <> Some false) {
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
+            }
+          }
+          (* accepted client instamces can only be ephkey revealed when not tested and 
+             if not all partners are tested *)
+        | Accepted st t k ir => {
+            if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t s_smap = Some false)) {
+              ek <- Some (get_eph_c st);
+              c_smap.[i] <- set_ir_eph (Accepted st t k ir);
+            }
+          }
+        | Aborted _ _ _ => {  }
+        end;
+      }
+    end;
+    return ek;
+  }
+
+  proc s_rev_ephkey(b: s_id, j: int) : skey option = {
+    var ek <- None;
+
+    match s_smap.[b, j] with
+    | None => { }
+    | Some st => {
+        (* only accepted server instances that are not ltkey revealed in case they 
+           or all partners are tested can be ephkey revealed *)
+        if (st is Accepted st t k ir) { (* No Pending on Server side *)
+          if (!((   get_ir_test (oget s_smap.[b, j])
+                 \/ untested_partner_s t c_smap = Some false)
+                /\ get_sr_ltk (oget servers.[b]))) {
+            ek <- Some (get_eph_s st);
+            s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+          }
+        }
+      }
+    end;
+    return ek;
+  }
+
+  proc c_test(i: int) : key option = {
+    var ks;
+    var k <- None;
+
+    if (tested = None) {
+      match c_smap.[i] with
+      | None => { }
+      | Some st => {
+          (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
+             and not all partner instances are unfresh can be tested *)
+          if (st is Accepted st' t' k' ir') {
+            if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
+                  \/ fresh_partner_c t' s_smap servers = Some false)) {
+              if (b0 = false) {
+                k <- Some k';
+                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+              } else {
+                ks <$ dkey;
+                k <- Some ks;
+                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+              }
+              tested <- Some i;
+           }
+          }
+        }
+      end;
+    }
+    return k;
+  }
+
+  proc s_test(b: s_id, j: int) : key option = {
+    var ks;
+    var k <- None;
+
+    if (tested = None) {
+      match s_smap.[(b, j)] with
+      | None => { }
+      | Some st => {
+          (* only accepted server instances that are not sesskey revealed, not trivially broken
+             and not all partner instances are unfresh can be tested *)
+          if (st is Accepted st' t' k' ir') {
+            if (!(   get_ir_sess (oget s_smap.[b, j]) 
+                  \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
+                  \/ fresh_partner_s t' c_smap = Some false)) {
+              if (b0 = false) {
+                k <- Some k';
+                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+              } else {
+                ks <$ dkey;
+                k <- Some ks;
+                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+              }
+              tested <- Some (pick (get_fresh_partners_s t' c_smap));
+            }
+          }
+        }
+      end;
+    }
+    return k;
+  }
+}.
+
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Security Proof *)
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-RO, -HROc.RO, -Meta_Red, -GAKEb, -GAKEb_mod }.
+declare module A <: A_GAKE {-RO, -HROc.RO, -Meta_Red, -GAKEb, -GAKEb_st, -GAKEb_mod }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -927,61 +1083,54 @@ declare axiom A_ll (G <: GAKE_out{-A}):
   islossless A(G).run.
 
 
-lemma gake_mod bit &m: Pr[E_GAKE(GAKEb(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(bit) @ &m : res] = Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : res].
+lemma gake_st bit &m: Pr[E_GAKE(GAKEb(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(bit) @ &m : res] =  Pr[E_GAKE(GAKEb_st(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(bit) @ &m : res].
 proof.
 byequiv => //.
 proc; inline.
-wp; call (: ={b0, tested}(GAKEb, GAKEb_mod) 
-               /\ (forall x, HROc.RO.m{1}.[x] = RO.m{2}.[(x.`1, x.`2, oget Meta_Red.O_GAKE.servers{2}.[x.`3], x.`4, x.`5)])
-               /\ (forall i, i \in GAKEb.c_smap{1} <=> i \in GAKEb_mod.c_smap{2})
-               /\ (forall j, j \in GAKEb.c_smap{1} <=> j \in GAKEb_mod.c_smap{2})
-               /\ (forall b, b \in GAKEb.servers{1} <=> b \in Meta_Red.O_GAKE.servers{2})
-               /\ (forall b, b \in GAKEb.servers{1} => get_pkey (oget GAKEb.servers{1}.[b]) = oget Meta_Red.O_GAKE.servers{2}.[b])
-               /\ (forall b, b \in Meta_Red.O_GAKE.servers{2} <=> (oget Meta_Red.O_GAKE.servers{2}.[b]) \in GAKEb_mod.s_kp{2})); last first.
-
-+ auto => />.
-  smt(mem_empty).
+call (: ={b0, servers, c_smap, s_smap, tested}(GAKEb, GAKEb_st) /\ ={m}(HROc.RO, HROc.RO)); try sim />.
 
 + proc; inline.
-  sp; seq 1 1 : (#pre /\ r{1} = r0{2}); 1: by auto => />.
-  if => //.
-  + smt().
-  + auto => /> &1 &2 *.
-    do rewrite get_set_sameE //=.
-    move => x1. 
-    case (x1 = x{2}) => x1neq; 1: by smt(mem_set get_setE).
-    do rewrite get_set_neqE //=.
-    do rewrite negb_and.
-    case (x1.`1 <> x{2}.`1) => x_1. smt().
-    case (x1.`2 <> x{2}.`2) => x_2. smt().
-    case (x1.`4 <> x{2}.`4) => x_4. smt().
-    case (x1.`5 <> x{2}.`5) => x_5. smt().
-    simplify.
-    have: (x1.`3 <> x{2}.`3). smt().
-    (* That I don't know yet... *)
-
-  auto => /> &1 &2 *.
-  admit. (* need stronger invariant saying that entries in the RO are the same *)
-
-+ proc; inline.
-  if => //.
-  + smt().
-  + rcondt{2} ^if. auto => /> &hr *.
-admit.
+  auto => />.
 qed.
-  
 
-lemma gake_mod_st bit &m: `| Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : res] - Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red_st(A)).run(bit) @ &m : res] | <= Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : Meta_Red.O_GAKE.stop].
+
+lemma gake_st_mod bit &m: `| Pr[E_GAKE(GAKEb_st(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(bit) @ &m : res] - Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : res] | <= Pr[E_GAKE(GAKEb_st(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(bit) @ &m : GAKEb_st.stop].
 proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Meta_Red.O_GAKE.stop => //; first last.
 + smt().
 symmetry; proc; inline*.
-call (: Game1.bad
-      , ={b0, servers, c_smap, s_smap, tested, kp_set, hm, bad}(Game0, Game1)
-      , ={bad}(Game0, Game1)) => //; try sim />.
+wp; call (: Meta_Red.O_GAKE.stop
+          , ={b0, tested}(GAKEb_st, GAKEb_mod) /\ ={pk_set, stop}(GAKEb_st, Meta_Red.O_GAKE)
+               /\ (forall x, HROc.RO.m{1}.[x] = RO.m{2}.[(x.`1, x.`2, oget Meta_Red.O_GAKE.servers{2}.[x.`3], x.`4, x.`5)])
+               /\ (forall i, i \in GAKEb_st.c_smap{1} <=> i \in GAKEb_mod.c_smap{2})
+               /\ (forall j, j \in GAKEb_st.c_smap{1} <=> j \in GAKEb_mod.c_smap{2})
+               /\ (forall b, b \in GAKEb_st.servers{1} <=> b \in Meta_Red.O_GAKE.servers{2})
+               /\ (forall b, b \in GAKEb_st.servers{1} => get_pkey (oget GAKEb_st.servers{1}.[b]) = oget Meta_Red.O_GAKE.servers{2}.[b])
+               /\ (forall b, b \in Meta_Red.O_GAKE.servers{2} <=> (oget Meta_Red.O_GAKE.servers{2}.[b]) \in GAKEb_mod.s_kp{2})
+          , GAKEb_st.stop{1} = Meta_Red.O_GAKE.stop{2}) => //.
 
 - exact A_ll.
 
+- proc; inline.
+  sp.
+  if {2} => //.
+  + sp. seq 1 1 : (#pre /\ ={r0}). auto => />.
+    if => //.
+    + smt().
+    + auto => /> &1 &2 *.
+      split. smt(get_setE).
+      split. smt().
+      move => x1.
+      case (x1 = x{2}) => x1neq; 1: by smt(get_set_sameE).
+      rewrite get_set_neqE //=.
+      admit. (* I need injectivity for pks in servers *)
+    auto => /> &1 &2 *.
+    smt().
+  auto => /> &1 &2 *. smt().
+- move => &2 bad; proc; inline. auto => />.
+  by rewrite weight_dprod dkey_ll dtag_ll bad //=.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
 
-end section.
+admitted.
