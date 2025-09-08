@@ -538,7 +538,6 @@ module E_GAKE_mod (O: GAKE_mod_out_i) (A : A_GAKE_mod) = {
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Reduction preventing collisions and prediction of public keys  *)
-
 module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
   module O_GAKE : GAKE_out = {
 
@@ -548,14 +547,183 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
     var stop : bool
 
     proc h(x : h_input) = {
-      var pk, r;
+      var pk;
+      var r <- (witness, witness);
 
-      if (x.`3 \in servers /\ !stop /\ x.`4 \in pk_set /\ x.`5 \in pk_set) {
+      stop <- stop \/ x.`4 \notin pk_set \/ x.`5 \notin pk_set \/ x.`3 \notin servers;
+
+      pk <- (oget servers.[x.`3]); 
+      r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
+
+      return r;
+    }
+
+    proc init_s(b: s_id) = {
+      var pk;
+
+      if (b \notin servers) {
+        pk <@ O.init_s();
+        stop <- stop \/ pk \in pk_set;
+        servers.[b] <- pk;
+        pk_set <- pk_set `|` fset1 pk;
+      }
+
+      return servers.[b];
+    }
+
+    proc set_cert(b: s_id, pk: pkey) = {
+      var r <- None;
+
+      stop <- stop \/ pk \in pk_set;
+
+      r <@ O.set_cert(pk);
+      servers.[b] <- pk;
+      pk_set <- pk_set `|` fset1 pk;
+
+      return r;
+    }
+
+    proc send_msg1(i: int, m1: s_id) = {
+      var pk; 
+      var r <- None;
+
+      stop <- stop \/ m1 \notin servers;
+
+      pk <- (oget servers.[m1]);
+      r <@ O.send_msg1(i, pk);
+      stop <- stop \/ (r <> None /\ oget r \in pk_set);
+      pk_set <- pk_set `|` fset1 (oget r);
+
+      return r;
+    }
+
+    proc send_msg2(b: s_id, j: int, m2: pkey) = {
+      var pk; 
+      var r <- None;
+
+      stop <- stop \/ m2 \notin pk_set \/ b \notin servers;
+
+      pk <- (oget servers.[b]);
+      r <@ O.send_msg2(pk, j, m2);
+      stop <- stop \/ (r <> None /\ (oget r).`1 \in pk_set);
+      pk_set <- pk_set `|` fset1 (oget r).`1;  
+
+      return r;
+    }
+
+    proc send_msg3(i: int, m3: pkey * tag) = {
+      var r <- None;
+
+      stop <- stop \/ m3.`1 \notin pk_set;
+
+      r <@ O.send_msg3(i, m3);
+
+      return r;
+    }
+
+    proc c_rev_skey(i: int) = {
+      var r <- None;
+
+      r <@ O.c_rev_skey(i);
+
+      return r;
+    }
+
+    proc s_rev_skey(b: s_id, j: int) = {
+      var pk;
+      var r <- None;
+
+      stop <- stop \/ b \notin servers;
+
+      pk <- (oget servers.[b]);
+      r <@ O.s_rev_skey(pk, j);
+
+      return r;     
+    }
+
+    proc rev_ltkey(b: s_id) = {
+      var pk;
+      var r <- None;
+
+      stop <- stop \/ b \notin servers;
+
+      pk <- (oget servers.[b]);
+      r <@ O.rev_ltkey(pk);
+
+      return r;
+    }
+
+    proc c_rev_ephkey(i : int) = {
+      var r <- None;
+
+      r <@ O.c_rev_ephkey(i);
+
+      return r;
+    }
+
+    proc s_rev_ephkey(b: s_id, j: int) = {
+      var pk;
+      var r <- None;
+
+      stop <- stop \/ b \notin servers;
+
+      pk <- (oget servers.[b]);
+      r <@ O.s_rev_ephkey(pk, j);
+
+      return r;     
+    }
+
+    proc c_test(i : int) = {
+      var r <- None;
+
+      r <@ O.c_test(i);
+
+      return r;
+    }
+
+    proc s_test(b: s_id, j: int) = {
+      var pk;
+      var r <- None;
+
+      stop <- stop \/ b \notin servers;
+
+      pk <- (oget servers.[b]);
+      r <@ O.s_test(pk, j);
+
+      return r;
+    }
+  }
+
+  proc run() : bool = {
+    var b';
+
+    O_GAKE.servers <- empty;
+    O_GAKE.stop <- false;
+
+    b' <@ A(O_GAKE).run();
+
+    return b';
+  }
+}.
+
+
+module (Meta_Red_st (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
+  module O_GAKE : GAKE_out = {
+
+    var servers : (s_id, pkey) fmap
+    var pk_set : pkey fset
+    
+    var stop : bool
+
+    proc h(x : h_input) = {
+      var pk;
+      var r <- (witness, witness);
+
+      stop <- stop \/ x.`4 \notin pk_set \/ x.`5 \notin pk_set \/ x.`3 \notin servers;
+
+      if (!stop) {
         pk <- (oget servers.[x.`3]); 
         r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
-      }
-      else {
-        r <- (witness, witness);
       }
 
       return r;
@@ -565,7 +733,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (b \notin servers /\ !stop) {
+      if (!stop /\ b \notin servers) {
         pk <@ O.init_s();
         stop <- stop \/ pk \in pk_set;
         servers.[b] <- pk;
@@ -594,7 +762,9 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk; 
       var r <- None;
 
-      if (m1 \in servers /\ !stop) {
+      stop <- stop \/ m1 \notin servers;
+
+      if (!stop) {
         pk <- (oget servers.[m1]);
         r <@ O.send_msg1(i, pk);
         stop <- stop \/ (r <> None /\ oget r \in pk_set);
@@ -608,9 +778,9 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk; 
       var r <- None;
 
-      stop <- stop \/ m2 \notin pk_set;
+      stop <- stop \/ m2 \notin pk_set \/ b \notin servers;
 
-      if (b \in servers /\ !stop) {
+      if (!stop) {
         pk <- (oget servers.[b]);
         r <@ O.send_msg2(pk, j, m2);
         stop <- stop \/ (r <> None /\ (oget r).`1 \in pk_set);
@@ -646,7 +816,9 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (b \in servers /\ !stop) {
+      stop <- stop \/ b \notin servers;
+
+      if (!stop) {
         pk <- (oget servers.[b]);
         r <@ O.s_rev_skey(pk, j);
       }
@@ -658,7 +830,9 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (b \in servers /\ !stop) {
+      stop <- stop \/ b \notin servers;
+
+      if (!stop) {
         pk <- (oget servers.[b]);
         r <@ O.rev_ltkey(pk);
       }
@@ -680,7 +854,9 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (b \in servers /\ !stop) {
+      stop <- stop \/ b \notin servers;
+
+      if (!stop) {
         pk <- (oget servers.[b]);
         r <@ O.s_rev_ephkey(pk, j);
       }
@@ -702,7 +878,9 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (b \in servers /\ !stop) {
+      stop <- stop \/ b \notin servers;
+
+      if (!stop) {
         pk <- (oget servers.[b]);
         r <@ O.s_test(pk, j);
       }
@@ -730,7 +908,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE {-RO, -HROc.RO, -Meta_Red }.
+declare module A <: A_GAKE {-RO, -HROc.RO, -Meta_Red, -GAKEb, -GAKEb_mod }.
 
 declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.h =>
@@ -748,10 +926,55 @@ declare axiom A_ll (G <: GAKE_out{-A}):
   islossless G.s_test =>
   islossless A(G).run.
 
-lemma gake_mod b &m: `| Pr[E_GAKE(GAKEb(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(b) @ &m : res] - Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(b) @ &m : res] | <= Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(b) @ &m : ].
-proof. admit. (*
+
+lemma gake_mod bit &m: Pr[E_GAKE(GAKEb(NTOR_S(HROc.RO), NTOR_C(HROc.RO), HROc.RO), A).run(bit) @ &m : res] = Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : res].
+proof.
+byequiv => //.
+proc; inline.
+wp; call (: ={b0, tested}(GAKEb, GAKEb_mod) 
+               /\ (forall x, HROc.RO.m{1}.[x] = RO.m{2}.[(x.`1, x.`2, oget Meta_Red.O_GAKE.servers{2}.[x.`3], x.`4, x.`5)])
+               /\ (forall i, i \in GAKEb.c_smap{1} <=> i \in GAKEb_mod.c_smap{2})
+               /\ (forall j, j \in GAKEb.c_smap{1} <=> j \in GAKEb_mod.c_smap{2})
+               /\ (forall b, b \in GAKEb.servers{1} <=> b \in Meta_Red.O_GAKE.servers{2})
+               /\ (forall b, b \in GAKEb.servers{1} => get_pkey (oget GAKEb.servers{1}.[b]) = oget Meta_Red.O_GAKE.servers{2}.[b])
+               /\ (forall b, b \in Meta_Red.O_GAKE.servers{2} <=> (oget Meta_Red.O_GAKE.servers{2}.[b]) \in GAKEb_mod.s_kp{2})); last first.
+
++ auto => />.
+  smt(mem_empty).
+
++ proc; inline.
+  sp; seq 1 1 : (#pre /\ r{1} = r0{2}); 1: by auto => />.
+  if => //.
+  + smt().
+  + auto => /> &1 &2 *.
+    do rewrite get_set_sameE //=.
+    move => x1. 
+    case (x1 = x{2}) => x1neq; 1: by smt(mem_set get_setE).
+    do rewrite get_set_neqE //=.
+    do rewrite negb_and.
+    case (x1.`1 <> x{2}.`1) => x_1. smt().
+    case (x1.`2 <> x{2}.`2) => x_2. smt().
+    case (x1.`4 <> x{2}.`4) => x_4. smt().
+    case (x1.`5 <> x{2}.`5) => x_5. smt().
+    simplify.
+    have: (x1.`3 <> x{2}.`3). smt().
+    (* That I don't know yet... *)
+
+  auto => /> &1 &2 *.
+  admit. (* need stronger invariant saying that entries in the RO are the same *)
+
++ proc; inline.
+  if => //.
+  + smt().
+  + rcondt{2} ^if. auto => /> &hr *.
+admit.
+qed.
+  
+
+lemma gake_mod_st bit &m: `| Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : res] - Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red_st(A)).run(bit) @ &m : res] | <= Pr[E_GAKE_mod(GAKEb_mod(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : Meta_Red.O_GAKE.stop].
+proof.
 rewrite StdOrder.RealOrder.distrC.
-byequiv (: _ ==> _) : Game1.bad => //; first last.
+byequiv (: _ ==> _) : Meta_Red.O_GAKE.stop => //; first last.
 + smt().
 symmetry; proc; inline*.
 call (: Game1.bad
