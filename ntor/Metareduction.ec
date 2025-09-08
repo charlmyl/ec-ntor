@@ -249,9 +249,7 @@ module GAKEb_mod (S: Server_mod) (C: Client_mod) (H : RO) : GAKE_mod_out = {
     var kp;
 
     kp <@ S.keygen();
-    if (kp.`1 \notin s_kp) {
-      s_kp.[kp.`1] <- Some kp.`2;
-    }
+    s_kp.[kp.`1] <- Some kp.`2;
 
     return kp.`1;
   }
@@ -564,12 +562,14 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      if (!stop /\ b \notin servers) {
-        pk <@ O.init_s();
-        stop <- stop \/ pk \in pk_set;
-        servers.[b] <- pk;
-        pk_set <- pk_set `|` fset1 pk;
-        r <- Some pk;
+      if (!stop) {
+        if (b \notin servers) {
+          pk <@ O.init_s();
+          stop <- stop \/ pk \in pk_set;
+          servers.[b] <- pk;
+          pk_set <- pk_set `|` fset1 pk;
+        }
+        r <- servers.[b];
       }
 
       return r;
@@ -1103,11 +1103,13 @@ symmetry; proc; inline*.
 wp; call (: Meta_Red.O_GAKE.stop
           , ={b0, tested}(GAKEb_st, GAKEb_mod) /\ ={pk_set, stop}(GAKEb_st, Meta_Red.O_GAKE)
                /\ (forall x, HROc.RO.m{1}.[x] = RO.m{2}.[(x.`1, x.`2, oget Meta_Red.O_GAKE.servers{2}.[x.`3], x.`4, x.`5)])
+               /\ (forall b1 b2, b1 \in Meta_Red.O_GAKE.servers{2} => b2 \in Meta_Red.O_GAKE.servers{2} 
+                    => oget Meta_Red.O_GAKE.servers{2}.[b1] = oget Meta_Red.O_GAKE.servers{2}.[b2] 
+                    => b1 = b2)
                /\ (forall i, i \in GAKEb_st.c_smap{1} <=> i \in GAKEb_mod.c_smap{2})
                /\ (forall j, j \in GAKEb_st.c_smap{1} <=> j \in GAKEb_mod.c_smap{2})
                /\ (forall b, b \in GAKEb_st.servers{1} <=> b \in Meta_Red.O_GAKE.servers{2})
                /\ (forall b, b \in GAKEb_st.servers{1} => get_pkey (oget GAKEb_st.servers{1}.[b]) = oget Meta_Red.O_GAKE.servers{2}.[b])
-               /\ (forall b, b \in Meta_Red.O_GAKE.servers{2} <=> (oget Meta_Red.O_GAKE.servers{2}.[b]) \in GAKEb_mod.s_kp{2})
           , GAKEb_st.stop{1} = Meta_Red.O_GAKE.stop{2}) => //.
 
 - exact A_ll.
@@ -1123,13 +1125,49 @@ wp; call (: Meta_Red.O_GAKE.stop
       split. smt().
       move => x1.
       case (x1 = x{2}) => x1neq; 1: by smt(get_set_sameE).
-      rewrite get_set_neqE //=.
-      admit. (* I need injectivity for pks in servers *)
+      rewrite get_set_neqE //=. 
+    case (x1.`1 <> x{2}.`1) => x_1. smt(get_set_neqE).
+    case (x1.`2 <> x{2}.`2) => x_2. smt(get_set_neqE).
+    case (x1.`4 <> x{2}.`4) => x_4. smt(get_set_neqE).
+    case (x1.`5 <> x{2}.`5) => x_5. smt(get_set_neqE).
+    simplify.
+    have: (x1.`3 <> x{2}.`3). smt(). move => x3neq.
+    have: (oget Meta_Red.O_GAKE.servers{2}.[x{2}.`3] <> oget Meta_Red.O_GAKE.servers{2}.[x1.`3]). (* I need that the value has to be in servers *)
+      admit. smt(mem_set get_setE).
     auto => /> &1 &2 *.
     smt().
   auto => /> &1 &2 *. smt().
 - move => &2 bad; proc; inline. auto => />.
   by rewrite weight_dprod dkey_ll dtag_ll bad //=.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp; if {2} => //.
+  + if => //.
+    + auto => />. smt().
+    + auto => /> &1 &2 *.
+      split. smt(get_setE).
+      split. 
+      + move => x.
+        case (x.`3 = b{2}). admit. (* Cannot happen since if not in servers there cannot be any RO queries for b *)
+        smt(get_setE).
+      split. 
+      + move => b1 b2.
+        case (b1 = b{2}) => b1eq.
+        + case (b2 = b{2}) => b2neq; 1: by smt().
+          rewrite b1eq get_set_sameE get_set_neqE //=.
+          admit. (* cannot happen since pk is not in pk_set and theredore nor in servers *)
+        case (b2 = b{2}) => b2eq; 2: by smt(mem_set get_setE).
+        rewrite b2eq get_set_sameE get_set_neqE //=.
+        admit. (* cannot happen since pk is not in pk_set and theredore nor in servers *)
+      split. smt(mem_set get_setE).
+      smt(mem_set get_setE).
+    auto => /> &1 &2 *. 
+    smt().
+  if {1} => //; auto => />.
+- move => &2 bad; proc; inline. if => //; auto => />.
+  by rewrite dt_ll bad //=.
 - move => &1; proc; inline.
   rcondf ^if; auto => />.
 
