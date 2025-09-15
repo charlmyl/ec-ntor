@@ -538,21 +538,38 @@ module E_GAKE_mod (O: GAKE_mod_out_i) (A : A_GAKE_mod) = {
 (* Reduction preventing collisions and prediction of public keys  *)
 module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
   module O_GAKE : GAKE_out = {
+    var unreg_ro : (pkey * pkey * s_id * pkey * pkey, (tag * key)) fmap
 
     var servers : (s_id, pkey) fmap
     var pk_set : pkey fset
+  (*  var pred_ce : pkey fset
+    var pred_se : pkey fset*)
     
     var stop : bool
 
     proc h(x : h_input) = {
-      var pk;
+      var pk, tk;
       var r <- (witness, witness);
 
-      stop <- stop \/ x.`4 \notin pk_set \/ x.`5 \notin pk_set \/ x.`3 \notin servers;
-
       if (!stop) {
-        pk <- (oget servers.[x.`3]); 
-        r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
+        if (x.`3 \in servers) {
+          stop <- stop \/ x \in unreg_ro;
+          pk <- (oget servers.[x.`3]); 
+          r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
+        } else {
+          tk <$ dtag `*` dkey;
+          if (x \notin unreg_ro) {
+            unreg_ro.[x] <- tk;
+          }
+          r <- oget unreg_ro.[x];
+        }
+
+        if (x.`4 \notin pk_set) {
+          pk_set <- pk_set `|` fset1 x.`4;
+        }
+        if (x.`5 \notin pk_set) {
+          pk_set <- pk_set `|` fset1 x.`5;
+        }
       }
 
       return r;
@@ -578,9 +595,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
     proc set_cert(b: s_id, pk: pkey) = {
       var r <- None;
 
-      stop <- stop \/ pk \in pk_set;
-
-      if (!stop) {
+      if (!stop /\ pk \notin pk_set) {
         r <@ O.set_cert(pk);
         servers.[b] <- pk;
         pk_set <- pk_set `|` fset1 pk;
@@ -593,9 +608,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk; 
       var r <- None;
 
-      stop <- stop \/ m1 \notin servers;
-
-      if (!stop) {
+      if (!stop /\ m1 \in servers) {
         pk <- (oget servers.[m1]);
         r <@ O.send_msg1(i, pk);
         stop <- stop \/ (r <> None /\ oget r \in pk_set);
@@ -609,9 +622,11 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk; 
       var r <- None;
 
-      stop <- stop \/ m2 \notin pk_set \/ b \notin servers;
+      if (!stop /\ b \in servers) {
+        if (m2 \notin pk_set) {
+          pk_set <- pk_set `|` fset1 m2;
+        }
 
-      if (!stop) {
         pk <- (oget servers.[b]);
         r <@ O.send_msg2(pk, j, m2);
         stop <- stop \/ (r <> None /\ (oget r).`1 \in pk_set);
@@ -624,9 +639,11 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
     proc send_msg3(i: int, m3: pkey * tag) = {
       var r <- None;
 
-      stop <- stop \/ m3.`1 \notin pk_set;
-
       if (!stop) {
+         if (m3.`1 \notin pk_set) {
+           pk_set <- pk_set `|` fset1 m3.`1;
+         }
+
          r <@ O.send_msg3(i, m3);
       }
 
@@ -647,9 +664,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      stop <- stop \/ b \notin servers;
-
-      if (!stop) {
+      if (!stop \/ b \in servers) {
         pk <- (oget servers.[b]);
         r <@ O.s_rev_skey(pk, j);
       }
@@ -661,9 +676,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      stop <- stop \/ b \notin servers;
-
-      if (!stop) {
+      if (!stop \/ b \in servers) {
         pk <- (oget servers.[b]);
         r <@ O.rev_ltkey(pk);
       }
@@ -685,9 +698,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      stop <- stop \/ b \notin servers;
-
-      if (!stop) {
+      if (!stop \/ b \in servers) {
         pk <- (oget servers.[b]);
         r <@ O.s_rev_ephkey(pk, j);
       }
@@ -709,9 +720,7 @@ module (Meta_Red (A : A_GAKE) : A_GAKE_mod) (O : GAKE_mod_out) = {
       var pk;
       var r <- None;
 
-      stop <- stop \/ b \notin servers;
-
-      if (!stop) {
+      if (!stop \/ b \in servers) {
         pk <- (oget servers.[b]);
         r <@ O.s_test(pk, j);
       }
@@ -739,6 +748,7 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
   var b0 : bool 
 
   var servers : (s_id, server_state) fmap
+  var unreg_ro : (pkey * pkey * s_id * pkey * pkey) fset
   var pk_set : pkey fset
   var stop : bool
 
@@ -762,7 +772,11 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
   proc h(x: h_input) = {
     var r;
 
-    stop <- stop \/ x.`4 \notin pk_set \/ x.`5 \notin pk_set \/ x.`3 \notin servers;
+    if (x.`3 \in servers) {
+      stop <- stop \/ x \in unreg_ro;
+    } else {
+      unreg_ro <- unreg_ro `|` fset1 x; (* do I care about copies in this set? *)
+    }
 
     r <@ H.get(x);
 
@@ -785,8 +799,6 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
   proc set_cert(b: s_id, pk: pkey) : unit option = {
     var r <- None;
 
-    stop <- stop \/ pk \in pk_set;
-
     if (b \notin servers) {
       servers.[b] <- Dishonest pk;
       pk_set <- pk_set `|` fset1 pk;
@@ -798,8 +810,6 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
   proc send_msg1(i: int, m1: s_id) : pkey option = {
     var st, pk_b, st', m2;
     var r <- None;
-
-    stop <- stop \/ m1 \notin servers;
 
     st <- c_smap.[i];
     if (m1 \in servers) {
@@ -830,9 +840,11 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
     var sko, resp, st', k, m3;
     var r <- None;
 
-    stop <- stop \/ m2 \notin pk_set \/ b \notin servers;
-
     sko <- obind get_skey servers.[b];
+    if (m2 \notin pk_set) {
+      pk_set <- pk_set `|` fset1 m2;
+    }
+
     if (sko is Some sk) (* Server was initialised as honest *) {
       match s_smap.[b, j] with
       | None => {
@@ -859,8 +871,12 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
     var resp, st', k;
     var r <- None;
 
+    if (m3.`1 \notin pk_set) {
+      pk_set <- pk_set `|` fset1 m3.`1;
+    }
+
     match c_smap.[i] with
-    | None => { } (* Abort? *)
+    | None => { }
     | Some st => {
         match st with
         | Pending st pt ir => {
@@ -903,7 +919,6 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
 
   proc s_rev_skey(b: s_id, j: int) : key option = {
     var k <- None;
-
 
     match s_smap.[(b, j)] with
     | None => { }
@@ -1102,7 +1117,10 @@ byequiv (: _ ==> _) : Meta_Red.O_GAKE.stop => //; first last.
 symmetry; proc; inline*.
 wp; call (: Meta_Red.O_GAKE.stop
           , ={b0, tested}(GAKEb_st, GAKEb_mod) /\ ={pk_set, stop}(GAKEb_st, Meta_Red.O_GAKE)
-               /\ (forall x, HROc.RO.m{1}.[x] = RO.m{2}.[(x.`1, x.`2, oget Meta_Red.O_GAKE.servers{2}.[x.`3], x.`4, x.`5)])
+               /\ (forall x, x \in HROc.RO.m{1} => x.`3 \in Meta_Red.O_GAKE.servers{2} 
+                    => HROc.RO.m{1}.[x] = RO.m{2}.[(x.`1, x.`2, oget Meta_Red.O_GAKE.servers{2}.[x.`3], x.`4, x.`5)])
+               /\ (forall x, x \notin HROc.RO.m{1} => x.`3 \in Meta_Red.O_GAKE.servers{2} 
+                    => (x.`1, x.`2, oget Meta_Red.O_GAKE.servers{2}.[x.`3], x.`4, x.`5) \notin RO.m{2})
                /\ (forall b1 b2, b1 \in Meta_Red.O_GAKE.servers{2} => b2 \in Meta_Red.O_GAKE.servers{2} 
                     => oget Meta_Red.O_GAKE.servers{2}.[b1] = oget Meta_Red.O_GAKE.servers{2}.[b2] 
                     => b1 = b2)
@@ -1118,24 +1136,15 @@ wp; call (: Meta_Red.O_GAKE.stop
   sp.
   if {2} => //.
   + sp. seq 1 1 : (#pre /\ ={r0}). auto => />.
-    if => //.
-    + smt().
+    if {1} => //.
+    rcondt {2} ^if. 
+    + auto => />. smt().
     + auto => /> &1 &2 *.
-      split. smt(get_setE).
-      split. smt().
-      move => x1.
-      case (x1 = x{2}) => x1neq; 1: by smt(get_set_sameE).
-      rewrite get_set_neqE //=. 
-    case (x1.`1 <> x{2}.`1) => x_1. smt(get_set_neqE).
-    case (x1.`2 <> x{2}.`2) => x_2. smt(get_set_neqE).
-    case (x1.`4 <> x{2}.`4) => x_4. smt(get_set_neqE).
-    case (x1.`5 <> x{2}.`5) => x_5. smt(get_set_neqE).
-    simplify.
-    have: (x1.`3 <> x{2}.`3). smt(). move => x3neq.
-    have: (oget Meta_Red.O_GAKE.servers{2}.[x{2}.`3] <> oget Meta_Red.O_GAKE.servers{2}.[x1.`3]). (* I need that the value has to be in servers *)
-      admit. smt(mem_set get_setE).
-    auto => /> &1 &2 *.
-    smt().
+      smt(get_setE).
+    rcondf {2} ^if.
+    + auto => />. smt().
+    auto => />.
+    smt(get_setE).
   auto => /> &1 &2 *. smt().
 - move => &2 bad; proc; inline. auto => />.
   by rewrite weight_dprod dkey_ll dtag_ll bad //=.
@@ -1150,7 +1159,7 @@ wp; call (: Meta_Red.O_GAKE.stop
       split. smt(get_setE).
       split. 
       + move => x.
-        case (x.`3 = b{2}). admit. (* Cannot happen since if not in servers there cannot be any RO queries for b *)
+        case (x.`3 = b{2}). admit. (* Isn't this exploited by the case that the adversary queries RO first and then registers the server? *)
         smt(get_setE).
       split. 
       + move => b1 b2.
@@ -1170,5 +1179,121 @@ wp; call (: Meta_Red.O_GAKE.stop
   by rewrite dt_ll bad //=.
 - move => &1; proc; inline.
   rcondf ^if; auto => />.
+                
+- proc; inline.
+  sp 2 2; if {2} => //; 2: by auto => /#.
+  admit.
+- move => &2 bad; proc; inline. auto => />.
+  by rewrite bad //=.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
 
-admitted.
+- proc; inline.
+  sp 2 2; if {2} => //.
+  + sp 1 5. admit.
+  sp; if {1} => //. sp; match {1}; auto => /#. auto => /#.
+- move => &2 bad; proc; inline.
+  sp; if => //. 
+  + sp; match. 
+    + auto => />.
+      by rewrite dt_ll bad //=.
+    match; auto => />.
+  auto => /#.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 2 2; if {2} => //.
+  + sp 1 5. admit.
+  sp; match {1} => //. auto => /#. admit. (* match struggles *)
+- move => &2 bad; proc; inline.
+  sp; match. 
+  + auto => />.
+    by rewrite bad //=.
+  admit. (* match struggles *)
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 1 2; if {2} => //.
+  + sp. admit.
+  admit. (* match struggles *)
+- move => &2 bad; proc; inline. auto => />.
+  admit. (* match struggles *)
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 1 1; if {2} => //; 2: by auto => /#.
+  sp; match; 1..2: smt().
+  + auto => />.
+  auto => /> &1 &2 *.
+  admit.
+- move => &2 bad; proc; inline. sp; match; auto => />. 
+  auto => /#.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 1 2; if {2} => //.
+  + sp. admit.  
+  admit.
+- move => &2 bad; proc; inline. sp; match; auto => />. 
+  auto => /#.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+                
+- proc; inline.
+  sp 1 2; if {2} => //.
+  + sp. admit.  
+  admit.
+- move => &2 bad; proc; inline. sp; match; auto => />. 
+  auto => /#.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 1 1; if {2} => //.
+  + sp. admit.  
+  match {1}; auto => />.
+- move => &2 bad; proc; inline. sp; match; auto => />. 
+  auto => /#.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 1 2; if {2} => //.
+  + sp. admit.  
+  admit.
+- move => &2 bad; proc; inline. sp; match; auto => />. 
+  auto => /#.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 1 1; if {2} => //.
+  + sp. admit.  
+  if {1} => //; match {1} => //. 
+  match {1} => //; if {1} => //.
+  if {1} => //; auto => />.
+- move => &2 bad; proc; inline. sp; if => //; match; auto => />. 
+  match => //; if => //; if; auto => />.
+  by rewrite dkey_ll.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  sp 1 2; if {2} => //.
+  + sp. admit.  
+  admit.
+- move => &2 bad; proc; inline. sp; if => //; match; auto => />. 
+  match => //; if => //; if; auto => />.
+  by rewrite dkey_ll.
+- move => &1; proc; inline.
+  rcondf ^if; auto => />.
+
+auto => />.
+split. smt(emptyE in_fset0).
+move => roeq inj csm ssm pkin rl rr al csl pksl sl stl tl ml ar csr tr pksr sr str mr.
+by case : (!str) => />.
+qed.
