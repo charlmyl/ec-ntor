@@ -1,108 +1,10 @@
-require import AllCore FSet FMap Distr DProd List SplitRO NTOR Games.
+require import AllCore FSet FMap Distr DProd List SplitRO NTOR.
 (*   *) import GAKEc HROc.
-require (*  *) GAKE_nosid DiffieHellman.
+require (*  *) DiffieHellman.
 (*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder DH.G DH.GP DH.FD DH.GP.ZModE.
 
-(* ------------------------------------------------------------------------------------------ *)
-(* Modified protocol and experiment *)
-(* ------------------------------------------------------------------------------------------ *)
-
-(* ------------------------------------------------------------------------------------------ *)
-(* Modified rondom oracle *)
-type pr_st_client_mod = pkey * skey.
-type pr_st_server_mod = skey * skey option.
-
-op rem_sid_c (s : pr_st_client instance_state) : pr_st_client_mod instance_state =
-match s with 
-| Pending st pt ir => Pending (st.`2, st.`3) pt ir
-| Accepted st t k ir => Accepted (st.`2, st.`3) t k ir
-| Aborted st t ir => Aborted (Some ((oget st).`2, (oget st).`3)) t ir
-end.
-
-op rem_sid_s (s : pr_st_server instance_state) : pr_st_server_mod instance_state =
-match s with 
-| Pending st pt ir => Pending (st.`2, st.`3) pt ir
-| Accepted st t k ir => Accepted (st.`2, st.`3) t k ir
-| Aborted st t ir => Aborted (Some ((oget st).`2, (oget st).`3)) t ir
-end.
-
-type h_mod_input = pkey * pkey * pkey * pkey * pkey.
-
-clone import PROM.FullRO as HRO_mod_c with
-  type in_t    <= h_mod_input,
-  type out_t   <= tag * key,
-  op   dout _  <= dtag `*` dkey,
-  type d_in_t  <= unit,
-  type d_out_t <= bool
-proof *.
-
-module type Server_mod = {
-  proc keygen() : pkey * skey
-  proc respond_session(st: pr_st_server_mod option, pk: pkey) : (pr_st_server_mod * (pkey * tag) * key) option
-}.
-
-module type Client_mod = {
-  proc new_session(pk: pkey) : pr_st_client_mod * pkey
-  proc complete_session(st: pr_st_client_mod, m: pkey * tag) : (pr_st_client_mod * key) option
-}.
-
-(* ------------------------------------------------------------------------------------------ *)
-(* Protocol using all public values as input *)
-module NTOR_S_mod (H : RO) : Server_mod = {
-  proc keygen() : (pkey * skey) = {
-    var sk_s, pk_s;
-
-    sk_s <$ dt;
-    pk_s <- g ^ sk_s;
-
-    return (pk_s, sk_s);
-  }
-
-  proc respond_session(st : pr_st_server_mod option, m2: pkey) : (pr_st_server_mod * (pkey * tag) * key) option = {
-    var sk_b, pk_se, sk_se, sko;
-    var sk, t_B;
-    var r <- None;
-    
-    match st with 
-    | None => {}
-    | Some st => {
-        (sk_b, sko) <- st;
-        sk_se <$ dt;
-        pk_se <- g ^ sk_se;
-        
-        (t_B, sk) <@ H.get(m2 ^ sk_se, m2 ^ sk_b, g ^ sk_b, m2, pk_se);
-        r <- Some ((sk_b, Some sk_se), (pk_se, t_B), sk);
-      }
-    end;
-    return r;
-  }
-}.
-
-module NTOR_C_mod (H : RO) : Client_mod = {
-  proc new_session(pk) : pr_st_client_mod * pkey = {
-    var pk_ce, sk_ce;
-
-    sk_ce <$ dt;
-    pk_ce <- g ^ sk_ce;
-
-    return ((pk, sk_ce), pk_ce);
-  }
-
-  proc complete_session(st: pr_st_client_mod, m3: pkey * tag) : (pr_st_client_mod * key) option = {
-    var r <- None;
-    var pk_b, sk_ce, sk, t_A;
-
-    (pk_b, sk_ce) <- st;
-    (t_A, sk) <@ H.get(m3.`1 ^ sk_ce, pk_b ^ sk_ce, pk_b, g ^ sk_ce, m3.`1);
-    if (t_A = m3.`2) {
-      r <- Some (st, sk);
-    }
-    return r;
-  }
-}.
-
 (* Introduce stop in original game *)
-module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
+module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) = {
   var b0 : bool 
 
   var servers : (s_id, server_state) fmap
@@ -447,17 +349,22 @@ module GAKEb_st (S: Server) (C: Client) (H : HROc.RO) = {
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Modified game without server ids *)
-clone import GAKE_nosid as GAKE_mod with 
-  type trace <- trace,
-  type pkey <- pkey,
-  type skey <- skey,
-  type key <- key,
-  type tag <- tag,
-  type pr_st_client <- pr_st_client_mod,
-  type pr_st_server <- pr_st_server_mod,
-  op dskey <- dt,
-  op dkey <- dkey,
-  op dtag <- dtag.
+require import NTOR_nosid.
+import GAKE_mod.
+
+op rem_sid_c (s : pr_st_client GAKEc.instance_state) : pr_st_client_mod instance_state =
+match s with 
+| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) pt ir
+| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) t k ir
+| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) t ir
+end.
+
+op rem_sid_s (s : pr_st_server GAKEc.instance_state) : pr_st_server_mod instance_state =
+match s with 
+| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) pt ir
+| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) t k ir
+| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) t ir
+end.
 
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -481,7 +388,7 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
   module O_GAKE : GAKEc.GAKE_out = {
     var unreg_ro : (pkey * pkey * s_id * pkey * pkey, (tag * key)) fmap
 
-    var servers : (s_id, server_state_mod) fmap
+    var sid_pk : (s_id, server_state_mod) fmap
     var pk_set : pkey fset
   (*  var pred_ce : pkey fset
     var pred_se : pkey fset*)
@@ -493,9 +400,9 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var r <- (witness, witness);
 
       if (!stop) {
-        if (x.`3 \in servers /\ !get_sr_mod (oget servers.[x.`3])) {
+        if (x.`3 \in sid_pk /\ !get_sr_mod (oget sid_pk.[x.`3])) {
           stop <- stop \/ x \in unreg_ro;
-          pk <- get_pkey_mod (oget servers.[x.`3]); 
+          pk <- get_pkey_mod (oget sid_pk.[x.`3]); 
           r <@ O.h((x.`1, x.`2, pk, x.`4, x.`5));
         } else {
           tk <$ dtag `*` dkey;
@@ -521,14 +428,17 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var r <- None;
 
       if (!stop) {
-        if (b \notin servers) {
+        if (b \notin sid_pk) {
           pko <@ O.init_s();
           if (pko is Some pk) {
             stop <- stop \/ pk \in pk_set;
-            servers.[b] <- Inner pk;
+            pk_set <- pk_set `|` fset1 pk;
+            sid_pk.[b] <- Inner pk;
+          } else {
+            stop <- stop \/ true; (* there was a collision in sampling *)
           }
         }
-        r <- Some (get_pkey_mod (oget servers.[b]));
+        r <- Some (get_pkey_mod (oget sid_pk.[b]));
       }
       return r;
     }
@@ -536,8 +446,8 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
     proc set_cert(b: s_id, pk: pkey) = {
       var r <- None;
 
-      if (!stop /\ b \notin servers) {
-        servers.[b] <- Outer pk;
+      if (!stop /\ b \notin sid_pk) {
+        sid_pk.[b] <- Outer pk;
         pk_set <- pk_set `|` fset1 pk;
         r <- Some ();
       }
@@ -549,8 +459,8 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var pk; 
       var r <- None;
 
-      if (!stop /\ m1 \in servers) {
-        pk <- get_pkey_mod (oget servers.[m1]);
+      if (!stop /\ m1 \in sid_pk) {
+        pk <- get_pkey_mod (oget sid_pk.[m1]);
         r <@ O.send_msg1(i, pk);
        if (r <> None) {
          stop <- stop \/ (oget r \in pk_set);
@@ -565,12 +475,12 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var pk; 
       var r <- None;
 
-      if (!stop /\ b \in servers) {
+      if (!stop /\ b \in sid_pk) {
         if (m2 \notin pk_set) {
           pk_set <- pk_set `|` fset1 m2;
         }
 
-        pk <- get_pkey_mod (oget servers.[b]);
+        pk <- get_pkey_mod (oget sid_pk.[b]);
         r <@ O.send_msg2(pk, j, m2);
         if (r <> None) {
           stop <- stop \/ ((oget r).`1 \in pk_set);
@@ -609,8 +519,8 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var pk;
       var r <- None;
 
-      if (!stop /\ b \in servers) {
-        pk <- get_pkey_mod (oget servers.[b]);
+      if (!stop /\ b \in sid_pk) {
+        pk <- get_pkey_mod (oget sid_pk.[b]);
         r <@ O.s_rev_skey(pk, j);
       }
 
@@ -621,11 +531,11 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var pk;
       var r <- None;
 
-      if (!stop /\ b \in servers) {
-        pk <- get_pkey_mod (oget servers.[b]);
+      if (!stop /\ b \in sid_pk) {
+        pk <- get_pkey_mod (oget sid_pk.[b]);
         r <@ O.rev_ltkey(pk);
         if (r <> None) {
-          servers.[b] <- Outer pk; (* Do I need to know that this was honest before? *)
+          sid_pk.[b] <- Outer pk; (* Do I need to know that this was honest before? *)
         }
       }
 
@@ -646,8 +556,8 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var pk;
       var r <- None;
 
-      if (!stop /\ b \in servers) {
-        pk <- get_pkey_mod (oget servers.[b]);
+      if (!stop /\ b \in sid_pk) {
+        pk <- get_pkey_mod (oget sid_pk.[b]);
         r <@ O.s_rev_ephkey(pk, j);
       }
 
@@ -668,9 +578,9 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var pk;
       var r <- None;
 
-      if (!stop /\ b \in servers) {
-        if (! get_sr_mod (oget servers.[b])) {
-          pk <- get_pkey_mod (oget servers.[b]);
+      if (!stop /\ b \in sid_pk) {
+        if (! get_sr_mod (oget sid_pk.[b])) {
+          pk <- get_pkey_mod (oget sid_pk.[b]);
           r <@ O.s_test(pk, j);
         }
       }
@@ -683,7 +593,7 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
     var b';
 
     O_GAKE.unreg_ro <- empty;
-    O_GAKE.servers <- empty;
+    O_GAKE.sid_pk <- empty;
     O_GAKE.pk_set <- fset0;
     O_GAKE.stop <- false;
 
@@ -695,14 +605,12 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
 
 
 
-
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Security Proof *)
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: GAKEc.A_GAKE {-RO, -GAKEc.HROc.RO, -Meta_Red, -GAKEc.GAKEb, -GAKEb_st, -GAKE_mod.GAKEb }.
+declare module A <: GAKEc.A_GAKE {-GAKE_mod.HROc.RO, -GAKEc.HROc.RO, -Meta_Red, -GAKEc.GAKEb, -GAKEb_st, -GAKE_mod.GAKEb }.
 
 declare axiom A_ll (G <: GAKEc.GAKE_out{-A}):
   islossless G.h =>
@@ -731,7 +639,8 @@ call (: ={b0, servers, c_smap, s_smap, tested}(GAKEc.GAKEb, GAKEb_st) /\ ={m}(GA
   auto => />.
 qed.
 
-lemma gake_st_mod bit &m: `| Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] - Pr[GAKE_mod.E_GAKE(GAKE_mod.GAKEb(NTOR_S_mod(RO), NTOR_C_mod(RO), RO), Meta_Red(A)).run(bit) @ &m : res] | <= Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : GAKEb_st.stop].
+
+lemma gake_st_mod bit &m: `| Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] - Pr[GAKE_mod.E_GAKE(GAKE_mod.GAKEb(NTOR_S_mod(GAKE_mod.HROc.RO), NTOR_C_mod(GAKE_mod.HROc.RO), GAKE_mod.HROc.RO), Meta_Red(A)).run(bit) @ &m : res] | <= Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : GAKEb_st.stop].
 proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Meta_Red.O_GAKE.stop => //; first last.
@@ -739,33 +648,34 @@ byequiv (: _ ==> _) : Meta_Red.O_GAKE.stop => //; first last.
 symmetry; proc; inline*.
 wp; call (: Meta_Red.O_GAKE.stop
           , ={b0, tested}(GAKEb_st, GAKE_mod.GAKEb) /\ ={pk_set, stop}(GAKEb_st, Meta_Red.O_GAKE)
-               /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`3 \in Meta_Red.O_GAKE.servers{2} => x \notin Meta_Red.O_GAKE.unreg_ro{2}
-                    => GAKEc.HROc.RO.m{1}.[x] = RO.m{2}.[(x.`1, x.`2, get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[x.`3]), x.`4, x.`5)])
-               /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`3 \notin Meta_Red.O_GAKE.servers{2} \/ get_sr_mod (oget Meta_Red.O_GAKE.servers{2}.[x.`3])
+               /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`3 \in Meta_Red.O_GAKE.sid_pk{2} => x \notin Meta_Red.O_GAKE.unreg_ro{2}
+                    => GAKEc.HROc.RO.m{1}.[x] = GAKE_mod.HROc.RO.m{2}.[(x.`1, x.`2, get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5)])
+               /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`3 \notin Meta_Red.O_GAKE.sid_pk{2} \/ get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[x.`3])
                     => GAKEc.HROc.RO.m{1}.[x] =  Meta_Red.O_GAKE.unreg_ro{2}.[x])
-               /\ (forall x, x \notin GAKEc.HROc.RO.m{1} => x.`3 \in Meta_Red.O_GAKE.servers{2} => !get_sr_mod (oget Meta_Red.O_GAKE.servers{2}.[x.`3])
-                    => (x.`1, x.`2, get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[x.`3]), x.`4, x.`5) \notin RO.m{2})
+               /\ (forall x, x \notin GAKEc.HROc.RO.m{1} => x.`3 \in Meta_Red.O_GAKE.sid_pk{2} => !get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[x.`3])
+                    => (x.`1, x.`2, get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5) \notin GAKE_mod.HROc.RO.m{2})
                /\ (forall x, x \notin GAKEc.HROc.RO.m{1} => x \notin  Meta_Red.O_GAKE.unreg_ro{2})
-               /\ (forall b1 b2, b1 \in Meta_Red.O_GAKE.servers{2} => b2 \in Meta_Red.O_GAKE.servers{2} 
-                    => !get_sr_mod (oget Meta_Red.O_GAKE.servers{2}.[b1])
-                    => oget Meta_Red.O_GAKE.servers{2}.[b1] = oget Meta_Red.O_GAKE.servers{2}.[b2]
+               /\ (forall b1 b2, b1 \in Meta_Red.O_GAKE.sid_pk{2} => b2 \in Meta_Red.O_GAKE.sid_pk{2} 
+                    => !get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b1])
+                    => oget Meta_Red.O_GAKE.sid_pk{2}.[b1] = oget Meta_Red.O_GAKE.sid_pk{2}.[b2]
                     => b1 = b2)
                /\ (forall i, i \in GAKEb_st.c_smap{1} <=> i \in GAKE_mod.GAKEb.c_smap{2})
                /\ (forall i, i \in GAKEb_st.c_smap{1} => rem_sid_c (oget GAKEb_st.c_smap{1}.[i]) = oget GAKE_mod.GAKEb.c_smap{2}.[i])
-               /\ (forall b j, (b, j) \in GAKEb_st.s_smap{1} => b \in Meta_Red.O_GAKE.servers{2} /\ !get_sr_mod (oget Meta_Red.O_GAKE.servers{2}.[b])
-                                      /\ (get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[b]), j) \in GAKEb_mod.s_smap{2}
-                                      /\ rem_sid_s (oget GAKEb_st.s_smap{1}.[(b, j)]) = oget GAKEb_mod.s_smap{2}.[(get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[b]), j)])
-               /\ (forall b j, (b, j) \notin GAKEb_st.s_smap{1} => b \in Meta_Red.O_GAKE.servers{2} => !get_sr_mod (oget Meta_Red.O_GAKE.servers{2}.[b])
-                    => (get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[b]), j) \notin GAKEb_mod.s_smap{2})
+               /\ (forall b j, (b, j) \in GAKEb_st.s_smap{1} => b \in Meta_Red.O_GAKE.sid_pk{2} /\ !get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])
+                                      /\ (get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b]), j) \in GAKE_mod.GAKEb.s_smap{2}
+                                      /\ rem_sid_s (oget GAKEb_st.s_smap{1}.[(b, j)]) = oget GAKE_mod.GAKEb.s_smap{2}.[(get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b]), j)])
+               /\ (forall b j, (b, j) \notin GAKEb_st.s_smap{1} => b \in Meta_Red.O_GAKE.sid_pk{2} => !get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])
+                    => (get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b]), j) \notin GAKE_mod.GAKEb.s_smap{2})
                /\ (forall x, x \in GAKEb_st.unreg_ro{1} <=> x \in Meta_Red.O_GAKE.unreg_ro{2})
-               /\ (forall b, b \in GAKEb_st.servers{1} <=> b \in Meta_Red.O_GAKE.servers{2})
-               /\ (forall b, b \in GAKEb_st.servers{1} => get_pkey (oget GAKEb_st.servers{1}.[b]) = get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[b])
-                                      /\ get_sr_ltk (oget GAKEb_st.servers{1}.[b]) = get_sr_mod (oget Meta_Red.O_GAKE.servers{2}.[b]))
-               /\ (forall pk x1 x2 x4 x5, pk \notin GAKEb_mod.s_kp{2} => !rng Meta_Red.O_GAKE.servers{2} (Honest_mod pk) /\ (x1, x2, pk, x4, x5) \notin RO.m{2})
-               /\ (forall b, b \in Meta_Red.O_GAKE.servers{2} => get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[b]) \in GAKEb_mod.s_pk{2})
-               /\ (forall b, b \in Meta_Red.O_GAKE.servers{2} => !get_sr_mod (oget Meta_Red.O_GAKE.servers{2}.[b])
-                    => obind get_skey GAKEb_st.servers{1}.[b] = oget GAKEb_mod.s_kp{2}.[get_pkey_mod (oget Meta_Red.O_GAKE.servers{2}.[b])])
-               /\ (forall pk j, pk \notin Meta_Red.O_GAKE.pk_set{2} => pk \notin GAKEb_mod.s_kp{2} /\ pk \notin GAKEb_mod.s_pk{2} /\ (pk, j) \notin GAKEb_mod.s_smap{2})
+               /\ (forall b, b \in GAKEb_st.servers{1} <=> b \in Meta_Red.O_GAKE.sid_pk{2})
+               /\ (forall b, b \in GAKEb_st.servers{1} => get_pkey (oget GAKEb_st.servers{1}.[b]) = get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])
+                                      /\ get_sr_ltk (oget GAKEb_st.servers{1}.[b]) = get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b]))
+               /\ (forall pk x1 x2 x4 x5, pk \notin GAKE_mod.GAKEb.servers{2} => !rng Meta_Red.O_GAKE.sid_pk{2} (Inner pk) /\ (x1, x2, pk, x4, x5) \notin GAKE_mod.HROc.RO.m{2})
+              (* /\ (forall b, b \in Meta_Red.O_GAKE.sid_pk{2} => get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b]) \in GAKE_mod.GAKEb.servers{2})
+               /\ (forall b, b \in Meta_Red.O_GAKE.sid_pk{2} => !get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])
+                    => obind get_skey GAKEb_st.servers{1}.[b] = GAKE_mod.GAKEb.servers{2}.[get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])])*)
+               /\ (forall pk j, pk \notin Meta_Red.O_GAKE.pk_set{2} 
+                    => pk \notin GAKE_mod.GAKEb.servers{2} /\ pk \notin GAKE_mod.GAKEb.servers{2} /\ (pk, j) \notin GAKE_mod.GAKEb.s_smap{2})
           , GAKEb_st.stop{1} = Meta_Red.O_GAKE.stop{2}) => //.
 
 - exact A_ll.
@@ -796,7 +706,10 @@ wp; call (: Meta_Red.O_GAKE.stop
   sp; if {2} => //.
   + if => //.
     + auto => />. smt().
-    + auto => /> &1 &2 *. smt(mem_set get_setE in_fsetU in_fset1).
+    + sp; seq 1 1 : (#pre /\ ={sk_s}). auto => />.
+      sp 2 2; if {2} => //.
+      + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+      auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
     auto => /> &1 &2 *. 
     smt().
   if {1} => //; auto => />.
@@ -807,7 +720,7 @@ wp; call (: Meta_Red.O_GAKE.stop
 
 - proc; inline.
   sp 1 1; if {2} => //.
-  + auto => /> &1 &2 *. smt(mem_set get_setE in_fsetU in_fset1).
+  + auto => /> &1 &2 *. smt(mem_set get_setE in_fsetU in_fset1). 
   auto => /> &1 &2 *. smt().
 - move => &2 bad; proc; inline. auto => />.
 - move => &1; proc; inline.
