@@ -725,13 +725,18 @@ wp; call (: Meta_Red.O_GAKE.stop
                /\ (forall b, b \in GAKEb_st.servers{1} <=> b \in Meta_Red.O_GAKE.sid_pk{2})
                /\ (forall b, b \in GAKEb_st.servers{1} => get_pkey (oget GAKEb_st.servers{1}.[b]) = get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])
                                       /\ get_sr_ltk (oget GAKEb_st.servers{1}.[b]) = get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b]))
+               /\ (forall b, b \in GAKEb_st.servers{1} => obind get_skey GAKEb_st.servers{1}.[b] = None 
+                    => oget Meta_Red.O_GAKE.sid_pk{2}.[b] = Outer (get_pkey (oget GAKEb_st.servers{1}.[b])))
+            (*   /\ (forall b, obind GAKEc.get_skey GAKEb_st.servers{1}.[b] = None => b \in Meta_Red.O_GAKE.sid_pk{2}
+                    => obind GAKE_mod.get_skey GAKEb.servers{2}.[get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])] = None)*)
                /\ (forall pk, pk \in GAKE_mod.GAKEb.servers{2} <=> rng Meta_Red.O_GAKE.sid_pk{2} (Inner pk))
                /\ (forall pk x1 x2 x4 x5, pk \notin GAKE_mod.GAKEb.servers{2} => !rng Meta_Red.O_GAKE.sid_pk{2} (Inner pk) /\ (x1, x2, pk, x4, x5) \notin GAKE_mod.HROc.RO.m{2})
               (* /\ (forall b, b \in Meta_Red.O_GAKE.sid_pk{2} => get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b]) \in GAKE_mod.GAKEb.servers{2})
                /\ (forall b, b \in Meta_Red.O_GAKE.sid_pk{2} => !get_sr_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])
                     => obind get_skey GAKEb_st.servers{1}.[b] = GAKE_mod.GAKEb.servers{2}.[get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b])])*)
-               /\ (forall pk j, pk \notin Meta_Red.O_GAKE.pk_set{2} 
-                    => pk \notin GAKE_mod.GAKEb.servers{2} /\ pk \notin GAKE_mod.GAKEb.servers{2} /\ (pk, j) \notin GAKE_mod.GAKEb.s_smap{2})
+         (*      /\ (forall b pk, b \in GAKEb_st.servers{1} => pk = get_pkey (oget GAKEb_st.servers{1}.[b]) => pk \in Meta_Red.O_GAKE.pk_set{2})*)
+               /\ (forall b pk, b \in Meta_Red.O_GAKE.sid_pk{2} => pk = get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b{2}]) => pk \in Meta_Red.O_GAKE.pk_set{2})
+               /\ (forall pk j, pk \notin Meta_Red.O_GAKE.pk_set{2} => pk \notin GAKE_mod.GAKEb.servers{2} /\ (pk, j) \notin GAKE_mod.GAKEb.s_smap{2})
           , GAKEb_st.stop{1} = Meta_Red.O_GAKE.stop{2}) => //.
 
 - exact A_ll.
@@ -776,7 +781,7 @@ wp; call (: Meta_Red.O_GAKE.stop
 
 - proc; inline.
   sp 1 1; if {2} => //.
-  + auto => /> &1 &2 *. smt(mem_set get_setE in_fsetU in_fset1). 
+  + auto => /> &1 &2 *. smt(mem_set get_setE in_fsetU in_fset1).
   auto => /> &1 &2 *. smt().
 - move => &2 bad; proc; inline. auto => />.
 - move => &1; proc; inline.
@@ -842,8 +847,14 @@ wp; call (: Meta_Red.O_GAKE.stop
 - proc; inline.
   sp 1 1; if {2} => //.
   + sp 1 0; if => //.
-    + sp 1 7. match.  
-      + auto => /> &1 &2 *. admit.
+    + sp 1 7. match.
+      + auto => /> &1 &2 *. split. 
+have : b{2} \in GAKEb_st.servers{1} /\ get_pkey (oget GAKEb_st.servers{1}.[b{2}]) = get_pkey_mod (oget Meta_Red.O_GAKE.sid_pk{2}.[b{2}]). smt(get_setE mem_set in_fsetU in_fset1).
+move => H1.
+ 
+
+
+smt(get_setE mem_set in_fsetU in_fset1).
       + auto => />. admit.
       auto => />. smt(get_setE mem_set in_fsetU in_fset1).
       admit. (* match struggles *)
