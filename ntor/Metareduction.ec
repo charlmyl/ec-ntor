@@ -151,6 +151,9 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) = {
               (st', k) <- r';
               c_smap.[i] <- Accepted st' (pt, Some m3) k ir;
               r <- Some ();
+              if (m3.`1 \notin pk_set) {
+                pk_set <- pk_set `|` fset1 m3.`1;
+              }
             } else {
               c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
             }
@@ -158,10 +161,6 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) = {
         | Accepted _ _ _ _ => { }
         | Aborted _ _ _ => { }
         end;
-
-        if (m3.`1 \notin pk_set) {
-          pk_set <- pk_set `|` fset1 m3.`1;
-        }
       }
     end;
     return r;
@@ -391,6 +390,7 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
     var dhc_smap : (int, pr_st_client_mod instance_state) fmap
     var c_inst : (int, bool) fmap (* true for honest partner *)
     var hon_p : (int, pkey) fmap
+    var dh_p : (int, s_id) fmap 
 
     var sid_pk : (s_id, server_state_mod) fmap
     var pk_set : pkey fset
@@ -491,6 +491,7 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
                   sk_ce <$ dt;
                   pk_ce <- g ^ sk_ce;
                   r <- Some pk_ce;
+                  dh_p.[i] <- m1;
                   dhc_smap.[i] <- GAKE_mod.Pending (pk, sk_ce) pk_ce (false, false, false);
                 }
               | Some st => {
@@ -543,17 +544,41 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
     }
 
     proc send_msg3(i: int, m3: pkey * tag) = {
+      var pk_b, sk_ce, b, t_A, k;
       var r <- None;
 
       if (!stop) {
-         if (i \in c_inst /\ oget c_inst.[i]) {
-           r <@ O.send_msg3(i, m3);
-           if (m3.`1 \notin pk_set) {
-             pk_set <- pk_set `|` fset1 m3.`1;
-           }
-         }
+        if (i \in c_inst /\ oget c_inst.[i]) {
+          r <@ O.send_msg3(i, m3);
+          if (r = Some () /\ m3.`1 \notin pk_set) {
+            pk_set <- pk_set `|` fset1 m3.`1;
+          }
+        } else {
+          match dhc_smap.[i] with 
+          | None => { } (* Abort? *)
+          | Some st => {
+              match st with
+              | GAKE_mod.Pending st pt ir => {
+                  (pk_b, sk_ce) <- st;
+                  b <- oget dh_p.[i];
+                  (t_A, k) <- oget unreg_ro.[(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1)];
+                  if (t_A = m3.`2) {
+                    dhc_smap.[i] <- GAKE_mod.Accepted st (pt, Some m3) k ir;
+                    r <- Some ();
+                    if (m3.`1 \notin pk_set) {
+                      pk_set <- pk_set `|` fset1 m3.`1;
+                    }
+                  } else {
+                    dhc_smap.[i] <- GAKE_mod.Aborted (Some st) (Some (pt, Some m3)) ir;
+                  }
+                }
+              | GAKE_mod.Accepted _ _ _ _ => { }
+              | GAKE_mod.Aborted _ _ _ => { }
+              end;
+            }
+          end;
+        }
       }
-
       return r;
     }
 
@@ -561,9 +586,26 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var r <- None;
 
       if (!stop) {
-        r <@ O.c_rev_skey(i);
+        if (i \in c_inst /\ oget c_inst.[i]) {
+          r <@ O.c_rev_skey(i);
+        } else {
+          match dhc_smap.[i] with
+          | None => { }
+          | Some st => {
+              match st with 
+              | GAKE_mod.Pending _ _ _ => { }
+              | GAKE_mod.Accepted st' t' k' ir' => {
+                  if (!get_ir_test (oget dhc_smap.[i])) { (* removed check on the partner and that they are untested, since an unhonest servers cannot be tested *)
+                    r <- Some k';
+                    dhc_smap.[i] <- set_ir_sess (GAKE_mod.Accepted st' t' k' ir');
+                  }
+                }
+              | GAKE_mod.Aborted _ _ _ => { }
+              end;
+            }
+          end;
+        }
       }
-
       return r;
     }
 
@@ -603,7 +645,28 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var r <- None;
 
       if (!stop) {
-        r <@ O.c_rev_ephkey(i);
+        if (i \in c_inst /\ oget c_inst.[i]) {
+          r <@ O.c_rev_ephkey(i);
+        } else {
+          match dhc_smap.[i] with
+          | None => { }
+          | Some st => {
+              match st with
+              | GAKE_mod.Pending st pk_e ir => {
+                  r <- Some (get_eph_c st);
+                  dhc_smap.[i] <- set_ir_eph (GAKE_mod.Pending st pk_e ir);
+                }
+              | GAKE_mod.Accepted st t k ir => {
+                  if (!get_ir_test (oget dhc_smap.[i])) {
+                    r <- Some (get_eph_c st);
+                    dhc_smap.[i] <- set_ir_eph (GAKE_mod.Accepted st t k ir);
+                  }
+                }
+              | GAKE_mod.Aborted _ _ _ => {  }
+               end;
+            }
+          end;
+        }
       }
 
       return r;
@@ -619,7 +682,7 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
         | Inner pk => {
             r <@ O.s_rev_ephkey(pk, j);
           }
-        | Outer pk => {}
+        | Outer pk => {(* I can eph key reveal an instance from an corrupted server! do I need to be able to distinguish dishonest from corrupted here? *)}
         end;
       }
 
@@ -630,7 +693,9 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
       var r <- None;
 
       if (!stop) {
-        r <@ O.c_test(i);
+        if (i \in c_inst /\ oget c_inst.[i]) {
+          r <@ O.c_test(i);
+        } (* can I test a client with a dishonest partner? *)
       }
 
       return r;
@@ -664,6 +729,7 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
     O_GAKE.dhc_smap <- empty;
     O_GAKE.c_inst <- empty;
     O_GAKE.hon_p <- empty;
+    O_GAKE.dh_p <- empty;
 
     b' <@ A(O_GAKE).run();
 
@@ -766,8 +832,8 @@ wp; call (: Meta_Red.O_GAKE.stop
                /\ (forall sk pk b, b \in Meta_Red.O_GAKE.sid_pk{2} => oget Meta_Red.O_GAKE.sid_pk{2}.[b] = Inner pk 
                     => pk \in GAKEb.servers{2} => obind GAKE_mod.get_skey GAKEb.servers{2}.[pk] = Some sk 
                     => pk = g ^ sk)
-          , GAKEb_st.stop{1} = Meta_Red.O_GAKE.stop{2}) => //.
-
+          , GAKEb_st.stop{1} = Meta_Red.O_GAKE.stop{2}) => //; 1..19: admit.
+(*
 - exact A_ll.
 
 - proc; inline.
@@ -938,46 +1004,91 @@ smt(get_setE mem_set in_fsetU in_fset1 pow_bij).  smt(get_setE mem_set in_fsetU 
   sp 1 1; if {2} => //.
   + if {2} => //.
     + sp; match; 1..2: smt().
-      + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+      + auto => />.
       move => stl str.
       match {1} => //.
       + match Pending {2} ^match. auto => /#.
         sp; seq 1 1 : (#pre /\ r1{1} = r2{2}). auto => />.
-        if {1} => //. rcondt {2} ^if. auto => />. admit. (* connect things to state *)
-        + sp 2 2; if => //. admit. (* here again *)
+        if {1} => //. rcondt {2} ^if. auto => /> &2 *. admit. (* connect things to state *)
+        + sp 2 2; if => //. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
           + sp; match Some {1} ^match. auto => /#.
             match Some {2} ^match. auto => /#.
-            sp 3 4; if => //.
-            + auto => /> &1 &2 *. admit.
-            auto => /> &1 &2 *. admit.
+            auto => /> &1 &2 *. 
+
+split. move => *. split. admit. split. admit. split. admit. split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). split. 
+admit. split. admit. split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+split. admit. split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+admit.
+move => *. split. admit. split. admit. split. admit. split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). split. 
+admit. split. admit. split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+split. admit. split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). admit.
+
           sp; match None {1} ^match. auto => /#.
           match None {2} ^match. auto => /#.
-          sp 1 2; if => //.
-          + auto => /> &1 &2 *. admit.
           auto => /> &1 &2 *. admit.
         admit.
       + match Accepted {2} ^match. auto => /#.
-        auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+        auto => />.
       match Aborted {2} ^match. auto => /#.
-      auto => />. admit. 
-    match None {1} ^match. auto => />. admit. (* if there is no honest server partner I can also be Pending? *)
+      auto => />.
+    match; 1..2: smt().
+    + auto => />.
+    move => stl str. 
+    match {1} => //.
+    + match Pending {2} ^match. auto => /#. (* struggles with the adversary guessing tag correctly *)
+      admit.
+    + match Accepted {2} ^match. auto => /#.
+      auto => />.
+    match Aborted {2} ^match. auto => /#.
     auto => />.
   match {1} => //. match {1} => //. auto => />.
-  + auto => />.
-  auto => />.
 - move => &2 bad; proc; inline.
   sp; match => //.
   match => //; auto => />.  
   by rewrite weight_dprod dkey_ll dtag_ll //=.
 - move => &1; proc; inline.
-  rcondf ^if; auto => />.
+  rcondf ^if; auto => />.*)
 
 - proc; inline.
   sp 1 1; if {2} => //; 2: by auto => /#.
-  sp; match; 1..2: admit.
+  if {2} => //.
+  + sp; match; 1..2: smt().
+    + auto => />.
+    move => stl str.
+    match {1} => //.
+    + match Pending {2} ^match. auto => /#.
+      auto => />.
+    + match Accepted {2} ^match. auto => /#.
+      if => //.
+      + auto => /> &1 &2 *. split. rewrite /untested_partner_c. move => [H1|]. smt(). 
+case (1 <= card (get_partners_c t'{1} GAKEb_st.s_smap{1})); 2: smt().
+case (1 <= card (get_untested_partners_c t'{1} GAKEb_st.s_smap{1}) = false); 2: smt().
+move => *.
+right.
+have<-: (card (get_partners_c t'{1} GAKEb_st.s_smap{1}) = card (get_partners_c t'{2} GAKEb.s_smap{2})). admit.
+have<-: (card (get_untested_partners_c t'{1} GAKEb_st.s_smap{1}) = card (get_untested_partners_c t'{2} GAKEb.s_smap{2})). admit.
+smt().
+ move => [] *. smt(). admit. (* relate untested_partner_c *)
+      + auto => />. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+      auto => />.
+    match Aborted {2} ^match. auto => /#.
+    auto => />.
+  match; 1..2: smt().  
   + auto => />.
   move => stl str.
-  admit.
+  match {1}  => //.
+  + match Pending {2} ^match. auto => /#.
+    auto => />.
+  + match Accepted {2} ^match. auto => /#.
+    if => //.
+    + auto => /> &1 &2 *. split. 
+have : untested_partner_c t'{1} GAKEb_st.s_smap{1} = Some true. admit. (* because partner server is dishonest and never able to be tested *)
+smt().
+smt().
+    auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+  match Aborted {2} ^match. auto => /#.
+  auto => />.
+  auto => />.
 - move => &2 bad; proc; inline. sp; match; auto => />. 
   auto => /#.
 - move => &1; proc; inline.
@@ -1023,10 +1134,27 @@ move => [H1|H1]. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). admit.
 
 - proc; inline.
   sp 1 1; if {2} => //.
-  + sp. match {1} => //. 
-    + match None {2} ^match; 1: by auto => /#.
+  + if {2} => //.
+    + sp. match; 1..2: smt().
+      + auto => />.
+      move => stl str.
+      match {1} => //.
+      + match Pending {2} ^match. auto => /#.
+        auto => /> &1 &2 *. admit.
+      + match Accepted {2} ^match. auto => /#. 
+        auto => /> &1 &2 *. admit.
+      match Aborted {2} ^match. auto => /#.
       auto => />.
-    admit.
+    match; 1..2: smt().
+    + auto => />.
+    move => stl str.
+    match {1} => //.
+    + match Pending {2} ^match. auto => /#.
+      auto => /> &1 &2 *. admit.
+    + match Accepted {2} ^match. auto => /#. 
+      auto => /> &1 &2 *. admit.
+    match Aborted {2} ^match. auto => /#.
+    auto => />.
   match {1}; auto => />.
 - move => &2 bad; proc; inline. sp; match; auto => />. 
   auto => /#.
@@ -1056,9 +1184,12 @@ move => [H1|H1]. smt(get_setE mem_set in_fsetU in_fset1 pow_bij). admit.
 
 - proc; inline.
   sp 1 1; if {2} => //.
-  + sp. if => //.
+  + if {2} => //.
+    + sp. if => //.
+      admit.
+      auto => />.
+    if {1} => //.
     admit.
-    auto => />.
   if {1} => //; match {1} => //. 
   match {1} => //; if {1} => //.
   if {1} => //; auto => />.
