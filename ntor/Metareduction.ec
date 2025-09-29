@@ -4,38 +4,13 @@ require (*  *) DiffieHellman.
 (*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder DH.G DH.GP DH.FD DH.GP.ZModE.
 
 
-
-(*
 (* ------------------------------------------------------------------------------------------ *)
-(* Removing client instances that are partnered to a dishonest server *)
-(* ------------------------------------------------------------------------------------------ *)
-
-
-print GAKEb.
-
-(* ------------------------------------------------------------------------------------------ *)
-(* Defining honest experiments *)
-module GAKE_hon = GAKEb with {
-  proc send_msg1 [
-    ^if ~ (m1 \in servers /\ !get_sr_ltk servers.[m1]) 
-  ]
-}.*)
-
-
-
-
-
-
-
-
-
-
+(* Introduce stop in original game *)
 op get_sr_dh s_st : bool =
 with s_st = Honest    _ => false
 with s_st = Corrupt   _ => false
 with s_st = Dishonest _ => true.
 
-(* Introduce stop in original game *)
 module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_out_i = {
   var b0 : bool 
 
@@ -110,7 +85,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_out_i = {
     var r <- None;
 
     st <- c_smap.[i];
-    if (m1 \in servers) {
+    if (m1 \in servers /\ !get_sr_ltk (oget servers.[m1])) {
       pk_b <- get_pkey (oget servers.[m1]);
       match st with
       | None => {
@@ -377,7 +352,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_out_i = {
 
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Modified game without server ids *)
+(* Modified model with pkeys instead of names *)
 require import NTOR_nosid.
 import GAKE_mod.
 
@@ -397,7 +372,7 @@ end.
 
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Reduction preventing collisions and prediction of public keys  *)
+(* Reduction to honest game that only allows clients to interact with honest servers  *)
 type server_state_mod = [
   Inner of pkey & bool
 | Outer of pkey
@@ -415,11 +390,189 @@ op get_sr_in s_st : bool =
 with s_st = Inner _ bool => bool
 with s_st = Outer _ => true.
 
-print GAKEc.GAKE_out.
-print GAKE_mod.Pending.
-print pr_st_client_mod.
 
-module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) = {
+module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
+  var dh_ro : (pkey * pkey * s_id * pkey * pkey, (tag * key)) fmap
+  var dhc_smap : (int, pr_st_client GAKEc.instance_state) fmap
+  var servers : (s_id, server_state_mod) fmap
+
+  proc init_mem(b: bool) = {
+    O.init_mem(b);
+    dhc_smap <- empty;
+    dh_ro <- empty;
+    servers <- empty;
+  }
+
+  proc h = O.h
+
+  proc init_s(b : s_id): pkey option = {
+  var r <- None;
+
+    r <@ O.init_s(b);
+    if (r <> None) {
+      servers.[b] <- Inner (oget r) false;
+    }
+
+    return r;
+  }
+
+  proc set_cert(b: s_id, pk: pkey) = { 
+    var r <- None;
+
+    r <@ O.set_cert(b, pk);
+    if (r <> None) {
+      servers.[b] <- Outer pk;
+    }
+
+    return r;
+  }
+
+  proc send_msg1(i: int, m1: s_id) = {
+    var st_dh, sk_ce, pk_ce, pk_b; 
+    var r <- None;
+
+    if (m1 \in servers) {
+      if (!get_sr_out (oget servers.[m1])) {
+        r <@ O.send_msg1(i, m1);
+      } else {
+        st_dh <- dhc_smap.[i];
+        match st_dh with
+        | None => {
+            sk_ce <$ dt;
+            pk_ce <- g ^ sk_ce;
+            pk_b <- get_pkey_mod (oget servers.[m1]);
+            r <- Some pk_ce;
+            dhc_smap.[i] <- GAKEc.Pending (m1, pk_b, sk_ce) pk_ce (false, false, false);
+          }
+        | Some st => {
+            match st with
+            | GAKEc.Pending st pt ir => dhc_smap.[i] <- GAKEc.Aborted (Some st) (Some (pt, None)) ir;
+            | GAKEc.Accepted _ _ _ _ => { }
+            | GAKEc.Aborted _ _ _ => { }
+            end;
+          }
+        end;
+      }
+    }
+
+    return r;
+  }
+
+  proc send_msg2 = O.send_msg2
+
+  proc send_msg3(i: int, m3: pkey * tag) = {
+    var pk_b, sk_ce, b, tk, t_A, k;
+    var r <- None;
+
+    if (i \notin dhc_smap) {
+      r <@ O.send_msg3(i, m3);
+    } else {
+      match dhc_smap.[i] with 
+      | None => { } (* Abort? *)
+      | Some st => {
+          match st with
+          | GAKEc.Pending st pt ir => {
+              (b, pk_b, sk_ce) <- st;
+              tk <$ dtag `*` dkey;
+              if ((m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1) \notin dh_ro) {
+                dh_ro.[(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1)] <- tk;
+              }
+              (t_A, k) <- oget dh_ro.[(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1)];
+              if (t_A = m3.`2) {
+                dhc_smap.[i] <- GAKEc.Accepted st (pt, Some m3) k ir;
+                r <- Some ();
+              } else {
+                dhc_smap.[i] <- GAKEc.Aborted (Some st) (Some (pt, Some m3)) ir;
+              }
+            }
+          | GAKEc.Accepted _ _ _ _ => { }
+          | GAKEc.Aborted _ _ _ => { }
+          end;
+        }
+      end;
+    }
+    return r;
+  }
+
+  proc c_rev_skey(i: int) = {
+    var r <- None;
+
+    if (i \notin dhc_smap) {
+      r <@ O.c_rev_skey(i);
+    } else {
+      match dhc_smap.[i] with
+      | None => { }
+      | Some st => {
+          match st with 
+          | GAKEc.Pending _ _ _ => { }
+          | GAKEc.Accepted st' t' k' ir' => {
+              if (!get_ir_test (oget dhc_smap.[i])) { (* removed check on the partner and that they are untested, since an unhonest servers cannot be tested *)
+                r <- Some k';
+                dhc_smap.[i] <- set_ir_sess (GAKEc.Accepted st' t' k' ir');
+              }
+            }
+          | GAKEc.Aborted _ _ _ => { }
+          end;
+        }
+      end;
+    }
+    return r;
+  }
+
+  proc s_rev_skey = O.s_rev_skey
+
+  proc rev_ltkey = O.rev_ltkey
+
+  proc c_rev_ephkey(i : int) = {
+    var r <- None;
+
+    if (i \notin dhc_smap) {
+      r <@ O.c_rev_ephkey(i);
+    } else {
+      match dhc_smap.[i] with
+      | None => { }
+      | Some st => {
+          match st with
+          | GAKEc.Pending st pk_e ir => {
+              r <- Some (get_eph_c st);
+              dhc_smap.[i] <- set_ir_eph (GAKEc.Pending st pk_e ir);
+            }
+          | GAKEc.Accepted st t k ir => {
+              if (!get_ir_test (oget dhc_smap.[i])) {
+                r <- Some (get_eph_c st);
+                dhc_smap.[i] <- set_ir_eph (GAKEc.Accepted st t k ir);
+              }
+            }
+          | GAKEc.Aborted _ _ _ => {  }
+           end;
+        }
+      end;
+    }
+
+    return r;
+  }
+
+  proc s_rev_ephkey = O.s_rev_ephkey
+
+  proc c_test(i : int) = {
+    var r <- None;
+
+
+    if (i \notin dhc_smap) {
+      r <@ O.c_test(i);
+    }
+
+    return r;
+  }
+
+  proc s_test = O.s_test
+}.
+
+
+(* ------------------------------------------------------------------------------------------ *)
+(* Reduction preventing collisions and prediction of public keys  *)
+
+module (Name_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) = {
   module O_GAKE : GAKEc.GAKE_out = {
     var unreg_ro : (pkey * pkey * s_id * pkey * pkey, (tag * key)) fmap
 
@@ -785,7 +938,7 @@ module (Meta_Red (A : GAKEc.A_GAKE) : GAKE_mod.A_GAKE) (O : GAKE_mod.GAKE_out) =
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: GAKEc.A_GAKE {-GAKE_mod.HROc.RO, -GAKEc.HROc.RO, -Meta_Red, -GAKEc.GAKEb, -GAKEb_st, -GAKE_mod.GAKEb }.
+declare module A <: GAKEc.A_GAKE {-GAKE_mod.HROc.RO, -GAKEc.HROc.RO, -Hon_Red, -Name_Red, -GAKEc.GAKEb, -GAKEc.GAKEb_hon, -GAKEb_st, -GAKE_mod.GAKEb }.
 
 declare axiom A_ll (G <: GAKEc.GAKE_out{-A}):
   islossless G.h =>
@@ -804,18 +957,176 @@ declare axiom A_ll (G <: GAKEc.GAKE_out{-A}):
   islossless A(G).run.
 
 
-lemma gake_st bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] =  Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res].
+lemma gake_hon bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] = Pr[GAKEc.E_GAKE(Hon_Red(GAKEc.GAKEb_hon(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO)), A).run(bit) @ &m : res].
 proof.
 byequiv => //.
 proc; inline.
-call (: ={b0, servers, c_smap, s_smap, tested}(GAKEc.GAKEb, GAKEb_st) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)); try sim />.
+wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
+              /\ (forall b, b \in GAKEc.GAKEb.servers{1} => b \in Hon_Red.servers{2} 
+                                      /\ get_pkey (oget GAKEc.GAKEb.servers{1}.[b]) = get_pkey_mod (oget Hon_Red.servers{2}.[b]))
+              /\ (forall b, b \in Hon_Red.servers{2} <=> b \in GAKEc.GAKEb_hon.servers{2})
+              /\ (forall i, i \notin GAKEc.GAKEb.c_smap{1} => i \notin GAKEc.GAKEb_hon.c_smap{2} /\ i \notin Hon_Red.dhc_smap{2})
+              /\ (forall i, i \in GAKEc.GAKEb.c_smap{1} => i \in GAKEc.GAKEb_hon.c_smap{2} \/ i \in Hon_Red.dhc_smap{2})
+              /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} <=> i \notin Hon_Red.dhc_smap{2})
+              /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} => i \in GAKEc.GAKEb.c_smap{1} /\ GAKEc.GAKEb.c_smap{1}.[i] = GAKEc.GAKEb_hon.c_smap{2}.[i])
+              /\ (forall i, i  \in Hon_Red.dhc_smap{2} => i \in GAKEc.GAKEb.c_smap{1} /\ GAKEc.GAKEb.c_smap{1}.[i] = Hon_Red.dhc_smap{2}.[i])
+              /\ (forall i, i \in Hon_Red.dhc_smap{2} => get_ir_test (oget Hon_Red.dhc_smap{2}.[i]) = false)
+              /\ (forall t, 1 <= card (get_partners_s t GAKEc.GAKEb.c_smap{1}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb.c_smap{1}) = false
+                   <=> 1 <= card (get_partners_s t GAKEc.GAKEb_hon.c_smap{2}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}) = false)
+).
+
++ sim />.
+
++ proc; inline.
+  sp 0 2; if => //.
+  + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+  auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+
++ proc; inline.
+  sp 1 4; if => //.
+  + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+  auto => />.
+
++ proc; inline.
+  sp 2 1; if => //. smt().
+  if {2} => //.
+  + rcondt {2} ^if. auto => />. admit.
+    sp; match = => //. auto => />. admit.
+    + auto => /> &1 &2 *. admit.
+    move => st.
+    match = => //.
+    + move => s pt ir.
+      auto => /> &1 &2 *. admit.
+    + move => s t k ir.
+      auto => />.
+    move => s t ir.
+    auto => />.
+  sp; match = => //. auto => />. admit.
+  + auto => /> &1 &2 *. admit.
+  move => st.
+  match = => //.
+  move => s pt ir.
+  auto => /> &1 &2 *. admit.
+
++ sim />.
+(*+ proc; inline.
+  sp; match = => //.
+  move => sk.
+  match = => //.
+  sp; match = => //.
+  + auto => />.
+  move => sts.
+  auto => /> &1 &2 *. split. move => nin.
+  move => b1 j0 s t k0 ir. 
+  case ((b1, j0) = (b{1},j{2})) => bjeq.
+  rewrite mem_set bjeq //=.
+  do rewrite get_setE //=.
+  move => *.
+
+admit.
+smt(get_setE mem_set in_fsetU in_fset1).*)
+
++ proc; inline.
+  sp 1 1; if {2} => //.
+  + sp; match = => //. auto => /#.
+    + auto => />.
+    move => st.
+    match = => //.
+    + move => s pt ir.
+      auto => /> &1 &2 *. admit.
+    + move => s t k ir.
+      auto => />.
+    move => s t ir.
+    auto => />.
+  match = => //. auto => /#.
+  move => st.
+  match = => //.
+  move => s pt ir.
+  sp; seq 1 1 : (#pre /\ r1{1} = tk{2}). auto => />.
+  if => //.
+  + admit.
+  + auto => /> &1 &2 *. admit.
+  auto => /> &1 &2 *. admit.
+
++ proc; inline.
+  sp 1 1; if {2} => //.
+  + sp; match = => //. auto => /#.
+    + auto => />.
+    move => st.    
+    match = => //.
+    + move => s pt ir.
+      auto => />.
+    + move => s t k ir.
+      if => //. 
+      + admit.
+      + auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1). admit. 
+      auto => />.
+    move => s t ir.
+    auto => />.
+  match = => //. auto => /#.
+  move => st.
+  match = => //.
+  move => s t k ir.
+  if => //.
+  + admit.
+  auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). admit. 
+
++ proc; inline.
+  sp; match = => //.
+  move => st.
+  match = => //.
+  move => s t k ir.
+  if => //.
+  + auto => /> &1 &2 *. smt().
+  auto => />.
+
++ admit.
+
++ proc; inline.
+  sp 1 1; if {2} => //.
+  + sp; match = => //. auto => /#.
+    + auto => />.
+    move => st.    
+    match = => //.
+    + move => s pt ir.
+      auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+    + move => s t k ir.
+      auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+    move => s t ir.
+    auto => />.
+  match = => //. auto => /#.
+  move => st.
+  match = => //.
+  + move => s pt ir.
+    auto => /> &1 &2 *. admit.
+  move => s t k ir.
+  auto => /> &1 &2 *. admit.
+
++ admit.
+
+admit. 
+
+admit.
+
+auto => />; smt(mem_empty).
+qed.
+
+
+
+
+
+lemma gake_st bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] =  Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res].
+proof.
+byequiv => //.
+proc; inline.
+call (: ={b0, servers, c_smap, s_smap, tested}(GAKEc.GAKEb_hon, GAKEb_st) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)); try sim />.
 
 + proc; inline.
   auto => />.
 qed.
 
 
-lemma gake_st_mod bit &m: `| Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] - Pr[GAKE_mod.E_GAKE(GAKE_mod.GAKEb(NTOR_S_mod(GAKE_mod.HROc.RO), NTOR_C_mod(GAKE_mod.HROc.RO), GAKE_mod.HROc.RO), Meta_Red(A)).run(bit) @ &m : res] | <= Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : GAKEb_st.stop].
+lemma gake_st_mod bit &m: `| Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO)), A).run(bit) @ &m : res] - Pr[GAKE_mod.E_GAKE(GAKE_mod.GAKEb(NTOR_S_mod(GAKE_mod.HROc.RO), NTOR_C_mod(GAKE_mod.HROc.RO), GAKE_mod.HROc.RO), Meta_Red(A)).run(bit) @ &m : res] | <= Pr[GAKEc.E_GAKE(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : GAKEb_st.stop].
 proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Meta_Red.O_GAKE.stop => //; first last.

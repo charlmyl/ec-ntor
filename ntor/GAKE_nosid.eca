@@ -540,6 +540,13 @@ module GAKEb (S: Server) (C: Client) (H : RO) : GAKE_out = {
   }
 }.
 
+(* ------------------------------------------------------------------------------------------ *)
+(* Defining honest version of original game *)
+module GAKEb_hon (S: Server) (C: Client) (H : RO) = GAKEb (S, C, H) with {
+  proc send_msg1 [
+    ^if ~ (m1 \in servers /\ !get_sr_ltk (oget servers.[m1]))
+  ]
+}.
 
 (********************************************************************************)
 (* Adversary and Experiment for GAKE game *)
