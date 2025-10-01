@@ -301,12 +301,12 @@ module GAKEb (S: Server) (C: Client) (H : RO) : GAKE_out = {
            c_smap.[i] <- Pending st' m2 (false, false, false);
           r <- Some m2;
         }
-      | Some st => {
+      | Some st => {(*
           match st with
           | Pending st pt ir => c_smap.[i] <- Aborted (Some st) (Some (pt, None)) ir;
           | Accepted _ _ _ _ => { }
           | Aborted _ _ _ => { }
-          end;
+          end;*)
         }
       end;
     }

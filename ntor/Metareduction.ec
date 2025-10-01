@@ -90,16 +90,10 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_out_i = {
       match st with
       | None => {
           (st', m2) <@ C.new_session(m1, pk_b);
-           c_smap.[i] <- Pending st' m2 (false, false, false);
+           c_smap.[i] <- Pending st' (m1, m2) (false, false, false);
           r <- Some m2;
         }
-      | Some st => {
-          match st with
-          | Pending st pt ir => c_smap.[i] <- Aborted (Some st) (Some (pt, None)) ir;
-          | Accepted _ _ _ _ => { }
-          | Aborted _ _ _ => { }
-          end;
-        }
+      | Some st => { }
       end;
     }
 
@@ -123,10 +117,10 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_out_i = {
           resp <@ S.respond_session(Some (b, sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
-            s_smap.[(b, j)] <- Accepted st' (m2, Some m3) k (false, false, false);
+            s_smap.[(b, j)] <- Accepted st' ((b, m2), Some m3) k (false, false, false);
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted None (Some (m2, None)) (false, false, false);
+            s_smap.[(b, j)] <- Aborted None (Some ((b, m2), None)) (false, false, false);
           }
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -358,16 +352,16 @@ import GAKE_mod.
 
 op rem_sid_c (s : pr_st_client GAKEc.instance_state) : pr_st_client_mod instance_state =
 match s with 
-| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) pt ir
-| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) t k ir
-| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) t ir
+| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) pt.`2 ir
+| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) ((t.`1).`2, t.`2) k ir
+| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) (Some (((oget t).`1).`2, (oget t).`2)) ir
 end.
 
 op rem_sid_s (s : pr_st_server GAKEc.instance_state) : pr_st_server_mod instance_state =
 match s with 
-| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) pt ir
-| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) t k ir
-| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) t ir
+| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) pt.`2 ir
+| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) ((t.`1).`2, t.`2)k ir
+| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) (Some (((oget t).`1).`2, (oget t).`2)) ir
 end.
 
 
@@ -409,7 +403,7 @@ module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
   var r <- None;
 
     r <@ O.init_s(b);
-    if (r <> None) {
+    if (b \notin servers) {
       servers.[b] <- Inner (oget r) false;
     }
 
@@ -420,7 +414,7 @@ module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
     var r <- None;
 
     r <@ O.set_cert(b, pk);
-    if (r <> None) {
+    if (b \notin servers) {
       servers.[b] <- Outer pk;
     }
 
@@ -432,7 +426,7 @@ module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
     var r <- None;
 
     if (m1 \in servers) {
-      if (!get_sr_out (oget servers.[m1])) {
+      if (!get_sr_in (oget servers.[m1]) /\ i \notin dhc_smap) {
         r <@ O.send_msg1(i, m1);
       } else {
         st_dh <- dhc_smap.[i];
@@ -442,15 +436,9 @@ module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
             pk_ce <- g ^ sk_ce;
             pk_b <- get_pkey_mod (oget servers.[m1]);
             r <- Some pk_ce;
-            dhc_smap.[i] <- GAKEc.Pending (m1, pk_b, sk_ce) pk_ce (false, false, false);
+            dhc_smap.[i] <- GAKEc.Pending (m1, pk_b, sk_ce) (m1, pk_ce) (false, false, false);
           }
-        | Some st => {
-            match st with
-            | GAKEc.Pending st pt ir => dhc_smap.[i] <- GAKEc.Aborted (Some st) (Some (pt, None)) ir;
-            | GAKEc.Accepted _ _ _ _ => { }
-            | GAKEc.Aborted _ _ _ => { }
-            end;
-          }
+        | Some st => { }
         end;
       }
     }
@@ -963,17 +951,29 @@ byequiv => //.
 proc; inline.
 wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
               /\ (forall b, b \in GAKEc.GAKEb.servers{1} => b \in Hon_Red.servers{2} 
-                                      /\ get_pkey (oget GAKEc.GAKEb.servers{1}.[b]) = get_pkey_mod (oget Hon_Red.servers{2}.[b]))
-              /\ (forall b, b \in Hon_Red.servers{2} <=> b \in GAKEc.GAKEb_hon.servers{2})
+                                      /\ get_pkey (oget GAKEc.GAKEb.servers{1}.[b]) = get_pkey_mod (oget Hon_Red.servers{2}.[b])
+                                      /\ (get_sr_in (oget Hon_Red.servers{2}.[b]) = get_sr_ltk (oget GAKEc.GAKEb.servers{1}.[b])))
+              /\ (forall b, b \in Hon_Red.servers{2} => b \in GAKEc.GAKEb.servers{1})
               /\ (forall i, i \notin GAKEc.GAKEb.c_smap{1} => i \notin GAKEc.GAKEb_hon.c_smap{2} /\ i \notin Hon_Red.dhc_smap{2})
               /\ (forall i, i \in GAKEc.GAKEb.c_smap{1} => i \in GAKEc.GAKEb_hon.c_smap{2} \/ i \in Hon_Red.dhc_smap{2})
-              /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} <=> i \notin Hon_Red.dhc_smap{2})
+              /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} => i \notin Hon_Red.dhc_smap{2})
+              /\ (forall i, i \in Hon_Red.dhc_smap{2} => i \notin GAKEc.GAKEb_hon.c_smap{2})
               /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} => i \in GAKEc.GAKEb.c_smap{1} /\ GAKEc.GAKEb.c_smap{1}.[i] = GAKEc.GAKEb_hon.c_smap{2}.[i])
               /\ (forall i, i  \in Hon_Red.dhc_smap{2} => i \in GAKEc.GAKEb.c_smap{1} /\ GAKEc.GAKEb.c_smap{1}.[i] = Hon_Red.dhc_smap{2}.[i])
               /\ (forall i, i \in Hon_Red.dhc_smap{2} => get_ir_test (oget Hon_Red.dhc_smap{2}.[i]) = false)
-              /\ (forall t, 1 <= card (get_partners_s t GAKEc.GAKEb.c_smap{1}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb.c_smap{1}) = false
-                   <=> 1 <= card (get_partners_s t GAKEc.GAKEb_hon.c_smap{2}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}) = false)
+            (*  /\ (forall t, 1 <= card (get_partners_s t GAKEc.GAKEb.c_smap{1}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb.c_smap{1}) = false
+                   <=> 1 <= card (get_partners_s t GAKEc.GAKEb_hon.c_smap{2}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}) = false)*)
 ).
+
+(* BAUSTELLE!!! 
+
+forall b j, (b, j) \in s_smap => all partners are in the inner c_smap, because servers.[b] is honest and all communication in c_smap
+
+forall i, i \in dhc_smap => I can never be tested and I have no untested partners and no fresh partners
+
+*)
+
+
 
 + sim />.
 
@@ -985,55 +985,34 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
 + proc; inline.
   sp 1 4; if => //.
   + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
-  auto => />.
+  auto => />. smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp 2 1; if => //. smt().
   if {2} => //.
-  + rcondt {2} ^if. auto => />. admit.
-    sp; match = => //. auto => />. admit.
-    + auto => /> &1 &2 *. admit.
+  + rcondt {2} ^if. auto => /#.
+    sp; match = => //. auto => /#.
+    + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
     move => st.
-    match = => //.
-    + move => s pt ir.
-      auto => /> &1 &2 *. admit.
-    + move => s t k ir.
-      auto => />.
-    move => s t ir.
     auto => />.
-  sp; match = => //. auto => />. admit.
-  + auto => /> &1 &2 *. admit.
-  move => st.
-  match = => //.
-  move => s pt ir.
-  auto => /> &1 &2 *. admit.
+  sp; match = => //. auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
+  + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
 
 + sim />.
-(*+ proc; inline.
-  sp; match = => //.
-  move => sk.
-  match = => //.
-  sp; match = => //.
-  + auto => />.
-  move => sts.
-  auto => /> &1 &2 *. split. move => nin.
-  move => b1 j0 s t k0 ir. 
-  case ((b1, j0) = (b{1},j{2})) => bjeq.
-  rewrite mem_set bjeq //=.
-  do rewrite get_setE //=.
-  move => *.
-
-admit.
-smt(get_setE mem_set in_fsetU in_fset1).*)
 
 + proc; inline.
   sp 1 1; if {2} => //.
   + sp; match = => //. auto => /#.
     + auto => />.
-    move => st.
+    move => sto.
     match = => //.
     + move => s pt ir.
-      auto => /> &1 &2 *. admit.
+      sp; seq 1 1 : (#pre /\ r1{1} = r2{2}). auto => />.
+      if => //.
+      + sp 2 2; if. auto => /#.
+        + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+        auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+      auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
     + move => s t k ir.
       auto => />.
     move => s t ir.
@@ -1044,7 +1023,7 @@ smt(get_setE mem_set in_fsetU in_fset1).*)
   move => s pt ir.
   sp; seq 1 1 : (#pre /\ r1{1} = tk{2}). auto => />.
   if => //.
-  + admit.
+  + admit. (* I need to fix RO stuff for the outer world *)
   + auto => /> &1 &2 *. admit.
   auto => /> &1 &2 *. admit.
 
@@ -1057,9 +1036,9 @@ smt(get_setE mem_set in_fsetU in_fset1).*)
     + move => s pt ir.
       auto => />.
     + move => s t k ir.
-      if => //. 
-      + admit.
-      + auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1).  split. smt(get_setE mem_set in_fsetU in_fset1). admit. 
+      if => //.
+      + admit. (* BAUSTELLE? *)
+      + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
       auto => />.
     move => s t ir.
     auto => />.
@@ -1068,8 +1047,8 @@ smt(get_setE mem_set in_fsetU in_fset1).*)
   match = => //.
   move => s t k ir.
   if => //.
-  + admit.
-  auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). admit. 
+  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
+  auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp; match = => //.
@@ -1077,10 +1056,17 @@ smt(get_setE mem_set in_fsetU in_fset1).*)
   match = => //.
   move => s t k ir.
   if => //.
-  + auto => /> &1 &2 *. smt().
+  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
   auto => />.
 
-+ admit.
++ proc; inline.
+  sp; match = => //.
+  + move => st.
+    match = => //.
+    move => kp. 
+    if => //.
+    + admit.
+    auto => /> &1 &2 *. split. admit. smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1102,13 +1088,46 @@ smt(get_setE mem_set in_fsetU in_fset1).*)
   move => s t k ir.
   auto => /> &1 &2 *. admit.
 
-+ admit.
++ proc; inline.
+  sp; match = => //.
+  move => st.    
+  match = => //.
+  move => s t k ir.
+  if => //.
+  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
+  auto => />.
 
-admit. 
++ proc; inline.
+  sp 1 1; if {2} => //.
+  + sp 0 2; if => //.
+    + match = => //. auto => /#.
+      + auto => />.
+      move => st.
+      match = => //. auto => /#.
+      + move => s t k ir.
+        if => //.
+        + admit. (* BAUSTELLE? *)
+        + if => //.
+          + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+          auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+        auto => />.
+      auto => />.
+    auto => />.
+  admit. (* BAUSTELLE? *)
 
-admit.
-
-auto => />; smt(mem_empty).
++ proc; inline.
+  sp 1 1; if => //.
+  match = => //.
+  move => st.
+  match = => //.
+  move => s t k ir.
+  if => //.
+  + admit. (* BAUSTELLE? *)
+  if => //.
+  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
+  auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
+search empty.
+auto => />; smt(mem_empty emptyE).
 qed.
 
 

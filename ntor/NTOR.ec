@@ -9,8 +9,6 @@ type pkey = group.
 type skey = exp.
 
 type key_mac, key, tag.
-type trace = pkey * (pkey * tag) option.
-type sid = (s_id * pkey) * trace.
 
 op [lossless] dtag : tag distr.
 op [lossless] dkey : key distr.
@@ -19,7 +17,6 @@ type pr_st_client = s_id * pkey * skey.
 type pr_st_server = s_id * skey * skey option.
 
 clone import GAKE as GAKEc with
-  type trace <- trace,
   type s_id <- s_id,
   type pkey <- pkey,
   type skey <- skey,

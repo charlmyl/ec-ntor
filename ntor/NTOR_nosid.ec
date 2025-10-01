@@ -11,7 +11,6 @@ type pr_st_client_mod = pkey * skey.
 type pr_st_server_mod = skey * skey option.
 
 clone import GAKE_nosid as GAKE_mod with
-  type trace <- trace,
   type pkey <- pkey,
   type skey <- skey,
   type key <- key,
