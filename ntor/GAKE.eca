@@ -40,6 +40,11 @@ with s = Pending _ pt _     => Some (pt, None)
 with s = Accepted _ t _ _  => Some t
 with s = Aborted _ t _     => t.
 
+op get_name (s: 'a instance_state) : s_id =
+with s = Pending _ pt _     => pt.`1
+with s = Accepted _ t _ _  => (t.`1).`1
+with s = Aborted _ t _     => ((oget t).`1).`1.
+
 op get_key (s: 'a instance_state) : key option =
 with s = Pending _ _ _    => None
 with s = Accepted _ _ k _ => Some k
@@ -90,6 +95,11 @@ with s_st = Dishonest pk => None.
 op get_sr_ltk s_st : bool =
 with s_st = Honest    _ => false
 with s_st = Corrupt   _ => true
+with s_st = Dishonest _ => true.
+
+op get_sr_dh s_st : bool =
+with s_st = Honest    _ => false
+with s_st = Corrupt   _ => false
 with s_st = Dishonest _ => true.
 
 (* helping operators for getting a set of all partners (with some specific revealed status *)
@@ -560,7 +570,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
 (* Defining honest version of original game *)
 module GAKEb_hon (S: Server) (C: Client) (H : RO) = GAKEb (S, C, H) with {
   proc send_msg1 [
-    ^if ~ (m1 \in servers /\ !get_sr_ltk (oget servers.[m1]))
+    ^if ~ (m1 \in servers /\ !get_sr_dh (oget servers.[m1]))
   ]
 }.
 

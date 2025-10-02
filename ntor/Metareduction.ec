@@ -6,11 +6,6 @@ require (*  *) DiffieHellman.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Introduce stop in original game *)
-op get_sr_dh s_st : bool =
-with s_st = Honest    _ => false
-with s_st = Corrupt   _ => false
-with s_st = Dishonest _ => true.
-
 module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_out_i = {
   var b0 : bool 
 
@@ -426,7 +421,7 @@ module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
     var r <- None;
 
     if (m1 \in servers) {
-      if (!get_sr_in (oget servers.[m1]) /\ i \notin dhc_smap) {
+      if (!get_sr_out (oget servers.[m1]) /\ i \notin dhc_smap) {
         r <@ O.send_msg1(i, m1);
       } else {
         st_dh <- dhc_smap.[i];
@@ -449,7 +444,7 @@ module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
   proc send_msg2 = O.send_msg2
 
   proc send_msg3(i: int, m3: pkey * tag) = {
-    var pk_b, sk_ce, b, tk, t_A, k;
+    var pk_b, sk_ce, b, t_A, k;
     var r <- None;
 
     if (i \notin dhc_smap) {
@@ -461,11 +456,7 @@ module Hon_Red (O : GAKEc.GAKE_out_i) : GAKEc.GAKE_out_i = {
           match st with
           | GAKEc.Pending st pt ir => {
               (b, pk_b, sk_ce) <- st;
-              tk <$ dtag `*` dkey;
-              if ((m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1) \notin dh_ro) {
-                dh_ro.[(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1)] <- tk;
-              }
-              (t_A, k) <- oget dh_ro.[(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1)];
+              (t_A, k) <@ O.h(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1);
               if (t_A = m3.`2) {
                 dhc_smap.[i] <- GAKEc.Accepted st (pt, Some m3) k ir;
                 r <- Some ();
@@ -933,18 +924,18 @@ declare axiom A_ll (G <: GAKEc.GAKE_out{-A}):
   islossless G.init_s =>
   islossless G.set_cert =>
   islossless G.send_msg1 =>
-  islossless G.send_msg2 =>
+  islossless G.send_msg2 => 
   islossless G.send_msg3 =>
   islossless G.c_rev_skey =>
-  islossless G.s_rev_skey =>
+  islossless G.s_rev_skey => 
   islossless G.rev_ltkey =>
   islossless G.c_rev_ephkey =>
   islossless G.s_rev_ephkey =>
   islossless G.c_test =>
   islossless G.s_test =>
-  islossless A(G).run.
-
-
+  islossless A(G).run. 
+ 
+ 
 lemma gake_hon bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] = Pr[GAKEc.E_GAKE(Hon_Red(GAKEc.GAKEb_hon(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO)), A).run(bit) @ &m : res].
 proof.
 byequiv => //.
@@ -952,15 +943,30 @@ proc; inline.
 wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
               /\ (forall b, b \in GAKEc.GAKEb.servers{1} => b \in Hon_Red.servers{2} 
                                       /\ get_pkey (oget GAKEc.GAKEb.servers{1}.[b]) = get_pkey_mod (oget Hon_Red.servers{2}.[b])
-                                      /\ (get_sr_in (oget Hon_Red.servers{2}.[b]) = get_sr_ltk (oget GAKEc.GAKEb.servers{1}.[b])))
+                                      /\ (get_sr_out (oget Hon_Red.servers{2}.[b]) = get_sr_dh (oget GAKEc.GAKEb.servers{1}.[b])))
               /\ (forall b, b \in Hon_Red.servers{2} => b \in GAKEc.GAKEb.servers{1})
               /\ (forall i, i \notin GAKEc.GAKEb.c_smap{1} => i \notin GAKEc.GAKEb_hon.c_smap{2} /\ i \notin Hon_Red.dhc_smap{2})
               /\ (forall i, i \in GAKEc.GAKEb.c_smap{1} => i \in GAKEc.GAKEb_hon.c_smap{2} \/ i \in Hon_Red.dhc_smap{2})
               /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} => i \notin Hon_Red.dhc_smap{2})
               /\ (forall i, i \in Hon_Red.dhc_smap{2} => i \notin GAKEc.GAKEb_hon.c_smap{2})
               /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} => i \in GAKEc.GAKEb.c_smap{1} /\ GAKEc.GAKEb.c_smap{1}.[i] = GAKEc.GAKEb_hon.c_smap{2}.[i])
-              /\ (forall i, i  \in Hon_Red.dhc_smap{2} => i \in GAKEc.GAKEb.c_smap{1} /\ GAKEc.GAKEb.c_smap{1}.[i] = Hon_Red.dhc_smap{2}.[i])
+              /\ (forall i, i \in Hon_Red.dhc_smap{2} => i \in GAKEc.GAKEb.c_smap{1} /\ GAKEc.GAKEb.c_smap{1}.[i] = Hon_Red.dhc_smap{2}.[i])
               /\ (forall i, i \in Hon_Red.dhc_smap{2} => get_ir_test (oget Hon_Red.dhc_smap{2}.[i]) = false)
+              /\ (forall b j bj, b \notin GAKEc.GAKEb.servers{1} => bj \in GAKEc.GAKEb_hon.s_smap{2}
+                   => (b, j) \notin GAKEc.GAKEb.s_smap{1} /\ get_name (oget GAKEc.GAKEb_hon.s_smap{2}.[bj]) <> b)
+              /\ (forall b j bj, b \in GAKEc.GAKEb.servers{1} => get_sr_dh (oget GAKEc.GAKEb.servers{1}.[b]) => bj \in GAKEc.GAKEb.s_smap{1}
+                   => (b, j) \notin GAKEc.GAKEb.s_smap{1} /\ get_name (oget GAKEc.GAKEb_hon.s_smap{2}.[bj]) <> b)
+              /\ (forall b, b \in GAKEc.GAKEb.servers{1} => get_sr_dh (oget GAKEc.GAKEb.servers{1}.[b]) 
+                   => get_sr_ltk (oget GAKEc.GAKEb.servers{1}.[b]))
+              /\ (forall i bj, i \in Hon_Red.dhc_smap{2} 
+                   => get_name (oget Hon_Red.dhc_smap{2}.[i]) <> get_name (oget GAKEc.GAKEb_hon.s_smap{2}.[bj]))
+              /\ (forall i st t k ir, i \in Hon_Red.dhc_smap{2} => Hon_Red.dhc_smap{2}.[i] = Some (Accepted st t k ir)
+                   => (1 <= card (get_partners_c t GAKEc.GAKEb_hon.s_smap{2})) = false)
+              /\ (forall b j st t k ir, (b, j) \in GAKEc.GAKEb.s_smap{1} => GAKEc.GAKEb.s_smap{1}.[(b, j)] = Some (Accepted st t k ir)
+                   => get_untested_partners_s t GAKEc.GAKEb.c_smap{1} = get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}
+                                       /\ get_fresh_partners_s t GAKEc.GAKEb.c_smap{1} = get_fresh_partners_s t GAKEc.GAKEb_hon.c_smap{2}
+                                       /\ get_partners_s t GAKEc.GAKEb.c_smap{1} = get_partners_s t GAKEc.GAKEb_hon.c_smap{2}
+                                       /\ get_origins_s t GAKEc.GAKEb.c_smap{1} = get_origins_s t GAKEc.GAKEb_hon.c_smap{2})
             (*  /\ (forall t, 1 <= card (get_partners_s t GAKEc.GAKEb.c_smap{1}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb.c_smap{1}) = false
                    <=> 1 <= card (get_partners_s t GAKEc.GAKEb_hon.c_smap{2}) /\ 1 <= card (get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}) = false)*)
 ).
@@ -969,7 +975,14 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
 
 forall b j, (b, j) \in s_smap => all partners are in the inner c_smap, because servers.[b] is honest and all communication in c_smap
 
+
+get_fresh_partner_s t GAKEc.GAKEb.c_smap{1} = get_fresh_partner_s t GAKEc.GAKEb_hon.c_smap{2} 
+
+
 forall i, i \in dhc_smap => I can never be tested and I have no untested partners and no fresh partners
+
+
+if in c_smap{1} and server in trace is dishonest then it must be in dhc_smap{2}
 
 *)
 
@@ -992,13 +1005,26 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
   if {2} => //.
   + rcondt {2} ^if. auto => /#.
     sp; match = => //. auto => /#.
-    + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+    + auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). 
+admit. (* some filter stuff again *)
     move => st.
     auto => />.
-  sp; match = => //. auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
-  + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+  sp; match {1} => //.
+  + match None {2} ^match. auto => /#.
+    auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split.
+move => i1 bj1.
+case (i1 = i{2}) => i1eq.
+rewrite i1eq mem_set //=.
+have: get_sr_in (oget Hon_Red.servers{2}.[m1{2}]). smt().
+admit.
+smt(get_setE mem_set in_fsetU in_fset1).
+split. smt(get_setE mem_set in_fsetU in_fset1). 
+admit. (* filter stuff *)
 
-+ sim />.
+admit. (* Something is wrong in the reduction *)
+
+
++ admit. (* NEU *)
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1007,12 +1033,21 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
     move => sto.
     match = => //.
     + move => s pt ir.
-      sp; seq 1 1 : (#pre /\ r1{1} = r2{2}). auto => />.
-      if => //.
-      + sp 2 2; if. auto => /#.
-        + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
-        auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
-      auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+      sp; seq 1 1 : (#pre /\ r1{1} = r3{2}). auto => />.
+      if. auto => />.
+      + sp 2 2; if => //. auto => /#.
+        + auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split.
+move => i1.
+case (i1 = i{2}) => i1eq.
+rewrite i1eq mem_set //=.
+split. smt(mem_set).
+have<-: (sk{1} = sk{2}).
+smt(get_setE mem_set in_fsetU in_fset1).
+smt(get_setE mem_set in_fsetU in_fset1). 
+smt(get_setE mem_set in_fsetU in_fset1).
+split. smt(get_setE mem_set in_fsetU in_fset1). admit. (* filter stuff *)
+        auto => /> &1 &2 *. admit. (* filter stuff *)
+      auto => /> &1 &2 *. admit. (* filter stuff *)
     + move => s t k ir.
       auto => />.
     move => s t ir.
@@ -1021,11 +1056,44 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
   move => st.
   match = => //.
   move => s pt ir.
-  sp; seq 1 1 : (#pre /\ r1{1} = tk{2}). auto => />.
+  sp; seq 1 1 : (#pre /\ ={r1}). auto => />.
   if => //.
-  + admit. (* I need to fix RO stuff for the outer world *)
-  + auto => /> &1 &2 *. admit.
-  auto => /> &1 &2 *. admit.
+  + sp 2 2; if => //. auto => /#.
+    + match Some {1} ^match. auto => /#.
+      auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split.
+move => i1.
+case (i1 = i{2}) => i1eq.
+rewrite i1eq mem_set //=.
+split. smt(mem_set).
+have->: sk{1} = k{2}. 
+smt(get_setE mem_set in_fsetU in_fset1).
+smt(get_setE mem_set in_fsetU in_fset1). 
+smt(get_setE mem_set in_fsetU in_fset1).
+split.
+smt(get_setE mem_set in_fsetU in_fset1). 
+split.
+smt(get_setE mem_set in_fsetU in_fset1).
+split.
+move => i1 st0 t k1 ir0.
+case (i1 = i{2}) => i1eq.
+rewrite i1eq mem_set //=.
+rewrite get_setE //=.
+move => [#] steq teq keq ireq.
+rewrite /get_partners_c.
+
+admit. (* HOW? *)
+
+smt(get_setE mem_set in_fsetU in_fset1). admit. (* filter stuff *)
+    auto => /> &1 &2 *. admit. (* filter stuff *)
+  sp 1 1; if => //. auto => /#.
+  + match Some {1} ^match. auto => /#.
+    auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split.
+have->: sk{1} = k{2}.
+have : (t_A{2}, k{2}) = (m3{2}.`2, sk{1}). admit.
+smt().
+smt(get_setE mem_set in_fsetU in_fset1).
+split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). admit.
+  auto => /> &1 &2 *. admit. (* filter stuff *)
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1037,8 +1105,8 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
       auto => />.
     + move => s t k ir.
       if => //.
-      + admit. (* BAUSTELLE? *)
-      + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+      + move => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+      + auto => /> &1 &2 *. admit. (* filter stuff *)
       auto => />.
     move => s t ir.
     auto => />.
@@ -1047,8 +1115,8 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
   match = => //.
   move => s t k ir.
   if => //.
-  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
-  auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+  + auto => /> &1 &2 *.  smt(get_setE mem_set in_fsetU in_fset1).
+  auto => /> &1 &2 *. admit. (* filter stuff *)
 
 + proc; inline.
   sp; match = => //.
@@ -1056,17 +1124,31 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
   match = => //.
   move => s t k ir.
   if => //.
-  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
-  auto => />.
+  + auto => /> &1 &2 *. split. move => []. smt(). admit. move => []. smt(). admit. (* BAUSTELLE? *)
+  auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1).
+ split. 
+move => i st0 t0 k0 ir0 iin iacc.
+have : t0 <> t. smt(get_setE mem_set in_fsetU in_fset1). move => tneq.
+have : (get_partners_c t0 GAKEc.GAKEb_hon.s_smap{2}.[b{2}, j{2} <- Accepted s t k (ir.`1, true, ir.`3)]) = (get_partners_c t0 GAKEc.GAKEb_hon.s_smap{2}). 
+rewrite /get_partners_c.
+rewrite filter_set.
+have->: !(fun (_ : s_id * int) (val : pr_st_server GAKEc.instance_state) =>
+         get_trace val = Some t0) (b{2}, j{2})
+        (Accepted s t k (ir.`1, true, ir.`3)). 
+smt(get_setE mem_set in_fsetU in_fset1).
+simplify.
+admit.  (* filter stuff *)
+smt(get_setE mem_set in_fsetU in_fset1).
+smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp; match = => //.
-  + move => st.
-    match = => //.
-    move => kp. 
-    if => //.
-    + admit.
-    auto => /> &1 &2 *. split. admit. smt(get_setE mem_set in_fsetU in_fset1).
+  move => st.
+  match = => //.
+  move => kp. 
+  if => //.
+  + auto => &1 &2 *. admit. (* difficult freshness condition *)
+  auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1075,18 +1157,18 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
     move => st.    
     match = => //.
     + move => s pt ir.
-      auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+      auto => /> &1 &2 *. admit. (* filter stuff *)
     + move => s t k ir.
-      auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+      auto => /> &1 &2 *. admit. (* filter stuff *)
     move => s t ir.
     auto => />.
   match = => //. auto => /#.
   move => st.
   match = => //.
   + move => s pt ir.
-    auto => /> &1 &2 *. admit.
+    auto => /> &1 &2 *. split. admit. (* untested_origins_c = None? *) admit. (* filter stuff *)
   move => s t k ir.
-  auto => /> &1 &2 *. admit.
+  auto => /> &1 &2 *. admit. (* filter stuff *)
 
 + proc; inline.
   sp; match = => //.
@@ -1094,8 +1176,8 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
   match = => //.
   move => s t k ir.
   if => //.
-  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
-  auto => />.
+  + auto => /#.
+  auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). admit. (* smae struggle as in the s_rev_skey ending *)
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1106,14 +1188,25 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
       match = => //. auto => /#.
       + move => s t k ir.
         if => //.
-        + admit. (* BAUSTELLE? *)
+        + auto => /#.
         + if => //.
-          + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
-          auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+          + auto => /> &1 &2 *. admit. (* filter stuff *)
+          auto => /> &1 &2 *. admit. (* filter stuff *)
         auto => />.
       auto => />.
     auto => />.
-  admit. (* BAUSTELLE? *)
+  if {1} => //.
+  match {1} => //.
+  match {1} => //.
+  rcondf {1} ^if. auto => /> &hr *. right; right.
+rewrite /fresh_partner_c.
+have: i{m0} \in (get_origins_c t'{hr} GAKEc.GAKEb_hon.s_smap{m0}).
+ admit. (* fresh_partner_c = Some false - there is an origin with that trace, but it is in dhc_smap and therefore not fresh 
+
+That is not true!!! I don't have a partner in s_smap , because I started talking to a dishonest server
+
+*)
+  auto => />.
 
 + proc; inline.
   sp 1 1; if => //.
@@ -1122,11 +1215,12 @@ forall i, i \in dhc_smap => I can never be tested and I have no untested partner
   match = => //.
   move => s t k ir.
   if => //.
-  + admit. (* BAUSTELLE? *)
+  + auto => /> &1 &2 *. smt().
   if => //.
-  + auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
-  auto => /> &1 &2 *. admit. (* BAUSTELLE? *)
-search empty.
+  + auto => /> &1 &2 *. split. smt(get_setE mem_set in_fsetU in_fset1).
+ split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. smt(get_setE mem_set in_fsetU in_fset1). split. admit. (* same as end of s_rev_skey and ephkey *) smt(get_setE mem_set in_fsetU in_fset1).
+  auto => /> &1 &2 *. admit. (* same again*)
+
 auto => />; smt(mem_empty emptyE).
 qed.
 
