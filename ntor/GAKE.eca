@@ -516,7 +516,8 @@ module GAKEb (S: Server) (C: Client) (H : RO) = {
              and not all partner instances are unfresh can be tested *)
           if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget GAKEb.c_smap.[i]) \/ get_ir_eph (oget GAKEb.c_smap.[i]) 
-                  \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false)) {
+                  \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false
+                  \/ get_sr_dh (oget servers.[get_name st]))) {
               if (b0 = false) {
                 k <- Some k';
                 GAKEb.c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
