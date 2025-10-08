@@ -988,43 +988,19 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
               /\ (forall i, i \in Hon_Red.dhc_smap{2} => get_ir_test (oget Hon_Red.dhc_smap{2}.[i]) = false
                                        /\ get_name (oget Hon_Red.dhc_smap{2}.[i]) \in GAKEb_hon.servers{2}
                                        /\ get_sr_dh (oget GAKEb_hon.servers{2}.[get_name (oget Hon_Red.dhc_smap{2}.[i])]))
-
-
-        (*      /\ (forall i st pt ir, i \in Hon_Red.dhc_smap{2} => Hon_Red.dhc_smap{2}.[i] = Some (Pending st pt ir)
-                   => get_name (oget Hon_Red.dhc_smap{2}.[i]) \in GAKEb_hon.servers{2}
-                                       /\ get_sr_dh (oget GAKEb_hon.servers{2}.[get_name (oget Hon_Red.dhc_smap{2}.[i])])) 
-              /\ (forall i st t k ir, i \in Hon_Red.dhc_smap{2} => Hon_Red.dhc_smap{2}.[i] = Some (Accepted st t k ir)
-                   => get_name (oget Hon_Red.dhc_smap{2}.[i]) \in GAKEb_hon.servers{2}
-                                       /\ get_sr_dh (oget GAKEb_hon.servers{2}.[get_name (oget Hon_Red.dhc_smap{2}.[i])])) *)
-
               /\ (forall b j , b \notin GAKEc.GAKEb_hon.servers{2} => (b, j) \notin GAKEc.GAKEb_hon.s_smap{2})
-              /\ (forall b j, (b, j) \in GAKEc.GAKEb_hon.s_smap{2} => get_name (oget GAKEc.GAKEb_hon.s_smap{2}.[(b, j)]) = b)
+              /\ (forall b j, (b, j) \in GAKEc.GAKEb_hon.s_smap{2} => get_name (oget GAKEc.GAKEb_hon.s_smap{2}.[(b, j)]) = b
+                                       /\ (exists pk m3, get_trace (oget GAKEc.GAKEb_hon.s_smap{2}.[(b, j)]) = Some ((b, pk), Some m3)))
               /\ (forall b j, b \in GAKEc.GAKEb_hon.servers{2} => get_sr_dh (oget GAKEc.GAKEb_hon.servers{2}.[b])
                    => (b, j) \notin GAKEc.GAKEb_hon.s_smap{2} /\ get_sr_ltk (oget GAKEc.GAKEb_hon.servers{2}.[b]))
               /\ (forall i j, i \in Hon_Red.dhc_smap{2}  
                    => (get_name (oget Hon_Red.dhc_smap{2}.[i]), j) \notin GAKEc.GAKEb_hon.s_smap{2})
-              /\ (forall i st t k ir, i \in GAKEc.GAKEb_hon.c_smap{2} => GAKEc.GAKEb_hon.c_smap{2}.[i] = Some (Accepted st t k ir)
-                   => (exists j, (get_name (oget GAKEc.GAKEb_hon.c_smap{2}.[i]), j) \in GAKEc.GAKEb_hon.s_smap{2})) (* do I need to add accepted server *)
-
               /\ (forall i st pt ir m3, i \in Hon_Red.dhc_smap{2} => Hon_Red.dhc_smap{2}.[i] = Some (Pending st pt ir)
                    => (1 <= card (get_partners_c (pt, Some m3) GAKEc.GAKEb_hon.s_smap{2})) = false)
               /\ (forall i st pt ir, i \in Hon_Red.dhc_smap{2} => Hon_Red.dhc_smap{2}.[i{2}] = Some (Pending st pt ir)
                    => (1 <= card (get_origins_c (pt, None) GAKEc.GAKEb_hon.s_smap{2}) = false))
               /\ (forall i st t k ir, i \in Hon_Red.dhc_smap{2} => Hon_Red.dhc_smap{2}.[i] = Some (Accepted st t k ir)
-                   => (1 <= card (get_partners_c t GAKEc.GAKEb_hon.s_smap{2})) = false)
-
-
-         (*     /\ (forall b j st t k ir, (b, j) \in GAKEc.GAKEb.s_smap{1} => GAKEc.GAKEb.s_smap{1}.[(b, j)] = Some (Accepted st t k ir)
-                   => get_untested_partners_s t GAKEc.GAKEb.c_smap{1} = get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}
-                                       /\ get_fresh_partners_s t GAKEc.GAKEb.c_smap{1} = get_fresh_partners_s t GAKEc.GAKEb_hon.c_smap{2}
-                                       /\ get_partners_s t GAKEc.GAKEb.c_smap{1} = get_partners_s t GAKEc.GAKEb_hon.c_smap{2}
-                                       /\ get_origins_s t GAKEc.GAKEb.c_smap{1} = get_origins_s t GAKEc.GAKEb_hon.c_smap{2})*)
-
-              /\ (forall b j t, (b, j) \in GAKEc.GAKEb_hon.s_smap{2} /\ t = (oget (get_trace (oget GAKEc.GAKEb_hon.s_smap{2}.[b, j])))
-                   => get_untested_partners_s t GAKEc.GAKEb.c_smap{1} = get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}
-                                       /\ get_partners_s t GAKEc.GAKEb.c_smap{1} = get_partners_s t GAKEc.GAKEb_hon.c_smap{2})
-
-).
+                   => (1 <= card (get_partners_c t GAKEc.GAKEb_hon.s_smap{2})) = false)).
 
 + sim />.
 
@@ -1043,49 +1019,65 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
   if {2} => //.
   + rcondt {2} ^if. auto => /#.
     sp; match = => //. auto => /> &2 *. smt(joinE).
-    + auto => /> &1 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1). 
-      + rewrite -fmap_eqP. smt(joinE get_setE).
-      + admit. (* exists *)
-      admit. (* filter stuff *)
+    + auto => /> &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1). 
+      rewrite -fmap_eqP. smt(joinE get_setE).
     move => st.
     auto => />. 
   sp; match {1} => //.
   + rcondt {2} ^if. auto => /#.
-    auto => /> &2 *. do !split; 2..6: smt(get_setE mem_set in_fsetU in_fset1 joinE).
+    auto => /> &2 ? ? ? ? ? ? ? ? inv ? ? ? ? ? ? ? sk *. do !split; 2..6: smt(get_setE mem_set in_fsetU in_fset1 joinE).
     + rewrite -fmap_eqP. smt(joinE get_setE).
-    + 
-
-move => i1 st0 pt ir0 m3.
-case (i1 = i{2}) => ieq.
-rewrite ieq mem_set//=.
-rewrite get_setE //=.
-move => [#] steq pteq ireq.
-rewrite /get_partners_c.
-have->: (fdom
-     (filter
-        (fun (_ : s_id * int) (val : pr_st_server GAKEc.instance_state) =>
-           get_trace val = Some (pt, Some m3)) GAKEb_hon.s_smap{2})) = fset0.
-admit. (* I don't know how to prove this... *)
-search card fset0.
-smt(fcards0).
-smt(get_setE mem_set in_fsetU in_fset1).
-
-
-move => i1 st0 pt ir.
-case (i1 = i{2}) => ieq.
-rewrite ieq mem_set//=.
-rewrite get_setE //=.
-move => [#] steq pteq ireq.
-rewrite /get_origins_c.
-admit.
-smt(get_setE mem_set in_fsetU in_fset1).
-
-smt(get_setE mem_set in_fsetU in_fset1).
-admit. (* filter stuff *)
-
+    + move => i1 st0 pt ir0 m3.
+      case (i1 = i{2}) => ieq.
+      + rewrite ieq mem_set //=.
+        rewrite get_setE //=.
+        move => [#] steq pteq ireq.
+        rewrite /get_partners_c.
+        case ((i{2} \notin Hon_Red.dhc_smap{2})) => indhc; 2: by smt(get_setE mem_set in_fsetU in_fset1 joinE).
+        have->: (fdom (filter (fun (_ : s_id * int) (val : pr_st_server GAKEc.instance_state) => get_trace val = Some (pt, Some m3)) GAKEb_hon.s_smap{2})) = fset0.
+        + rewrite fsetP.
+          move => x.
+          rewrite mem_fdom mem_filter.
+          have->: !(x \in GAKEb_hon.s_smap{2} /\ (fun (_ : s_id * int) (val : pr_st_server GAKEc.instance_state) =>
+              get_trace val = Some (pt, Some m3)) x (oget GAKEb_hon.s_smap{2}.[x])).
+          + rewrite negb_and.
+            case (x \in GAKEb_hon.s_smap{2}); 2: by smt().
+            simplify.
+            rewrite -pteq.
+            move => xin.
+            have := inv x.`1 x.`2.
+            by smt(get_setE in_fset0 joinE).
+          by smt(get_setE in_fset0 joinE).
+        by smt(fcards0).
+      by smt(get_setE mem_set in_fsetU in_fset1).
+    + move => i1 st0 pt ir.
+      case (i1 = i{2}) => ieq.
+      + rewrite ieq mem_set//=.
+        rewrite get_setE //=.
+        move => [#] steq pteq ireq.
+        rewrite /get_origins_c.
+        case ((i{2} \notin Hon_Red.dhc_smap{2})) => indhc; 2: by smt(get_setE mem_set in_fsetU in_fset1 joinE).
+        have->: (fdom (filter (fun (_ : s_id * int) (val : pr_st_server GAKEc.instance_state) 
+          => exists (m2o : (pkey * tag) option), get_trace val = Some (pt, m2o)) GAKEb_hon.s_smap{2})) = fset0.
+        + rewrite fsetP.
+          move => x.
+          rewrite mem_fdom mem_filter. 
+          have->: !(x \in GAKEb_hon.s_smap{2} /\ (fun (_ : s_id * int) (val : pr_st_server GAKEc.instance_state) =>
+              exists (m2o : (pkey * tag) option), get_trace val = Some (pt, m2o)) x (oget GAKEb_hon.s_smap{2}.[x])).
+          + rewrite negb_and.
+            case (x \in GAKEb_hon.s_smap{2}); 2: by smt().
+            simplify.
+            rewrite -pteq.
+            move => xin. 
+            rewrite negb_exists.
+            have := inv x.`1 x.`2.
+            by smt(get_setE in_fset0 joinE).
+          by smt(get_setE in_fset0 joinE).
+        by smt(fcards0).
+      by smt(get_setE mem_set in_fsetU in_fset1).
+    by smt(get_setE mem_set in_fsetU in_fset1).
   rcondf {2} ^if. auto => /#.
   auto => />.
-
 
 + proc; inline.
   sp; match = => //.
@@ -1097,71 +1089,59 @@ admit. (* filter stuff *)
   sp; seq 1 1 : (#pre /\ ={sk_se}). auto => />.
   sp; seq 1 1 : (#pre /\ ={r1}). auto => />. 
   if => //.
-  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..5: smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 pt ir0 m3 iin ipen.
-rewrite get_setE //=.
-rewrite /get_partners_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv i1 st0 pt ir0 m3 iin ipen.
-rewrite /get_partners_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 pt ir0 iin ipen.
-rewrite get_setE //=.
-rewrite /get_origins_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv2 i1 st0 pt ir0 iin ipen.
-rewrite /get_origins_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 t k0 ir0 iin ipen.
-rewrite get_setE //=.
-rewrite /get_partners_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv3 i1 st0 t k0 ir0 iin ipen.
-rewrite /get_partners_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-admit. (* filter stuff *)
-
-  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..5: smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 pt ir0 m3 iin ipen.
-rewrite /get_partners_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv i1 st0 pt ir0 m3 iin ipen.
-rewrite /get_partners_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 pt ir0 iin ipen.
-rewrite /get_origins_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv2 i1 st0 pt ir0 iin ipen.
-rewrite /get_origins_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 t k0 ir0 iin ipen.
-rewrite /get_partners_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv3 i1 st0 t k0 ir0 iin ipen.
-rewrite /get_partners_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-admit. (* filter stuff *)
-
+  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1).
+    + move => i1 st0 pt ir0 m3 iin ipen.
+      rewrite get_setE //=.
+      rewrite /get_partners_c.
+      rewrite filter_set.
+      rewrite rem_id. 
+      rewrite mem_filter negb_and. smt().
+      have := inv i1 st0 pt ir0 m3 iin ipen.
+      rewrite /get_partners_c. 
+      by smt(get_setE mem_set in_fsetU in_fset1). 
+    + move => i1 st0 pt ir0 iin ipen.
+      rewrite get_setE //=.
+      rewrite /get_origins_c.
+      rewrite filter_set.
+      rewrite rem_id. 
+      rewrite mem_filter negb_and. smt().
+      have := inv2 i1 st0 pt ir0 iin ipen.
+      rewrite /get_origins_c. 
+      by smt(get_setE mem_set in_fsetU in_fset1).   
+    move => i1 st0 t k0 ir0 iin ipen.
+    rewrite get_setE //=.
+    rewrite /get_partners_c.
+    rewrite filter_set.
+    rewrite rem_id. 
+    rewrite mem_filter negb_and. smt().
+    have := inv3 i1 st0 t k0 ir0 iin ipen.
+    rewrite /get_partners_c. 
+    by smt(get_setE mem_set in_fsetU in_fset1).
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1).
+  + move => i1 st0 pt ir0 m3 iin ipen.
+    rewrite /get_partners_c.
+    rewrite filter_set.
+    rewrite rem_id. 
+    rewrite mem_filter negb_and. smt().
+    have := inv i1 st0 pt ir0 m3 iin ipen.
+    rewrite /get_partners_c. 
+    by smt(get_setE mem_set in_fsetU in_fset1).
+  + move => i1 st0 pt ir0 iin ipen.
+    rewrite /get_origins_c.
+    rewrite filter_set.
+    rewrite rem_id. 
+    rewrite mem_filter negb_and. smt().
+    have := inv2 i1 st0 pt ir0 iin ipen.
+    rewrite /get_origins_c. 
+    by smt(get_setE mem_set in_fsetU in_fset1). 
+  move => i1 st0 t k0 ir0 iin ipen.
+  rewrite /get_partners_c.
+  rewrite filter_set.
+  rewrite rem_id. 
+  rewrite mem_filter negb_and. smt().
+  have := inv3 i1 st0 t k0 ir0 iin ipen.
+  rewrite /get_partners_c. 
+  by smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1174,24 +1154,16 @@ admit. (* filter stuff *)
       if. auto => />.
       + sp 2 2; if => //. auto => /#.
         + auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
-          + rewrite -fmap_eqP. have->: sk{1} = sk{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
-          + admit. (* exists *)
-          admit. (* filter stuff *)
+          rewrite -fmap_eqP. have->: sk{1} = sk{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
         auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
-        + rewrite -fmap_eqP. smt(joinE get_setE).
-        + admit. (* exists *)
-        admit. (* filter stuff *)
+        rewrite -fmap_eqP. smt(joinE get_setE).
       sp 1 1; if => //. auto => /#.
       + auto => /> &1 &2 rol ror *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
-        + rewrite -fmap_eqP. 
-          have->: sk{1} = sk{2}. have : (t_A0{2}, sk{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
-          smt(joinE get_setE).
-        + admit. (* exists *)
-        admit. (* filter stuff *)
+        rewrite -fmap_eqP. 
+        have->: sk{1} = sk{2}. have : (t_A0{2}, sk{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
+        by smt(joinE get_setE).
       auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
-      + rewrite -fmap_eqP. smt(joinE get_setE).
-      + admit. (* exists *)
-      admit. (* filter stuff *)
+      rewrite -fmap_eqP. smt(joinE get_setE).
     + move => s t k ir.
       auto => />.
     move => s t ir.
@@ -1205,21 +1177,17 @@ admit. (* filter stuff *)
   + sp 2 2; if => //. auto => /#.
     + match Some {1} ^match. auto => /#.
       auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
-      + rewrite -fmap_eqP. have->: sk{1} = k{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
-      admit. (* filter stuff *)
+      rewrite -fmap_eqP. have->: sk{1} = k{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
     auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1). 
-    + rewrite -fmap_eqP. smt(joinE get_setE).
-    admit. (* filter stuff *)
+    rewrite -fmap_eqP. smt(joinE get_setE).
   sp 1 1; if => //. auto => /#.
   + match Some {1} ^match. auto => /#.
     auto => /> &1 &2 rol ror *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
-    + rewrite -fmap_eqP. 
-      have->: sk{1} = k{2}. have : (t_A{2}, k{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
-      smt(joinE get_setE).
-    admit. (* filter stuff *)
+    rewrite -fmap_eqP. 
+    have->: sk{1} = k{2}. have : (t_A{2}, k{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
+    by smt(joinE get_setE).
   auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
-  + rewrite -fmap_eqP. smt(joinE get_setE).
-  admit. (* filter stuff *)
+  rewrite -fmap_eqP. smt(joinE get_setE).
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1233,9 +1201,7 @@ admit. (* filter stuff *)
       if => //.
       + move => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
       + auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
-        + rewrite -fmap_eqP. smt(joinE get_setE). 
-        + admit. (* exists *)
-        admit. (* filter stuff *)
+        rewrite -fmap_eqP. smt(joinE get_setE). 
       auto => />.
     move => s t ir.
     auto => />.
@@ -1246,8 +1212,7 @@ admit. (* filter stuff *)
   if => //.
   + auto => /> &1 &2 *.  smt(get_setE mem_set in_fsetU in_fset1).
   auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1 joinE).  
-  + rewrite -fmap_eqP. smt(joinE get_setE).
-  admit. (* filter stuff *)
+  rewrite -fmap_eqP. smt(joinE get_setE).
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1258,38 +1223,48 @@ admit. (* filter stuff *)
     + auto => />.
     + move => s t k ir.
       if => //.
-      + auto => />. admit. (* prove partnering *)
-      + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1). 
-        + admit. (* exists *)
-
-move => i1 st0 pt ir0 m3 iin ipen.
-rewrite /get_partners_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv i1 st0 pt ir0 m3 iin ipen.
-rewrite /get_partners_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 pt ir0 iin ipen.
-rewrite /get_origins_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv2 i1 st0 pt ir0 iin ipen.
-rewrite /get_origins_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-move => i1 st0 t0 k0 ir0 iin ipen.
-rewrite /get_partners_c.
-rewrite filter_set.
-rewrite rem_id. 
-rewrite mem_filter negb_and. smt().
-have := inv3 i1 st0 t0 k0 ir0 iin ipen.
-rewrite /get_partners_c. 
-smt(get_setE mem_set in_fsetU in_fset1).
-
-        admit. (* filter stuff *)
+      + auto => /> &1 &2 *. 
+        rewrite /untested_partner_s.
+        rewrite /get_partners_s /get_untested_partners_s.
+        have->: (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t) (GAKEb_hon.c_smap{1} + Hon_Red.dhc_smap{1}))) 
+            = (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t) GAKEb_hon.c_smap{1})).
+        + rewrite fsetP.
+          move => x.
+          do rewrite mem_fdom mem_filter.
+          by smt(joinE).
+        have->: (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false)
+             (GAKEb_hon.c_smap{1} + Hon_Red.dhc_smap{1}))) = (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) =>
+                get_trace val = Some t /\ get_ir_test val = false) GAKEb_hon.c_smap{1})). 
+        + rewrite fsetP.
+          move => x.
+          do rewrite mem_fdom mem_filter.
+          by smt(joinE).
+        by smt().
+      + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1). 
+        + move => i1 st0 pt ir0 m3 iin ipen.
+          rewrite /get_partners_c.
+          rewrite filter_set.
+          rewrite rem_id. 
+          rewrite mem_filter negb_and. smt().
+          have := inv i1 st0 pt ir0 m3 iin ipen.
+          rewrite /get_partners_c. 
+          by smt(get_setE mem_set in_fsetU in_fset1). 
+        + move => i1 st0 pt ir0 iin ipen.
+          rewrite /get_origins_c.
+          rewrite filter_set.
+          rewrite rem_id. 
+          rewrite mem_filter negb_and. smt().
+          have := inv2 i1 st0 pt ir0 iin ipen.
+          rewrite /get_origins_c. 
+          by smt(get_setE mem_set in_fsetU in_fset1).
+        move => i1 st0 t0 k0 ir0 iin ipen.
+        rewrite /get_partners_c.
+        rewrite filter_set.
+        rewrite rem_id. 
+        rewrite mem_filter negb_and. smt().
+        have := inv3 i1 st0 t0 k0 ir0 iin ipen.
+        rewrite /get_partners_c. 
+        by smt(get_setE mem_set in_fsetU in_fset1).
       auto => />.
     auto => />.
   auto => /#.
@@ -1302,13 +1277,33 @@ smt(get_setE mem_set in_fsetU in_fset1).
     match = => //.
     + move => kp. 
       if => //.
-      + auto => />. smt(joinE).
+      + auto => /> &2 *.
+        have : (forall b j t, (b, j) \in GAKEc.GAKEb_hon.s_smap{2} /\ t = (oget (get_trace (oget GAKEc.GAKEb_hon.s_smap{2}.[b, j])))
+            => get_untested_partners_s t (GAKEb_hon.c_smap{2} + Hon_Red.dhc_smap{2}) = get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}
+            /\ get_partners_s t (GAKEb_hon.c_smap{2} + Hon_Red.dhc_smap{2}) = get_partners_s t GAKEc.GAKEb_hon.c_smap{2}).
+        + rewrite /untested_partner_s.
+          rewrite /get_partners_s /get_untested_partners_s.
+          move => b1 j t [] bjin teq.
+          have->: (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false) (GAKEb_hon.c_smap{2} 
+              + Hon_Red.dhc_smap{2}))) = (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) 
+              => get_trace val = Some t /\ get_ir_test val = false) GAKEb_hon.c_smap{2})).
+          + rewrite fsetP.
+            move => x.
+            do rewrite mem_fdom mem_filter.
+            smt(joinE).
+          have->: (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t) (GAKEb_hon.c_smap{2} + Hon_Red.dhc_smap{2}))) = 
+              (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t) GAKEb_hon.c_smap{2})). 
+          + rewrite fsetP.
+            move => x.
+            do rewrite mem_fdom mem_filter.
+            smt(joinE).
+          smt().
+        smt(joinE).
       + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
       auto => />.
     + auto => />.
     auto => />.
   auto => />. smt(joinE).
-
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1318,15 +1313,11 @@ smt(get_setE mem_set in_fsetU in_fset1).
     match = => //.
     + move => s pt ir.
       auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
-      + rewrite -fmap_eqP. smt(joinE get_setE). 
-      + admit. (* exists *)
-      admit. (* filter stuff *)
+      rewrite -fmap_eqP. smt(joinE get_setE). 
     + move => s t k ir.
       if => //. auto => />. smt(joinE).
       + auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
-        + rewrite -fmap_eqP. smt(joinE get_setE). 
-        + admit. (* exists *)
-        admit. (* filter stuff *)
+        rewrite -fmap_eqP. smt(joinE get_setE). 
       auto => />.
     move => s t ir.
     auto => />.
@@ -1334,14 +1325,16 @@ smt(get_setE mem_set in_fsetU in_fset1).
   move => st.
   match = => //.
   + move => s pt ir.
-    rcondf {1} ^if. auto => />. admit. (* partnering notion *)
-    auto => /> &2 *. admit. (* WHAT THE F *)
+    rcondt {1} ^if. auto => /#.
+    auto => /> &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
+    rewrite -fmap_eqP. smt(joinE get_setE). 
   move => s t k ir.
   if => //.
-  + admit. (* partnering notion *)
+  + auto => /> &1 &2 *.
+    have->: untested_partner_c t GAKEb_hon.s_smap{1} = None by rewrite /untested_partner_c; smt().
+    by smt().
   auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
-  + rewrite -fmap_eqP. smt(joinE get_setE). 
-  admit. (* filter stuff *)
+  rewrite -fmap_eqP. smt(joinE get_setE). 
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1352,12 +1345,48 @@ smt(get_setE mem_set in_fsetU in_fset1).
     + auto => />.
     + move => s t k ir.
       if => //.
-      + auto => /> &1 &2 *. admit. (* partnering notion *)
-      + auto => /> &1 &2 *. do !split; 1..5: smt(get_setE mem_set in_fsetU in_fset1).  
-        + admit. (* copy from above *) 
-        + admit. (* copy from above *) 
-        + admit. (* copy from above *)
-        admit. (* filter stuff *)
+      + auto => /> &1 &2 *. 
+        rewrite /untested_partner_s.
+        rewrite /get_partners_s /get_untested_partners_s.
+        have->: (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t) (GAKEb_hon.c_smap{1} + Hon_Red.dhc_smap{1}))) 
+          = (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t) GAKEb_hon.c_smap{1})).
+        + rewrite fsetP.
+          move => x.
+          do rewrite mem_fdom mem_filter.
+          by smt(joinE).
+        have->: (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false)
+             (GAKEb_hon.c_smap{1} + Hon_Red.dhc_smap{1}))) = (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) =>
+                get_trace val = Some t /\ get_ir_test val = false) GAKEb_hon.c_smap{1})). 
+        + rewrite fsetP.
+          move => x.
+          do rewrite mem_fdom mem_filter.
+          by smt(joinE).
+        by smt().
+      + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1).
+        + move => i1 st0 pt ir0 m3 iin ipen.
+          rewrite /get_partners_c.
+          rewrite filter_set.
+          rewrite rem_id. 
+          rewrite mem_filter negb_and. smt().
+          have := inv i1 st0 pt ir0 m3 iin ipen.
+          rewrite /get_partners_c. 
+          by smt(get_setE mem_set in_fsetU in_fset1).
+        + move => i1 st0 pt ir0 iin ipen.
+          rewrite /get_origins_c.
+          rewrite filter_set.
+          rewrite rem_id. 
+          rewrite mem_filter negb_and. smt().
+          have := inv2 i1 st0 pt ir0 iin ipen.
+          rewrite /get_origins_c. 
+          by smt(get_setE mem_set in_fsetU in_fset1).
+        move => i1 st0 t0 k0 ir0 iin ipen.
+        rewrite /get_partners_c.
+        rewrite filter_set.
+        rewrite rem_id. 
+        rewrite mem_filter negb_and. smt().
+        have := inv3 i1 st0 t0 k0 ir0 iin ipen.
+        rewrite /get_partners_c. 
+        by smt(get_setE mem_set in_fsetU in_fset1).
       auto => />.
     auto => />.
   auto => /#.
@@ -1374,13 +1403,9 @@ smt(get_setE mem_set in_fsetU in_fset1).
         + auto => /#.
         + if => //.
           + auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).
-            + rewrite -fmap_eqP. smt(joinE get_setE).
-            + admit. (* exists *)
-            admit. (* filter stuff *)  
+            rewrite -fmap_eqP. smt(joinE get_setE). 
           auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).
-          + rewrite -fmap_eqP. smt(joinE get_setE).
-          + admit. (* exists *)
-          admit. (* filter stuff *) 
+          rewrite -fmap_eqP. smt(joinE get_setE). 
         auto => />.
       auto => />.
     auto => />.
@@ -1410,7 +1435,7 @@ smt(get_setE mem_set in_fsetU in_fset1).
           + rewrite fsetP.
             move => x.
             do rewrite mem_fdom mem_filter.
-            smt(joinE).
+            by smt(joinE).
           have->: (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) =>
                   (exists (m2o : (pkey * tag) option), get_trace val = Some (t.`1, m2o)) /\ get_ir_test val = false /\ get_ir_sess val = false /\ get_ir_eph val = false)
                (GAKEb_hon.c_smap{1} + Hon_Red.dhc_smap{1}))) = (fdom (filter (fun (_ : int) (val : pr_st_client GAKEc.instance_state) =>
@@ -1419,11 +1444,69 @@ smt(get_setE mem_set in_fsetU in_fset1).
           + rewrite fsetP.
             move => x.
             do rewrite mem_fdom mem_filter.
-            smt(joinE).
-          smt().
+            by smt(joinE).
+          by smt().
         + if => //.
-          + auto => /> &1 &2 *. split. admit. do !split; 1..5: smt(get_setE mem_set in_fsetU in_fset1). admit. (* no partners proof *) admit. (* no partners proof *) admit. (* no partners proof *) admit. (* filter stuff *)
-          auto => /> &1 &2 *. split. admit. do !split; 1..5: smt(get_setE mem_set in_fsetU in_fset1). admit. (* no partners proof *) admit. (* no partners proof *) admit. (* no partners proof *) admit. (* filter stuff *)
+          + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 2..5: smt(get_setE mem_set in_fsetU in_fset1). 
+            + congr. rewrite /get_fresh_partners_s.
+              rewrite fsetP.
+              move => x.
+              do rewrite mem_fdom mem_filter.
+              by smt(joinE).
+            + move => i1 st0 pt ir0 m3 iin ipen.
+              rewrite /get_partners_c.
+              rewrite filter_set.
+              rewrite rem_id. 
+              rewrite mem_filter negb_and. smt().
+              have := inv i1 st0 pt ir0 m3 iin ipen.
+              rewrite /get_partners_c. 
+              by smt(get_setE mem_set in_fsetU in_fset1).
+            + move => i1 st0 pt ir0 iin ipen.
+              rewrite /get_origins_c.
+              rewrite filter_set.
+              rewrite rem_id. 
+              rewrite mem_filter negb_and. smt().
+              have := inv2 i1 st0 pt ir0 iin ipen.
+              rewrite /get_origins_c. 
+              by smt(get_setE mem_set in_fsetU in_fset1).
+            move => i1 st0 t0 k0 ir0 iin ipen.
+            rewrite /get_partners_c.
+            rewrite filter_set.
+            rewrite rem_id. 
+            rewrite mem_filter negb_and. smt().
+            have := inv3 i1 st0 t0 k0 ir0 iin ipen.
+            rewrite /get_partners_c. 
+            by smt(get_setE mem_set in_fsetU in_fset1).
+          auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 2..5: smt(get_setE mem_set in_fsetU in_fset1).
+          + congr. rewrite /get_fresh_partners_s.
+            rewrite fsetP.
+            move => x.
+            do rewrite mem_fdom mem_filter.
+            by smt(joinE).
+          + move => i1 st0 pt ir0 m3 iin ipen.
+            rewrite /get_partners_c.
+            rewrite filter_set.
+            rewrite rem_id. 
+            rewrite mem_filter negb_and. smt().
+            have := inv i1 st0 pt ir0 m3 iin ipen.
+            rewrite /get_partners_c. 
+            by smt(get_setE mem_set in_fsetU in_fset1).
+          + move => i1 st0 pt ir0 iin ipen.
+            rewrite /get_origins_c.
+            rewrite filter_set.
+            rewrite rem_id. 
+            rewrite mem_filter negb_and. smt().
+            have := inv2 i1 st0 pt ir0 iin ipen.
+            rewrite /get_origins_c. 
+            by smt(get_setE mem_set in_fsetU in_fset1).
+          move => i1 st0 t0 k0 ir0 iin ipen.
+          rewrite /get_partners_c.
+          rewrite filter_set.
+          rewrite rem_id. 
+          rewrite mem_filter negb_and. smt().
+          have := inv3 i1 st0 t0 k0 ir0 iin ipen.
+          rewrite /get_partners_c. 
+          by smt(get_setE mem_set in_fsetU in_fset1).
         auto => />.
       move => pr t ir.
       auto => />.
@@ -1432,7 +1515,7 @@ smt(get_setE mem_set in_fsetU in_fset1).
   match None {1} ^match. auto => /#.
   auto => />.
 
-auto => />; smt(mem_empty emptyE).
+auto => />; smt(fmap_eqP joinE mem_empty emptyE).
 qed.
 
 
