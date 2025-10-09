@@ -1,6 +1,7 @@
 (* Intermediate Games *)
-require import AllCore FMap FSet Distr NTOR.
-import GAKEc HROc DH.G DH.GP DH.FD.
+require import AllCore FMap FSet Distr NTOR NTOR_nosid.
+import GAKE_mod HRO_mod_c DH.DDH DH.G DH.GP DH.FD.
+
 
 (* Proof:
 - Step 0: inline everathing;
@@ -36,21 +37,22 @@ Steps done:
 
 *)
 
+print pr_st_client.
 (* Step0 inlining everything and adding bad event *)
 module Game0 : GAKE_out_i = {
   (* This is not aligned with the sequence above *)
   var b0 : bool 
 
-  var hm : (pkey * pkey * s_id * pkey * pkey, tag * key) fmap
+  var hm : (pkey * pkey * pkey * pkey * pkey, tag * key) fmap
 
-  var servers : (s_id, server_state) fmap
+  var servers : (pkey, server_state) fmap
 
   var c_smap : (int, pr_st_client instance_state) fmap
-  var s_smap : (s_id * int, pr_st_server instance_state) fmap
+  var s_smap : (pkey * int, pr_st_server instance_state) fmap
   
   var tested : int option
   
-  var kp_set : ((pkey * skey)) fset
+  var kp_set : pkey fset
   var bad : bool
 
 
@@ -66,7 +68,7 @@ module Game0 : GAKE_out_i = {
   }
   
   (* random oracle *)
-  proc h(x: pkey * pkey * s_id * pkey * pkey) : tag * key = {
+  proc h(x: pkey * pkey * pkey * pkey * pkey) : tag * key = {
     var tk;
 
     tk <$ dtag `*` dkey;
@@ -78,59 +80,50 @@ module Game0 : GAKE_out_i = {
   }
 
   (* server management *)
-  proc init_s(b: s_id) : pkey option = {
-    var sk, kp;
-
-    if (b \notin servers) {
-      sk <$ dt;
-      kp <- (g ^ sk, sk);
-      bad <- bad \/ kp \in kp_set;
-      kp_set <- kp_set `|` fset1 kp;
-      servers.[b] <- Honest kp;
-    }
-    return omap get_pkey servers.[b];
-  }
-  
-  proc set_cert(b: s_id, pk: pkey) : unit option = {
+  proc init_s() : pkey option = {
+    var sk, pk;
     var r <- None;
 
-    if (b \notin servers) {
-      servers.[b] <- Dishonest pk;
-      r <- Some ();
+    sk <$ dt;
+    pk <- g ^ sk;
+    if (pk \notin servers) {
+      bad <- bad \/ pk \in kp_set;
+      kp_set <- kp_set `|` fset1 pk;
+      servers.[pk] <- Honest sk;
+      r <- Some pk;
     }
     return r;
   }
 
-  proc send_msg1(i: int, m1: s_id) : pkey option = {
-    var st, pk_b, sk, kp;
+  proc send_msg1(i: int, m1: pkey) : pkey option = {
+    var st, pk, sk;
     var r <- None;
 
     st <- c_smap.[i];
     if (m1 \in servers) {
-      pk_b <- get_pkey (oget servers.[m1]);
       match st with
       | None => {
           sk <$ dt;
-          kp <- (g ^ sk, sk);
-          bad <- bad \/ kp \in kp_set;
-          kp_set <- kp_set `|` fset1 kp;
-          c_smap.[i] <- Pending (m1, pk_b, snd kp) (fst kp) (false, false, false);
-          r <- Some (fst kp);
+          pk <- g ^ sk;
+          bad <- bad \/ pk \in kp_set;
+          kp_set <- kp_set `|` fset1 pk;
+          c_smap.[i] <- Pending (m1, sk) (m1, pk) (false, false, false);
+          r <- Some pk;
         }
-      | Some st => {
+      | Some st => { (*
           match st with
           | Pending st pt ir => c_smap.[i] <- Aborted (Some st) (Some (pt, None)) ir;
           | Accepted _ _ _ _ => { }
           | Aborted _ _ _ => { }
-          end;
+          end;*)
         }
       end;
     }
     return r;
   }
 
-  proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
-    var sko, sk, kp, t_B, key;
+  proc send_msg2(b: pkey, j: int, m2: pkey) : (pkey * tag) option = {
+    var sko, sk, pk, t_B, key;
     var r <- None;
 
     sko <- obind get_skey servers.[b];
@@ -138,12 +131,12 @@ module Game0 : GAKE_out_i = {
       match s_smap.[b, j] with
       | None => {
           sk <$ dt;
-          kp <- (g ^ sk, sk);
-          bad <- bad \/ kp \in kp_set;
-          kp_set <- kp_set `|` fset1 kp;
-          (t_B, key) <@ h(m2 ^ kp.`2, m2 ^ sk_b, b, m2, kp.`1);
-          s_smap.[(b, j)] <- Accepted (b, sk_b, Some kp.`2) (m2, Some (kp.`1, t_B)) key (false, false, false);
-          r <- Some (kp.`1, t_B);
+          pk <- g ^ sk;
+          bad <- bad \/ pk \in kp_set;
+          kp_set <- kp_set `|` fset1 pk;
+          (t_B, key) <@ h(m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
+          s_smap.[(b, j)] <- Accepted (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false);
+          r <- Some (pk, t_B);
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
       end;
@@ -153,7 +146,7 @@ module Game0 : GAKE_out_i = {
   }
 
   proc send_msg3(i: int, m3: pkey * tag) : unit option = {
-    var b, pk_b, sk_ce, t_A, key;
+    var b, sk_ce, t_A, key;
     var r <- None;
 
     match c_smap.[i] with
@@ -161,8 +154,8 @@ module Game0 : GAKE_out_i = {
     | Some st => {
         match st with
         | Pending st pt ir => {
-            (b, pk_b, sk_ce) <- st;
-            (t_A, key) <@ h(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1);
+            (b, sk_ce) <- st;
+            (t_A, key) <@ h(m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
             if (t_A = m3.`2) {
               c_smap.[i] <- Accepted st (pt, Some m3) key ir;
               r <- Some ();
@@ -199,7 +192,7 @@ module Game0 : GAKE_out_i = {
     return k;
   }
 
-  proc s_rev_skey(b: s_id, j: int) : key option = {
+  proc s_rev_skey(b: pkey, j: int) : key option = {
     var k <- None;
 
     match s_smap.[(b, j)] with
@@ -218,7 +211,7 @@ module Game0 : GAKE_out_i = {
     return k;
   }
 
-  proc rev_ltkey(b: s_id) : skey option = {
+  proc rev_ltkey(b: pkey) : skey option = {
     var ltk <- None;
 
     match servers.[b] with
@@ -226,15 +219,15 @@ module Game0 : GAKE_out_i = {
     | Some st => {
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
-        if (st is Honest kp) {
+        if (st is Honest sk) {
           if (forall j,
                 (b, j) \in s_smap (* just checking instances of b *)
                 => !(   (   get_ir_test (oget s_smap.[b, j])
                             (* This is always OK (get_trace always Some on server side *)
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
                      /\ get_ir_eph (oget s_smap.[b,j]))) {
-            ltk <- Some kp.`2; 
-            servers.[b] <- Corrupt kp; 
+            ltk <- Some sk; 
+            servers.[b] <- Corrupt sk; 
           }
         }
       }
@@ -272,7 +265,7 @@ module Game0 : GAKE_out_i = {
     return ek;
   }
 
-  proc s_rev_ephkey(b: s_id, j: int) : skey option = {
+  proc s_rev_ephkey(b: pkey, j: int) : skey option = {
     var ek <- None;
 
     match s_smap.[b, j] with
@@ -323,7 +316,7 @@ module Game0 : GAKE_out_i = {
     return k;
   }
 
-  proc s_test(b: s_id, j: int) : key option = {
+  proc s_test(b: pkey, j: int) : key option = {
     var ks;
     var k <- None;
 
@@ -378,12 +371,12 @@ print Game1.
 
 (* Step2: Splitting the random oracle and tracking bad event of overlap between RO queries and test query *)
 module Game2 = Game1 with {
-  var h1m : (pkey * pkey * s_id * pkey * pkey, tag) fmap
-  var h2m : (pkey * pkey * s_id * pkey * pkey, key) fmap
-  var hq : (pkey * pkey * s_id * pkey * pkey) fset
-  var tq : (pkey * pkey * s_id * pkey * pkey) option
+  var h1m : (pkey * pkey * pkey * pkey * pkey, tag) fmap
+  var h2m : (pkey * pkey * pkey * pkey * pkey, key) fmap
+  var hq : (pkey * pkey * pkey * pkey * pkey) fset
+  var tq : (pkey * pkey * pkey * pkey * pkey) option
   var badq : bool
-  var tags : (pkey * pkey * s_id * pkey * pkey, tag) fmap
+  var tags : (pkey * pkey * pkey * pkey * pkey, tag) fmap
   var badt : bool
 
   proc init_mem [
@@ -401,8 +394,8 @@ module Game2 = Game1 with {
   proc send_msg2 [
     var ts : tag
     var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ kp.`2, m2 ^ sk_b, b, m2, kp.`1);
+    var x : pkey * pkey * pkey * pkey * pkey
+    ^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
                                       ts <$ dtag;
                                       if (x \notin h1m) {h1m.[x] <- ts;} 
                                       t_B <- oget h1m.[x];
@@ -415,8 +408,8 @@ module Game2 = Game1 with {
   proc send_msg3 [
     var ts : tag
     var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1);
+    var x : pkey * pkey * pkey * pkey * pkey
+    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
                                      ts <$ dtag;
                                      if (x \notin h1m) {h1m.[x] <- ts;} 
                                      t_A <- oget h1m.[x];
@@ -430,15 +423,15 @@ module Game2 = Game1 with {
 
 
   proc c_test [
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`3, st'.`2 ^ st'.`3, st'.`1, g ^ st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`3, st'.`2 ^ st'.`3, st'.`1, g ^ st'.`3, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    var x : pkey * pkey * pkey * pkey * pkey
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 
   proc s_test [
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    var x : pkey * pkey * pkey * pkey * pkey
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 }.
 
@@ -460,7 +453,7 @@ module Game4 = Game3 with {
   var counti : int
   var handles_c : (int, int) fmap
   var test_ephrev_s : bool option
-  var b_test : s_id option
+  var b_test : pkey option
   var j_test : int option
 
   proc init_mem [
@@ -483,8 +476,8 @@ module Game4 = Game3 with {
 
   proc c_rev_skey [
     var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`3, st'.`2 ^ st'.`3, st'.`1, g ^ st'.`3, (oget t'.`2).`1); 
+    var x : pkey * pkey * pkey * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); 
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}
@@ -492,8 +485,8 @@ module Game4 = Game3 with {
 
   proc s_rev_skey [
     var ks : key
-    var x : pkey * pkey * s_id * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- (t'.`1 ^ (oget st'.`3), t'.`1 ^ st'.`2, st'.`1, t'.`1, (oget t'.`2).`1);
+    var x : pkey * pkey * pkey * pkey * pkey
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, (oget t'.`2).`1);
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}
@@ -501,7 +494,7 @@ module Game4 = Game3 with {
 
   proc c_test [
     var ks2 : key
-    var p : (s_id * int)
+    var p : (pkey * int)
     ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
                                                     p <- pick (get_fresh_partners_c t' s_smap servers); 
                                                     test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));
@@ -544,9 +537,11 @@ module DDH_I = {
 
 print Game4.
 
+(*
+
 module GameDDH = Game4 with {
-  var h1mDDH : (pkey option * pkey option * s_id * pkey * pkey, tag) fmap
-  var h2mDDH : (pkey option * pkey option * s_id * pkey * pkey, key) fmap
+  var h1mDDH : (pkey option * pkey option * pkey * pkey * pkey, tag) fmap
+  var h2mDDH : (pkey option * pkey option * pkey * pkey * pkey, key) fmap
 
   proc init_mem [
     -1 + { h1mDDH <- empty; h2mDDH <- empty; }
@@ -617,3 +612,4 @@ module GameDDH = Game4 with {
 }.
 
 print GameDDH.
+*)

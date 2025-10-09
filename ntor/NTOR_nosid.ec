@@ -7,16 +7,11 @@ import DH.DDH DH.G DH.GP DH.FD.
 (* ------------------------------------------------------------------------------------------ *)
 (* Modified protocol *)
 (* ------------------------------------------------------------------------------------------ *)
-type pr_st_client_mod = pkey * skey.
-type pr_st_server_mod = skey * skey option.
-
 clone import GAKE_nosid as GAKE_mod with
   type pkey <- pkey,
   type skey <- skey,
   type key <- key,
   type tag <- tag,
-  type pr_st_client <- pr_st_client_mod,
-  type pr_st_server <- pr_st_server_mod,
   op dskey <- dt,
   op dkey <- dkey,
   op dtag <- dtag.
@@ -34,12 +29,12 @@ proof *.
 
 module type Server_mod = {
   proc keygen() : pkey * skey
-  proc respond_session(st: pr_st_server_mod option, pk: pkey) : (pr_st_server_mod * (pkey * tag) * key) option
+  proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
 }.
 
 module type Client_mod = {
-  proc new_session(pk: pkey) : pr_st_client_mod * pkey
-  proc complete_session(st: pr_st_client_mod, m: pkey * tag) : (pr_st_client_mod * key) option
+  proc new_session(pk: pkey) : pr_st_client * pkey
+  proc complete_session(st: pr_st_client, m: pkey * tag) : (pr_st_client * key) option
 }.
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -54,7 +49,7 @@ module NTOR_S_mod (H : RO) : Server_mod = {
     return (pk_s, sk_s);
   }
 
-  proc respond_session(st : pr_st_server_mod option, m2: pkey) : (pr_st_server_mod * (pkey * tag) * key) option = {
+  proc respond_session(st : pr_st_server option, m2: pkey) : (pr_st_server * (pkey * tag) * key) option = {
     var sk_b, pk_se, sk_se, sko;
     var sk, t_B;
     var r <- None;
@@ -74,7 +69,7 @@ module NTOR_S_mod (H : RO) : Server_mod = {
 }.
 
 module NTOR_C_mod (H : RO) : Client = {
-  proc new_session(pk) : pr_st_client_mod * pkey = {
+  proc new_session(pk) : pr_st_client * pkey = {
     var pk_ce, sk_ce;
 
     sk_ce <$ dt;
@@ -83,7 +78,7 @@ module NTOR_C_mod (H : RO) : Client = {
     return ((pk, sk_ce), pk_ce);
   }
 
-  proc complete_session(st: pr_st_client_mod, m3: pkey * tag) : (pr_st_client_mod * key) option = {
+  proc complete_session(st: pr_st_client, m3: pkey * tag) : (pr_st_client * key) option = {
     var r <- None;
     var pk_b, sk_ce, sk, t_A;
 
