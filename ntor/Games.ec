@@ -39,7 +39,7 @@ Steps done:
 
 print pr_st_client.
 (* Step0 inlining everything and adding bad event *)
-module Game0 : GAKE_out_i = {
+module Game0 : GAKE_nodhs_i = {
   (* This is not aligned with the sequence above *)
   var b0 : bool 
 
@@ -430,8 +430,8 @@ module Game2 = Game1 with {
 
   proc s_test [
     var x : pkey * pkey * pkey * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 }.
 
@@ -486,7 +486,7 @@ module Game4 = Game3 with {
   proc s_rev_skey [
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, (oget t'.`2).`1);
+    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2));
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}
@@ -513,21 +513,16 @@ module Game4 = Game3 with {
   ]
 }.
 
-print Game4.
 
-
-
-
-module DDH_I = {
-  proc ddh_input(x : group * group * s_id * group * group, b : group) : (group option * group option) = {
-    var r, ddh1, ddh2;
+module DDH_valid = {
+  proc ddh_input(x : group * group * group * group * group) : (group option * group option) = {
+    var r <- (Some x.`1, Some x.`2);
+    var ddh1, ddh2;
 
     ddh1 <- (x.`4 ^ (loge x.`5) = x.`1);
-    ddh2 <- (x.`4 ^ (loge b) = x.`2);
+    ddh2 <- (x.`4 ^ (loge x.`3) = x.`2);
     if (ddh1 /\ ddh2) {
       r <- (None, None);
-    } else {
-      r <- (Some x.`1, Some x.`2);
     }
 
     return r;
@@ -537,26 +532,22 @@ module DDH_I = {
 
 print Game4.
 
-(*
-
 module GameDDH = Game4 with {
+  var stop : bool
   var h1mDDH : (pkey option * pkey option * pkey * pkey * pkey, tag) fmap
   var h2mDDH : (pkey option * pkey option * pkey * pkey * pkey, key) fmap
 
   proc init_mem [
-    -1 + { h1mDDH <- empty; h2mDDH <- empty; }
+    -1 + { h1mDDH <- empty; h2mDDH <- empty; stop <- false; }
   ]
   
   proc h [
-    var pk_s : group
     var x1, x2 : group option
     var rt : tag
     var rk : key
-
-    0 + ^  {rt <- oget h1mDDH.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)]; rk <- oget h2mDDH.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)];}
-    [0 - ^if{2}] + ^ (x \notin hq)
-    ^badq<- + {pk_s <- get_pkey (oget servers.[x.`3]); 
-               (x1, x2) <@ DDH_I.ddh_input(x, pk_s);}
+    
+    ^badq<- + {(x1, x2) <@ DDH_valid.ddh_input(x);
+               stop <- stop \/ ((x1, x2) = (None, None));}
     ^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
     ^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- t;}
     ^if + {rt <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
@@ -612,4 +603,3 @@ module GameDDH = Game4 with {
 }.
 
 print GameDDH.
-*)
