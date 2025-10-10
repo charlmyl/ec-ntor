@@ -533,12 +533,11 @@ module DDH_valid = {
 print Game4.
 
 module GameDDH = Game4 with {
-  var stop : bool
   var h1mDDH : (pkey option * pkey option * pkey * pkey * pkey, tag) fmap
   var h2mDDH : (pkey option * pkey option * pkey * pkey * pkey, key) fmap
 
   proc init_mem [
-    -1 + { h1mDDH <- empty; h2mDDH <- empty; stop <- false; }
+    -1 + { h1mDDH <- empty; h2mDDH <- empty; }
   ]
   
   proc h [
@@ -546,8 +545,7 @@ module GameDDH = Game4 with {
     var rt : tag
     var rk : key
     
-    ^badq<- + {(x1, x2) <@ DDH_valid.ddh_input(x);
-               stop <- stop \/ ((x1, x2) = (None, None));}
+    ^badq<- + {(x1, x2) <@ DDH_valid.ddh_input(x);}
     ^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
     ^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- t;}
     ^if + {rt <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
