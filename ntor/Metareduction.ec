@@ -1433,32 +1433,117 @@ proc; inline.
 wp; call (: ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.GAKEb_nodhs) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
                /\ (forall b, b \in GAKEb_hon.servers{1} <=> b \in Hon_s_Red.O_GAKE.servers{2})
                /\ (forall b, b \notin Hon_s_Red.O_GAKE.servers{2} => b \notin GAKEc.GAKEb_nodhs.servers{2})
-               /\ (forall b, b \in Hon_s_Red.O_GAKE.servers{2} => (oget Hon_s_Red.O_GAKE.servers{2}.[b]).`1 = false
+               /\ (forall b, b \in GAKEb_hon.servers{1} => ! get_sr_dh (oget GAKEb_hon.servers{1}.[b])
                    => GAKEb_hon.servers{1}.[b] = GAKEc.GAKEb_nodhs.servers{2}.[b])
+               /\ (forall b, b \in GAKEc.GAKEb_nodhs.servers{2} => ! get_sr_dh (oget GAKEc.GAKEb_nodhs.servers{2}.[b])
+                   /\ ! get_sr_dh (oget GAKEb_hon.servers{1}.[b])
+                   /\ (! get_sr_ltk (oget GAKEc.GAKEb_nodhs.servers{2}.[b]) <=> ! get_sr_ltk (oget GAKEb_hon.servers{1}.[b])))
+               /\ (forall b, get_sr_dh (oget GAKEb_hon.servers{1}.[b]) => get_sr_ltk (oget GAKEb_hon.servers{1}.[b]))
+               /\ (forall b, get_sr_dh (oget GAKEc.GAKEb_nodhs.servers{2}.[b]) => get_sr_ltk (oget GAKEc.GAKEb_nodhs.servers{2}.[b]))
                /\ (forall b, b \in Hon_s_Red.O_GAKE.servers{2} => omap get_pkey GAKEb_hon.servers{1}.[b] = (oget Hon_s_Red.O_GAKE.servers{2}.[b]).`2)
-      ); 1,6,7,8,10: sim />.
+               /\ (forall i, i \in GAKEc.GAKEb_nodhs.c_smap{2} => get_name (oget GAKEc.GAKEb_nodhs.c_smap{2}.[i]) \in GAKEc.GAKEb_nodhs.servers{2})
+               /\ (forall b j, (b, j) \in GAKEc.GAKEb_nodhs.s_smap{2} => b \in GAKEc.GAKEb_nodhs.servers{2})
+      ); 1: sim />.
 
 + proc; inline.
   if => //. auto => /#.
   + rcondt {2} ^if. auto => /#.
     auto => />; smt(get_setE mem_set).
-  auto => /> &1 &2 *. smt(get_setE mem_set).
+  auto => />. smt(get_setE mem_set).
 
 + proc; inline.
   sp 1 1; if => //. auto => /#.
-  auto => /> &1 &2 *. smt(get_setE mem_set).
+  auto => />. smt(get_setE mem_set).
 
-admit. 
++ proc; inline.
+  sp 2 2; if => //. auto => /#.
+  sp; match => //.
+  auto => />. smt(get_setE mem_set).
 
-admit.
++ proc; inline.
+  sp; match = => //; 1: auto => /#.
+  move => sk.
+  match = => //.
+  sp; match = => //; 1: auto => />.
+  move => st.
+  auto => />. smt(get_setE mem_set).
 
-admit.
++ proc; inline.
+  sp; match = => // st.
+  match = => // s pt ir.
+  auto => />. smt(get_setE mem_set).
 
-admit.
++ proc; inline.
+  sp; match = => // st.
+  match = => // s t k ir.
+  auto => />. smt(get_setE mem_set).
 
-admit.
++ proc; inline.
+  sp; match = => // st.
+  match = => // s t k ir.
+  auto => />. smt(get_setE mem_set).
 
-admit. 
++ proc; inline.
+  sp; match {1} => //.
+  + match None {2} ^match; 1: auto => /#.
+    auto => />.
+  match {1} => //.
+  + match Some {2} ^match; 1: auto => /#.
+    match Honest {2} ^match; 1: auto => /#.
+    auto => />. smt(get_setE mem_set).
+  + match Some {2} ^match; 1: auto => /#.
+    match Corrupt {2} ^match; 1: auto => /#.
+    auto => />.
+  match {2}.
+  + auto => />.
+  match Dishonest {2} ^match; 1: auto => /#.
+  auto => />.
+
++ proc; inline.
+  sp; match = => // st.
+  match = => // [s pt ir|s t k ir].
+  + auto => /> &1 &2 str _ inv inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 untori. 
+    move => i0.
+    case (i0 = i{2}) => ieq; 2: smt(get_setE mem_set).
+    have := inv8 i{2}.
+    smt(get_setE mem_set).
+  auto => />. smt(get_setE mem_set).
+
++ proc; inline.
+  sp; match = => // st.
+  match = => // s t k ir.
+  auto => />. smt(get_setE mem_set).
+
++ proc; inline.
+  sp 1 1; if => //.
+  match = => // st.
+  match = => // s t k ir.
+  if => //.
+  + auto => &1 &2 *.
+    do rewrite negb_or.
+    rewrite /fresh_partner_c.
+    rewrite /get_fresh_partners_c.
+    have->: (fdom (filter (fun (bj : s_id * int) (val : GAKEc.pr_st_server GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false 
+                /\ get_ir_sess val = false /\ (get_ir_eph val = false \/ get_sr_ltk (oget GAKEb_hon.servers{1}.[bj.`1]) = false)) GAKEb_hon.s_smap{1})) 
+              = (fdom (filter (fun (bj : s_id * int) (val : GAKEc.pr_st_server GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false 
+                /\ get_ir_sess val = false /\ (get_ir_eph val = false \/ get_sr_ltk (oget GAKEc.GAKEb_nodhs.servers{2}.[bj.`1]) = false)) GAKEc.GAKEb_nodhs.s_smap{2})).
+    + rewrite fsetP. 
+      move => x.
+      do rewrite mem_fdom mem_filter. smt(get_setE mem_set).
+    by smt(get_setE mem_set).
+  if => //.
+  + auto => />. smt(get_setE mem_set).
+  auto => />. smt(get_setE mem_set).
+
++ proc; inline.
+  sp 1 1; if => //.
+  match = => // st.
+  match = => // s t k ir.
+  if => //.
+  + auto => /#.
+  if => //.
+  + auto => />. smt(get_setE mem_set).
+  auto => />. smt(get_setE mem_set).
 
 auto => />. smt(mem_empty emptyE).
 qed.

@@ -820,8 +820,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
              and not all partner instances are unfresh can be tested *)
           if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
-                  \/ fresh_partner_c t' s_smap servers = Some false
-                  \/ get_sr_dh (oget servers.[get_name st]))) {
+                  \/ fresh_partner_c t' s_smap servers = Some false)) {
               if (b0 = false) {
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
