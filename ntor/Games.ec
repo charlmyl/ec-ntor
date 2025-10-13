@@ -246,7 +246,7 @@ module Game0 : GAKE_nodhs_i = {
              a tested origin partner (agreeing on first message *)
         | Pending st pk_e ir => {
             if (untested_origins_c (pk_e, None) s_smap <> Some false) {
-              ek <- Some (get_eph_c st);
+              ek <- Some (st.`2);
               c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
             }
           }
@@ -254,7 +254,7 @@ module Game0 : GAKE_nodhs_i = {
              if not all partners are tested *)
         | Accepted st t k ir => {
             if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t s_smap = Some false)) {
-              ek <- Some (get_eph_c st);
+              ek <- Some (st.`2);
               c_smap.[i] <- set_ir_eph (Accepted st t k ir);
             }
           }
@@ -277,7 +277,7 @@ module Game0 : GAKE_nodhs_i = {
           if (!((   get_ir_test (oget s_smap.[b, j])
                  \/ untested_partner_s t c_smap = Some false)
                 /\ get_sr_ltk (oget servers.[b]))) {
-            ek <- Some (get_eph_s st);
+            ek <- Some (oget st.`2);
             s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
           }
         }
