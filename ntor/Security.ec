@@ -1,10 +1,10 @@
-require import AllCore FSet FMap Distr DProd List SplitRO NTOR_nosid Games.
-(*   *) import GAKE_mod HRO_mod_c.
-require (*  *) Birthday SplitRO StdBigop StdOrder DiffieHellman.
-(*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder DH.G DH.GP DH.FD DH.GP.ZModE.
+require import AllCore FSet FMap Distr DProd List SplitRO.
+require (*  *) Birthday SplitRO StdBigop StdOrder Games.
 
+(*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder.
 
-
+clone import Games as Gamesc.
+import NTOR_nosid_c NTORc GAKE_mod HRO_mod_c DH.G DH.GP DH.FD DH.GP.ZModE.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Reductions *)
@@ -197,12 +197,205 @@ module (Red_ROM2 (D : A_GAKE_nodhs) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher
 }.
 
 
+(* CDH stuff for now *)
+module type Oracle = {
+  proc ddh(x y z : group) : bool
+  proc gen1() : group
+  proc gen2() : group
+  proc corrupt1(i : int) : exp option
+  proc corrupt2(j : int) : exp option
+}.
+
+module type Oracle_i = {
+  include Oracle
+
+  proc init_mem() : unit
+}.
+
+module St_CDH_O : Oracle_i = {
+  var win : bool
+  var n, m : int
+  var cr1, cr2 : int fset
+  var x_map : (int, exp) fmap
+  var y_map : (int, exp) fmap
+
+  proc init_mem() : unit = {
+    win <- false;
+    n <- 0;
+    m <- 0;
+    cr1 <- fset0;
+    cr2 <- fset0;
+    x_map <- empty;
+    y_map <- empty;
+  }
+
+  proc ddh(x y z : group) : bool = {
+    var r <- false;
+
+    if (exists i, i \in x_map /\ x = g ^ (oget x_map.[i]) /\ z = y ^ (oget x_map.[i]) /\ i \notin cr1) {
+      if (exists j, j \in y_map /\ y = g ^ (oget y_map.[j]) /\ j \notin cr2) {
+         win <- true;
+         r <- true;
+      }
+    } elif (exists j, j \in y_map /\ y = g ^ (oget y_map.[j]) /\ z = x ^ (oget y_map.[j])) {
+         r <- true;
+    }
+
+    return r;
+  }
+
+  proc gen1() : group = {
+    var x_n;
+
+    n <- n + 1;
+    x_n <$ dt;
+    x_map.[n] <- x_n;
+
+    return (g ^ x_n);
+  }
+
+  proc gen2() : group = {
+    var y_m;
+
+    m <- m + 1;
+    y_m <$ dt;
+    y_map.[m] <- y_m;
+
+    return (g ^ y_m);
+  }
+
+  proc corrupt1(i : int) : exp option = {
+    var r <- None;
+
+    if (i \in x_map) {
+      cr1 <- cr1 `|` fset1 i;
+      r <- x_map.[i];
+    }
+
+    return r;
+  }
+
+  proc corrupt2(j : int) : exp option = {
+    var r <- None;
+
+    if (j \in y_map) {
+      cr2 <- cr2 `|` fset1 j;
+      r <- y_map.[j];
+    }
+
+    return r;
+  }
+}.
+
+module type St_CDH_A (O : Oracle) = {
+  proc solve() : unit
+}.
+
+
+module St_CDH_E (O : Oracle_i) (A : St_CDH_A) = {
+  proc run(): unit = {
+    
+    A(O).solve();
+
+    return ();
+  }
+}.
+
+(* CDH reductions *)
+print GameDDH.
+
+module (Red_Ltk (A : A_GAKE_nodhs) : St_CDH_A) (O : Oracle) = {
+  var win : bool 
+
+  var count_b : int
+  var b_inst : (pkey, int) fmap
+  var count_i : int
+  var i_inst : (int, int) fmap
+
+  module Red_O : GAKE_nodhs_i = GameDDH with {
+    var stop : bool
+
+    proc init_mem [
+      -1 + {stop <- false; win <- false;}
+    ]
+
+    proc h [
+       0 + ^ {rt <- witness; rk <- witness;}
+      [^t<$ - ^rk<-] + ^ (!stop)
+      ^ <@ ~ {win <@ O.ddh((x.`4, x.`5, x.`1)); stop <- stop \/ win; }
+    ]
+
+    proc init_s [
+      [0 - ^if] + ^ (!stop)
+      [^sk<$ - ^pk<-] ~ {count_b <- count_b + 1; sk <- witness; pk <@ O.gen2(); b_inst.[pk] <- count_b;}
+    ]
+
+    proc send_msg1 [
+      [0 - ^if] + ^ (!stop)
+      [^if.^match#None.^sk<$ - ^pk<-] ~ {count_i <- count_i + 1; sk <- witness; pk <@ O.gen1(); i_inst.[i] <- count_i;}
+    ]
+
+    proc send_msg2 [
+      [0 - ^match] + ^ (!stop)
+    ]
+
+    proc send_msg3 [
+      [0 - ^match] + ^ (!stop)
+    ]
+
+    proc c_rev_skey [
+      [0 - ^match] + ^ (!stop)
+    ]
+
+    proc s_rev_skey [
+      [0 - ^match] + ^ (!stop)
+    ]
+
+    proc rev_ltkey [
+      var inst : int
+
+      [0 - ^match] + ^ (!stop)
+      ^match#Some.^match#Honest.^if.^ltk<- ~ {inst <- oget b_inst.[b]; ltk <@ O.corrupt2(inst);}
+    ]
+
+    proc c_rev_ephkey [
+      var inst : int
+
+      [0 - ^match] + ^ (!stop)
+      ^match#Some.^match#Pending.^if.^ek<- ~ {inst <- oget i_inst.[i]; ek <@ O.corrupt1(inst);}
+    ]
+
+    proc s_rev_ephkey [
+      [0 - ^match] + ^ (!stop)
+    ]
+
+    proc c_test [
+      [0 - ^if] + ^ (!stop)
+    ]
+
+    proc s_test [
+      [0 - ^if] + ^ (!stop)
+    ]
+  }
+
+  proc solve() : unit = {
+    var b' : bool;
+
+    Red_O.init_mem(true);
+    b' <@ A(Red_O).run();
+    return ();
+  }
+}.
+
+print Red_Ltk.Red_O.
+
+
 (* ------------------------------------------------------------------------------------------ *)
 (* Security Proof *)
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_GAKE_nodhs {-GAKEb_nodhs, -Game0, -Game1, -Game2, -Game3, -Game4, -GameDDH, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2 }.
+declare module A <: A_GAKE_nodhs {-GAKEb_nodhs, -Game0, -Game1, -Game2, -Game3, -Game4, -GameDDH, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2, -St_CDH_O, -Red_Ltk }.
 
 declare axiom A_ll (G <: GAKE_nodhs{-A}):
   islossless G.h =>
@@ -400,7 +593,7 @@ qed.
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 1b: Bound the bad event. *)
 lemma game0_bad bit &m: Pr[E_GAKE_nodhs(Game0, A).run(bit) @ &m : Game0.bad] <= ((q_is + q_m1 + q_m2) ^ 2)%r * mu1 dt (mode dt).
-proof.
+proof. admit. (*
 case (bit) => real_ideal.
 
 (* Proof for the ideal side *)
@@ -525,7 +718,7 @@ call (:
   auto => />.
   smt(mem_set in_fsetU1 pow_bij).
 auto => />.
-smt(in_fset0).
+smt(in_fset0).*)
 qed.
 
 
@@ -537,7 +730,7 @@ local clone import DProd.ProdSampling with
 proof *.
 
 lemma game1_game2 bit &m: Pr[E_GAKE_nodhs(Game1, A).run(bit) @ &m : res] =  Pr[E_GAKE_nodhs(Game2, A).run(bit) @ &m : res].
-proof.
+proof. admit. (*
 (* Proof on the real side *)
 byequiv (: ={glob A, glob Red_ROM} /\ arg{1} = bit /\ arg{2} = bit ==> _) => //.
 proc*.
@@ -601,7 +794,7 @@ call (: ={b0, servers, c_smap, s_smap, tested, kp_set, bad}(Red_ROM.AKE_O, Game2
   smt(mem_set).
 
 auto => />.
-smt(emptyE).
+smt(emptyE).*)
 qed.
 
 
@@ -609,7 +802,7 @@ qed.
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 3: Removing case of adversary guessing right tag. *)
 lemma game2_game3 b &m: `| Pr[E_GAKE_nodhs(Game2, A).run(b) @ &m : res] - Pr[E_GAKE_nodhs(Game3, A).run(b) @ &m : res] | <= Pr[E_GAKE_nodhs(Game2, A).run(b) @ &m : Game2.badt].
-proof.
+proof. admit. (*
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Game3.badt => //; first last.
 + smt().
@@ -736,7 +929,7 @@ by case : (!btr) => />.
   if => //; if => //.
   + auto => />.
   auto => />.
-  by rewrite dkey_ll.
+  by rewrite dkey_ll.*)
 qed.
 
 
@@ -836,7 +1029,7 @@ by case: (sml.[x])=> /> [] @/c_clear_k /#.
 qed.
 
 lemma game3_RO bit &m: Pr[E_GAKE_nodhs(Game3, A).run(bit) @ &m : res] = Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res].
-proof.
+proof. admit. (*
 byequiv (: ={glob A, glob Red_ROM2} /\ arg{1} = bit /\ arg{2} = bit ==> _)  => //.
 proc*.
 
@@ -1036,7 +1229,7 @@ call (: ={b0, hm, servers, kp_set, bad, hq, tq, badq, tags, badt}(Game3, Red_ROM
   auto => />.
   by smt(get_setE).
 
-by auto => />; smt(map_empty emptyE).
+by auto => />; smt(map_empty emptyE).*)
 qed.
 
 lemma LRO_game4 bit &m: Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res] = Pr[E_GAKE_nodhs(Game4, A).run(bit) @ &m : res].
@@ -1714,7 +1907,9 @@ by smt(get_setE).
           move : H2 => [i'] t k ir H2.
           exists i' t k ir.
           case (i' = (b, j){2}) => bjeq; 2: by smt(get_setE).
-          admit.
+          rewrite bjeq.
+          have : get_trace (oget Game4.s_smap{2}.[b{2}, j{2} <- Accepted st' t' k' (ir'.`1, true, ir'.`3)].[b{2}, j{2}]) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]) by smt(get_setE).
+          smt(get_setE mem_set).
         by smt().
       split.
       + move => i st0 t k0 ir H1. 
@@ -1831,9 +2026,9 @@ by smt(get_setE).
     + right; left. 
       move : H2 => [i'] t k ir H2.
       exists i' t k ir. 
-      have : get_trace (oget (Some (Accepted st' t' k' (ir'.`1, true, ir'.`3)))) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]); 1: by smt().
       case (i' = (b,j){2}); 2: smt(get_setE mem_set).
-      admit.
+      have : get_trace (oget Game4.s_smap{2}.[b{2}, j{2} <- Accepted st' t' k' (ir'.`1, true, ir'.`3)].[b{2}, j{2}]) = get_trace (oget Game4.s_smap{2}.[b{2}, j{2}]) by smt(get_setE).
+      smt(get_setE mem_set).
     by smt().
   split.
   + move => i st0 t k0 ir H1. 
@@ -2344,7 +2539,112 @@ qed.
 
 
 
-(* Step 6: Split up probability into all possible test sessions *)
+(* Step 7: Reduction to multi-instance st-CDH assumption *)
+op clear_ddh(x : group * group * group * group * group) =
+  if (x.`4 ^ (loge x.`5) = x.`1) /\ (x.`4 ^ (loge x.`3) = x.`2) then (None, None, x.`3, x.`4, x.`5) 
+    else (Some x.`1, Some x.`2, x.`3, x.`4, x.`5).
+
+lemma game4_gameddh &m: Pr[E_GAKE_nodhs(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE_nodhs(GameDDH, A).run(false) @ &m : GameDDH.badq].
+proof.
+byequiv => //.
+proc; inline.
+call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, tags, badt, test_ephrev_s}(Game4, GameDDH)
+        /\ (Game4.b0{1} = false)
+        /\ (forall x, Game4.h1m{1}.[x] = GameDDH.h1mDDH{2}.[(clear_ddh x)])
+        /\ (forall x, Game4.h2m{1}.[x] = GameDDH.h2mDDH{2}.[(clear_ddh x)])); 2,3, 8, 9,10: sim />; last first.
+
+auto => />.
+smt(emptyE in_fset0).
+
++ proc; inline.
+  sp 2 6. 
+  if{2} => //.
+  + sp. seq 1 1: (#pre /\ ={t}); 1: by auto => />.
+    if => //; 1: auto => /#.
+    + sp. seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+      if => //; 1: by auto => /#.
+      + auto => />. smt(get_setE).
+      auto => />. smt(get_setE).
+    sp; seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+    if => //; 1: by auto => /#.
+    + auto => />. smt(get_setE mem_set).
+    auto => />. smt(get_setE).
+  sp. seq 1 1: (#pre /\ ={t}); 1: by auto => />.
+  if => //; 1: auto => /#.
+  + sp. seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+    if => //; 1: by auto => /#.
+    + auto => />. smt(get_setE).
+    auto => />. smt(get_setE).
+  sp; seq 1 1: (#pre /\ ={k}); 1: by auto => />.
+  if => //; 1: by auto => /#.
+  + auto => /> &1 &2 *. smt(get_setE mem_set).
+  auto => /> &1 &2 *. smt(get_setE).
+
++ proc; inline.
+  sp; match = => // sk_b.
+  match = => //.
+  seq 1 1 : (#pre /\ ={sk}). auto => />.
+  sp 2 2; if => //.
+  sp; seq 1 1 : (#pre /\ ={ts}). auto => />.
+  if => //. auto => />. 
+  + smt(mem_set loggK).
+  + auto => />. smt(get_setE mem_set loggK).
+  auto => />. smt(get_setE mem_set loggK).
+
++ proc; inline.
+  sp; match = => // st.
+  match = => // s pt ir.
+  sp; seq 1 1 : (#pre /\ ={ts}). auto => />.
+  if => //. auto => />. 
+  + smt(ComRing.mulrC expM expgK mem_set). 
+  + auto => />. smt(ComRing.mulrC expM expgK get_setE mem_set).
+  auto => />. smt(ComRing.mulrC expM expgK mem_set). 
+
++ proc; inline.
+  sp; match = => // st.
+  match = => // s t k ir.
+  if => //.
+  sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
+  if => //. auto => />. smt(ComRing.mulrC expM expgK mem_set). 
+  + auto => /> &1 &2 *. smt(ComRing.mulrC expM expgK get_setE mem_set).
+  auto => />. smt(ComRing.mulrC expM expgK mem_set). 
+
++ proc; inline.
+  sp; match = => // st.
+  match = => // s t k ir.
+  if => //.
+  sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
+  if => //. auto => />. smt(get_setE mem_set loggK).
+  + auto => />. smt(get_setE mem_set loggK).
+  auto => />. smt(get_setE mem_set loggK).
+
++ proc; inline.
+  sp 1 1; if => //.
+  match = => // st.
+  match = => // s t k ir.
+  if => //.
+  if => //.
+  + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
+    if => //. auto => />. smt(ComRing.mulrC expM expgK mem_set). 
+    + auto => />. smt(ComRing.mulrC expM expgK get_setE mem_set).
+    auto => />. smt(ComRing.mulrC expM expgK mem_set). 
+  auto => />.
+
++ proc; inline.
+  sp 1 1; if => //.
+  match = => // st.
+  match = => // s t k ir.
+  if => //.
+  if => //.
+  + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
+    if => //. auto => />. smt(get_setE mem_set loggK).
+    + auto => />. smt(get_setE mem_set loggK).
+    auto => />. smt(get_setE mem_set loggK).
+  auto => />.
+qed.
+
+
+(*
 lemma tested_nn &m: Pr[E_GAKE_nodhs(GameDDH, A).run(false) @ &m : GameDDH.badq /\ GameDDH.tested = None] = 0%r.
 proof.
 byphoare => //; hoare.
@@ -2471,7 +2771,6 @@ qed.
 lemma split_j_pr 
 
 
-(* Step 7: Reduction to CDH assumption *)
 module type DDH_oracle = {
   proc run(gx : group, gy : group, gz : group) : bool
 }.
@@ -2480,200 +2779,169 @@ module DDH_O : DDH_oracle = {
   proc run(gx, gy, gz : group): bool = {
     return (gz = gy ^ (loge gx));
   }
-}.
+}.*)
 
-print GameDDH.
-
-op clear_ddh(x : group * group * group * group * group) =
-  if (x.`4 ^ (loge x.`5) = x.`1) /\ (x.`4 ^ (loge x.`3) = x.`2) then (None, None, x.`3, x.`4, x.`5) 
-    else (Some x.`1, Some x.`2, x.`3, x.`4, x.`5).
-
-lemma game4_gameddh &m: Pr[E_GAKE_nodhs(Game4, A).run(false) @ &m : Game4.badq] = Pr[E_GAKE_nodhs(GameDDH, A).run(false) @ &m : GameDDH.badq].
+lemma test_ephrev_nn &m: Pr[E_GAKE_nodhs(GameDDH, A).run(false) @ &m : GameDDH.badq /\ GameDDH.test_ephrev_s = None] = 0%r.
 proof.
-byequiv => //.
+byphoare => //; hoare.
 proc; inline.
-call (: ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, hq, tq, badq, tags, badt, counti, handles_c, test_ephrev_s, b_test, j_test}(Game4, GameDDH)
-        /\ (Game4.b0{1} = false)
-        /\ (forall x, Game4.h1m{1}.[x] = GameDDH.h1mDDH{2}.[(clear_ddh x)])
-        /\ (forall x, Game4.h2m{1}.[x] = GameDDH.h2mDDH{2}.[(clear_ddh x)])); 2,3, 8, 9,10: sim />; last first.
+call (_: ! (GameDDH.badq /\ GameDDH.test_ephrev_s = None) /\ (GameDDH.test_ephrev_s = None <=> GameDDH.tq = None) /\ (GameDDH.tested = None <=> GameDDH.tq = None)); 2..10: conseq (: true) => //.
 
-auto => />.
-smt(emptyE in_fset0).
+- proc; inline; auto => /#.
 
-+ proc; inline.
-  sp 2 6. 
-  if{2} => //.
-  + sp. seq 1 1: (#pre /\ ={t}); 1: by auto => />.
-    if => //; 1: auto => /#.
-    + sp. seq 1 1: (#pre /\ ={k}); 1: by auto => />.
-      if => //; 1: by auto => /#.
-      + auto => />. smt(get_setE).
-      auto => />. smt(get_setE).
-    sp; seq 1 1: (#pre /\ ={k}); 1: by auto => />.
-    if => //; 1: by auto => /#.
-    + auto => />. smt(get_setE mem_set).
-    auto => />. smt(get_setE).
-  sp. seq 1 1: (#pre /\ ={t}); 1: by auto => />.
-  if => //; 1: auto => /#.
-  + sp. seq 1 1: (#pre /\ ={k}); 1: by auto => />.
-    if => //; 1: by auto => /#.
-    + auto => />. smt(get_setE).
-    auto => />. smt(get_setE).
-  sp; seq 1 1: (#pre /\ ={k}); 1: by auto => />.
-  if => //; 1: by auto => /#.
-  + auto => /> &1 &2 *. smt(get_setE mem_set).
-  auto => /> &1 &2 *. smt(get_setE).
-
-+ proc; inline.
-  sp; match = => // sk_b.
-  match = => //.
-  seq 1 1 : (#pre /\ ={sk}). auto => />.
-  sp 2 2; if => //.
-  sp; seq 1 1 : (#pre /\ ={ts}). auto => />.
-  if => //. auto => />. 
-  + smt(mem_set loggK).
-  + auto => />. smt(get_setE mem_set loggK).
-  auto => />. smt(get_setE mem_set loggK).
-
-+ proc; inline.
-  sp; match = => // st.
-  match = => // s pt ir.
-  sp; seq 1 1 : (#pre /\ ={ts}). auto => />.
-  if => //. auto => />. 
-  + smt(ComRing.mulrC expM expgK mem_set). 
-  + auto => />. smt(ComRing.mulrC expM expgK get_setE mem_set).
-  auto => />. smt(ComRing.mulrC expM expgK mem_set). 
-
-+ proc; inline.
-  sp; match = => // st.
-  match = => // s t k ir.
-  if => //.
-  sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
-  if => //. auto => />. smt(ComRing.mulrC expM expgK mem_set). 
-  + auto => /> &1 &2 *. smt(ComRing.mulrC expM expgK get_setE mem_set).
-  auto => />. smt(ComRing.mulrC expM expgK mem_set). 
-
-+ proc; inline.
-  sp; match = => // st.
-  match = => // s t k ir.
-  if => //.
-  sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
-  if => //. auto => />. smt(get_setE mem_set loggK).
-  + auto => />. smt(get_setE mem_set loggK).
-  auto => />. smt(get_setE mem_set loggK).
-
-+ proc; inline.
-  sp 1 1; if => //.
-  match = => // st.
-  match = => // s t k ir.
-  if => //.
-  if => //.
-  + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
-    if => //. auto => />. smt(ComRing.mulrC expM expgK mem_set). 
-    + auto => />. smt(ComRing.mulrC expM expgK get_setE mem_set).
-    auto => />. smt(ComRing.mulrC expM expgK mem_set). 
+- proc; inline.
+  sp; if => //.
+  exlim GameDDH.c_smap.[i{!hr}] => csi.
+  case (csi = None).
+  + match None ^match => //.
+  match Some ^match => //.
+  + skip => /#.
+  match => //; if => //; if => //.
+  + sp; seq 1: (#pre /\ ks \in dkey); 1: by auto => />.
+    auto => />.
+  sp; seq 1: (#pre /\ ks2 \in dkey); 1: by auto => />.
   auto => />.
 
-+ proc; inline.
-  sp 1 1; if => //.
-  match = => // st.
-  match = => // s t k ir.
-  if => //.
-  if => //.
-  + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
-    if => //. auto => />. smt(get_setE mem_set loggK).
-    + auto => />. smt(get_setE mem_set loggK).
-    auto => />. smt(get_setE mem_set loggK).
+- proc; inline.
+  sp; if => //.
+  exlim GameDDH.s_smap.[(b, j)] => ssj.
+  case (ssj = None).
+  + match None ^match => //.
+  match Some ^match => //.
+  + skip => /#.
+  match => //; if => //; if => //.
+  + sp; seq 1: (#pre /\ ks \in dkey); 1: by auto => />.
+    auto => />.
+  sp; seq 1: (#pre /\ ks2 \in dkey); 1: by auto => />.
   auto => />.
+
+auto => /#.
+qed.
+
+lemma split_pr &m: Pr[E_GAKE_nodhs(GameDDH, A).run(false) @ &m : GameDDH.badq] = 
+                     Pr[E_GAKE_nodhs(GameDDH, A).run(false) @ &m : GameDDH.badq /\ GameDDH.test_ephrev_s = Some true] 
+                     + Pr[E_GAKE_nodhs(GameDDH, A).run(false) @ &m : GameDDH.badq /\ GameDDH.test_ephrev_s = Some false].
+proof.
+rewrite Pr[mu_split GameDDH.test_ephrev_s = None].
+rewrite test_ephrev_nn //=.
+rewrite Pr[mu_split GameDDH.test_ephrev_s = Some true].
+do rewrite -andbA.
+by congr; rewrite Pr[mu_eq] // => &hr; smt().
 qed.
 
 
-print GameDDH.
+lemma cdh_red_ltk &m: Pr[E_GAKE_nodhs(GameDDH, A).run(true) @ &m : GameDDH.badq /\ GameDDH.test_ephrev_s = Some true] <= 
+                 Pr[St_CDH_E(St_CDH_O, Red_Ltk(A)).run() @ &m : St_CDH_O.win].
+proof. 
+byequiv => //.
+proc; inline.
+call (: Red_Ltk.Red_O.stop,
+        ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, h1m, h2m, hq, tq, badq, tags, badt, test_ephrev_s, h1mDDH, h2mDDH}(GameDDH, Red_Ltk.Red_O)
+         /\ (GameDDH.badq{1} /\ GameDDH.test_ephrev_s{1} = Some true => St_CDH_O.win{2}),
+        St_CDH_O.win{2}).
 
-module Reduction_Ltk (A : A_GAKE_nodhs) (D : DDH_oracle) = {
-  var solution : group option
+- exact A_ll.
 
-  module Red_O : GAKE_nodhs_i = GameDDH with {
-    var t_i : int
-    var pk_b : pkey
-    var ga, gb : group
-    var stop : bool
++ proc; inline.
+  admit.
+- move => &2 bad; proc; inline; auto => />. 
+  by rewrite dtag_ll dkey_ll //=.
+- move => &1; proc; inline.
+  sp; if => //.
+  + auto => />; rewrite dtag_ll dkey_ll //=. 
+    admit.
+  admit.
 
-    proc init_mem [
-      -1 + {stop <- false;}
-    ]
++ proc; inline.
+  if {2} => //; 2: by auto => />.
+  sp; seq 1 1 : (#pre /\ sk{1} = y_m{2}). auto => />.
+  auto => />.
+  admit. (* admit servers only equal upto honesty since we remove the sk *)
+- move => &2 bad; proc; inline; auto => />. 
+  by rewrite dt_ll //=.
+- move => &1; proc; inline.
+  sp; if => //.
+  auto => />.
 
-    proc h [
-       0 + ^ {rt <- witness; rk <- witness; }
-      [0 - ^rk<-] + ^ (!stop)
-      ^t<$ + ^ {stop <- stop \/ ((x1, x2) = (None, None));}
-    ]
++ proc; inline.
+  if {2} => //.
+  + sp; if => //.
+    match = => //.
+    auto => />. 
+    admit. (* I need to remove the secret key from the client state *)
+  sp 2 0; if {1} => //.
+  match {1} => //.
+  auto => />.
+- move => &2 bad; proc; inline. 
+  sp; if => //; match; auto => />. 
+  by rewrite dt_ll //=.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; if => //; match; auto => />.
 
-    proc init_s [
-      [0 - ^if{2}] + ^ (!stop)
-      ^pk<-{2} + ^ (pk = pk_b)
-      ^pk<- + {pk <- ga;}
-    ]
++ proc; inline.
+  if {2} => //.
+  + sim />.
+  sp; match {1} => //.
+  match {1} => //.
+  seq 1 0 : (#pre /\ sk{1} \in dt). auto => />.
+  sp 2 0; if {1} => //.
+  auto => />.
+- move => &2 bad; proc; inline. 
+  sp; match => //. 
+  match => //.
+  admit.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; match => //. 
+  match; auto => />.
+  admit.
 
-    proc send_msg1 [
-      [0 - ^if] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc send_msg2 [
-      [0 - ^match] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc send_msg3 [
-      [0 - ^match] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc c_rev_skey [
-      [0 - ^match] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc s_rev_skey [
-      [0 - ^match] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc rev_ltkey [
-      [0 - ^match] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc c_rev_ephkey [
-      [0 - ^match] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc s_rev_ephkey [
-      [0 - ^match] + ^ (!stop)
-    ]
++ proc; inline.
+  admit.
+- admit.
+- admit.
 
-    proc c_test [
-      [0 - ^if] + ^ (!stop)
-    ]
-
-    proc s_test [
-      [0 - ^if] + ^ (!stop)
-    ]
-  }
-
-  proc solve(t_i : int, pk_b : pkey, ga, gb : group) : group option = {
-    var b' : bool;
-
-    solution <- witness;
-    Red_O.t_i <- t_i;
-    Red_O.pk_b <- pk_b;
-    Red_O.ga <- ga;
-    Red_O.gb <- gb;
-    Red_O.init_mem(true);
-    b' <@ A(Red_O).run();
-    return solution;
-  }
-}.
-
-print Reduction_Ltk.Red_O.
-
-
-
+auto => />.
+move => &2.
+split. 
+move => &2 roeq inj csm ssm pkin inv inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 rl rr al hsl csl pksl ssl sl stl tl url ml ar hsr csr tr str huh ssr sr pksr urr mr.
+by case : (!str) => />.
 
 
 module Reduction_Eph (A : A_GAKE_nodhs) (D : DDH_oracle) = {

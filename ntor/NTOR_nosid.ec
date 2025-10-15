@@ -1,6 +1,7 @@
-require import AllCore Distr List NTOR.
-require GAKE_nosid DiffieHellman.
+require import AllCore Distr List.
+require GAKE_nosid NTOR.
 
+clone import NTOR as NTORc.
 import DH.DDH DH.G DH.GP DH.FD.
 
 
