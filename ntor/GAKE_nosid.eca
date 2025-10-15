@@ -20,69 +20,69 @@ type pr_st_client = pkey * skey.
 type pr_st_server = skey * skey option.
 
 type 'a instance_state = [
-  Pending  of 'a & part_trace (* Partial trace on client side, useless state on server side *) & ir_status
-| Accepted of 'a & trace & key & ir_status
-| Aborted  of 'a option & trace option & ir_status
+  Pending_mod  of 'a & part_trace (* Partial trace on client side, useless state on server side *) & ir_status
+| Accepted_mod of 'a & trace & key & ir_status
+| Aborted_mod  of 'a option & trace option & ir_status
 ].
 
 type server_state = [
-  Honest    of skey
-| Corrupt   of skey
-| Dishonest
+  Honest_mod    of skey
+| Corrupt_mod   of skey
+| Dishonest_mod
 ].
 
 (* operators for getting information from an instance state *)
 op get_trace (s: 'a instance_state) : trace option =
-with s = Pending _ pt _     => Some (pt, None)
-with s = Accepted _ t _ _  => Some t
-with s = Aborted _ t _     => t.
+with s = Pending_mod _ pt _     => Some (pt, None)
+with s = Accepted_mod _ t _ _  => Some t
+with s = Aborted_mod _ t _     => t.
 
 op get_key (s: 'a instance_state) : key option =
-with s = Pending _ _ _    => None
-with s = Accepted _ _ k _ => Some k
-with s = Aborted _ _ _    => None.
+with s = Pending_mod _ _ _    => None
+with s = Accepted_mod _ _ k _ => Some k
+with s = Aborted_mod _ _ _    => None.
 
 op get_ir_eph (s: 'a instance_state) : bool =
-with s = Pending _ _ ir    => ir.`1
-with s = Accepted _ _ _ ir => ir.`1
-with s = Aborted _ _ ir    => ir.`1.
+with s = Pending_mod _ _ ir    => ir.`1
+with s = Accepted_mod _ _ _ ir => ir.`1
+with s = Aborted_mod _ _ ir    => ir.`1.
 
 op get_ir_sess (s: 'a instance_state) : bool =
-with s = Pending _ _ ir    => ir.`2
-with s = Accepted _ _ _ ir => ir.`2
-with s = Aborted _ _ ir    => ir.`2.
+with s = Pending_mod _ _ ir    => ir.`2
+with s = Accepted_mod _ _ _ ir => ir.`2
+with s = Aborted_mod _ _ ir    => ir.`2.
 
 op get_ir_test (s: 'a instance_state) : bool =
-with s = Pending _ _ ir    => ir.`3
-with s = Accepted _ _ _ ir => ir.`3
-with s = Aborted _ _ ir    => ir.`3.
+with s = Pending_mod _ _ ir    => ir.`3
+with s = Accepted_mod _ _ _ ir => ir.`3
+with s = Aborted_mod _ _ ir    => ir.`3.
 
 (* operators for getting or setting the revealed status of an instance *)
 op set_ir_eph (s: 'a instance_state) : 'a instance_state =
-with s = Pending s t ir    => Pending s t (true, ir.`2, ir.`3)
-with s = Accepted s t k ir => Accepted s t k (true, ir.`2, ir.`3)
-with s = Aborted s t ir    => Aborted s t (true, ir.`2, ir.`3).
+with s = Pending_mod s t ir    => Pending_mod s t (true, ir.`2, ir.`3)
+with s = Accepted_mod s t k ir => Accepted_mod s t k (true, ir.`2, ir.`3)
+with s = Aborted_mod s t ir    => Aborted_mod s t (true, ir.`2, ir.`3).
 
 op set_ir_sess (s: 'a instance_state) : 'a instance_state =
-with s = Pending s t ir    => Pending s t (ir.`1, true, ir.`3)
-with s = Accepted s t k ir => Accepted s t k (ir.`1, true, ir.`3)
-with s = Aborted s t ir    => Aborted s t (ir.`1, true, ir.`3).
+with s = Pending_mod s t ir    => Pending_mod s t (ir.`1, true, ir.`3)
+with s = Accepted_mod s t k ir => Accepted_mod s t k (ir.`1, true, ir.`3)
+with s = Aborted_mod s t ir    => Aborted_mod s t (ir.`1, true, ir.`3).
 
 op set_ir_test (s: 'a instance_state) : 'a instance_state =
-with s = Pending s t ir    => Pending s t (ir.`1, ir.`2, true)
-with s = Accepted s t k ir => Accepted s t k (ir.`1, ir.`2, true)
-with s = Aborted s t ir    => Aborted s t (ir.`1, ir.`2, true).
+with s = Pending_mod s t ir    => Pending_mod s t (ir.`1, ir.`2, true)
+with s = Accepted_mod s t k ir => Accepted_mod s t k (ir.`1, ir.`2, true)
+with s = Aborted_mod s t ir    => Aborted_mod s t (ir.`1, ir.`2, true).
 
 (* operators for getting information from a server state *)
 op get_skey s_st =
-with s_st = Honest    sk => Some sk
-with s_st = Corrupt   sk => Some sk
-with s_st = Dishonest    => None.
+with s_st = Honest_mod    sk => Some sk
+with s_st = Corrupt_mod   sk => Some sk
+with s_st = Dishonest_mod    => None.
 
 op get_sr_ltk s_st : bool =
-with s_st = Honest    _ => false
-with s_st = Corrupt   _ => true
-with s_st = Dishonest   => true.
+with s_st = Honest_mod    _ => false
+with s_st = Corrupt_mod   _ => true
+with s_st = Dishonest_mod   => true.
 
 (* helping operators for getting a set of all partners (with some specific revealed status *)
 op get_partners_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
@@ -293,7 +293,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
 
     (pk, sk) <@ S.keygen();
     if (pk \notin servers) {
-      servers.[pk] <- Honest sk;
+      servers.[pk] <- Honest_mod sk;
       r <- Some pk;
     }
     return r;
@@ -308,7 +308,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
       match st with
       | None => {
           (st', m2) <@ C.new_session(m1);
-           c_smap.[i] <- Pending st' (m1, m2) (false, false, false);
+           c_smap.[i] <- Pending_mod st' (m1, m2) (false, false, false);
           r <- Some m2;
         }
       | Some st => { (*
@@ -334,10 +334,10 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
           resp <@ S.respond_session(Some (sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
-            s_smap.[(b, j)] <- Accepted st' ((b, m2), Some m3) k (false, false, false);
+            s_smap.[(b, j)] <- Accepted_mod st' ((b, m2), Some m3) k (false, false, false);
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted None (Some ((b, m2), None)) (false, false, false);
+            s_smap.[(b, j)] <- Aborted_mod None (Some ((b, m2), None)) (false, false, false);
           }
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -355,18 +355,18 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     | None => { } (* Abort? *)
     | Some st => {
         match st with
-        | Pending st pt ir => {
+        | Pending_mod st pt ir => {
             resp <@ C.complete_session(st, m3);
             if (resp is Some r') {
               (st', k) <- r';
-              c_smap.[i] <- Accepted st' (pt, Some m3) k ir;
+              c_smap.[i] <- Accepted_mod st' (pt, Some m3) k ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
+              c_smap.[i] <- Aborted_mod (Some st) (Some (pt, Some m3)) ir;
             }
           }
-        | Accepted _ _ _ _ => { }
-        | Aborted _ _ _ => { }
+        | Accepted_mod _ _ _ _ => { }
+        | Aborted_mod _ _ _ => { }
         end;
       }
     end;
@@ -383,10 +383,10 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     | Some st => {
         (* only accepted client instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
-        if (st is Accepted st' t' k' ir') {
+        if (st is Accepted_mod st' t' k' ir') {
           if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
             k <- Some k';
-            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+            c_smap.[i] <- set_ir_sess (Accepted_mod st' t' k' ir');
           }
         }
       }
@@ -402,10 +402,10 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     | Some st => {
         (* only accepted server instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
-        if (st is Accepted st' t' k' ir') {
+        if (st is Accepted_mod st' t' k' ir') {
           if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+            s_smap.[(b, j)] <- set_ir_sess (Accepted_mod st' t' k' ir');
           }
         }
       }
@@ -421,7 +421,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     | Some st => {
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
-        if (st is Honest sk) {
+        if (st is Honest_mod sk) {
           if (forall j,
                 (b, j) \in s_smap (* just checking instances of b *)
                 => !(   (   get_ir_test (oget s_smap.[b, j])
@@ -429,7 +429,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
                      /\ get_ir_eph (oget s_smap.[b,j]))) {
             ltk <- Some sk; 
-            servers.[b] <- Corrupt sk; 
+            servers.[b] <- Corrupt_mod sk; 
           }
         }
       }
@@ -446,21 +446,21 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
         match st with
           (* client instances can be ephkey revealed when pending if there isn't 
              a tested origin partner (agreeing on first message *)
-        | Pending st pk_e ir => {
+        | Pending_mod st pk_e ir => {
             if (untested_origins_c (pk_e, None) s_smap <> Some false) {
               ek <- Some (st.`2);
-              c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
+              c_smap.[i] <- set_ir_eph (Pending_mod st pk_e ir);
             }
           }
           (* accepted client instamces can only be ephkey revealed when not tested and 
              if not all partners are tested *)
-        | Accepted st t k ir => {
+        | Accepted_mod st t k ir => {
             if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t s_smap = Some false)) {
               ek <- Some (st.`2);
-              c_smap.[i] <- set_ir_eph (Accepted st t k ir);
+              c_smap.[i] <- set_ir_eph (Accepted_mod st t k ir);
             }
           }
-        | Aborted _ _ _ => {  }
+        | Aborted_mod _ _ _ => {  }
         end;
       }
     end;
@@ -475,12 +475,12 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     | Some st => {
         (* only accepted server instances that are not ltkey revealed in case they 
            or all partners are tested can be ephkey revealed *)
-        if (st is Accepted st t k ir) { (* No Pending on Server side *)
+        if (st is Accepted_mod st t k ir) { (* No Pending on Server side *)
           if (!((   get_ir_test (oget s_smap.[b, j])
                  \/ untested_partner_s t c_smap = Some false)
                 /\ get_sr_ltk (oget servers.[b]))) {
             ek <- Some (oget st.`2);
-            s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+            s_smap.[(b, j)] <- set_ir_eph (Accepted_mod st t k ir);
           }
         }
       }
@@ -498,16 +498,16 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
       | Some st => {
           (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
              and not all partner instances are unfresh can be tested *)
-          if (st is Accepted st' t' k' ir') {
+          if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
                   \/ fresh_partner_c t' s_smap servers = Some false)) {
               if (b0 = false) {
                 k <- Some k';
-                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+                c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+                c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
               }
               tested <- Some i;
            }
@@ -528,17 +528,17 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
       | Some st => {
           (* only accepted server instances that are not sesskey revealed, not trivially broken
              and not all partner instances are unfresh can be tested *)
-          if (st is Accepted st' t' k' ir') {
+          if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget s_smap.[b, j]) 
                   \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
                   \/ fresh_partner_s t' c_smap = Some false)) {
               if (b0 = false) {
                 k <- Some k';
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(b, j)] <- set_ir_test (Accepted_mod st' t' k' ir');
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(b, j)] <- set_ir_test (Accepted_mod st' t' k' ir');
               }
               tested <- Some (pick (get_fresh_partners_s t' c_smap));
             }

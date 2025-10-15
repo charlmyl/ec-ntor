@@ -1,20 +1,22 @@
-require import AllCore FSet FMap Distr DProd List SplitRO NTOR.
-(*   *) import GAKEc HROc.
-require (*  *) DiffieHellman.
-(*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder DH.G DH.GP DH.FD DH.GP.ZModE.
+require import AllCore FSet FMap Distr DProd List SplitRO.
+(*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder.
+
+require NTOR_nosid.
+clone import NTOR_nosid as NTOR_mod.
+import NTORc GAKE_mod GAKEc HROc HRO_mod_c DH.G DH.GP DH.FD.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Introduce stop in original game *)
-module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_nodhs_i = {
+module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i = {
   var b0 : bool 
 
-  var servers : (s_id, server_state) fmap
+  var servers : (s_id, GAKEc.server_state) fmap
   var unreg_ro : (pkey * pkey * s_id * pkey * pkey) fset
   var pk_set : pkey fset
   var stop : bool
 
-  var c_smap: (int, pr_st_client instance_state) fmap
-  var s_smap: (s_id * int, pr_st_server instance_state) fmap
+  var c_smap: (int, GAKEc.pr_st_client GAKEc.instance_state) fmap
+  var s_smap: (s_id * int, GAKEc.pr_st_server GAKEc.instance_state) fmap
   
   var tested: int option
 
@@ -58,7 +60,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_nodhs_i = {
       kp <@ S.keygen();
       stop <- stop \/ kp.`1 \in pk_set;
       pk_set <- pk_set `|` fset1 kp.`1;
-      servers.[b] <- Honest kp;
+      servers.[b] <- GAKEc.Honest kp;
     }
     return omap get_pkey servers.[b];
   }
@@ -92,7 +94,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_nodhs_i = {
     var sko, resp, st', k, m3;
     var r <- None;
 
-    sko <- obind get_skey servers.[b];
+    sko <- obind GAKEc.get_skey servers.[b];
 
     if (sko is Some sk) (* Server was initialised as honest *) {
       match s_smap.[b, j] with
@@ -160,6 +162,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_nodhs_i = {
     | Some st => {
         (* only accepted client instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
+        
         if (st is Accepted st' t' k' ir') {
           if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
             k <- Some k';
@@ -253,7 +256,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_nodhs_i = {
     | Some st => {
         (* only accepted server instances that are not ltkey revealed in case they 
            or all partners are tested can be ephkey revealed *)
-        if (st is Accepted st t k ir) { (* No Pending on Server side *)
+        if (st is GAKEc.Accepted st t k ir) { (* No Pending on Server side *)
           if (!((   get_ir_test (oget s_smap.[b, j])
                  \/ untested_partner_s t c_smap = Some false)
                 /\ get_sr_ltk (oget servers.[b]))) {
@@ -328,25 +331,6 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKE_nodhs_i = {
   }
 }.
 
-
-(* ------------------------------------------------------------------------------------------ *)
-(* Modified model with pkeys instead of names *)
-require import NTOR_nosid.
-import GAKE_mod.
-
-op rem_sid_c (s : GAKEc.pr_st_client GAKEc.instance_state) : pr_st_client instance_state =
-match s with 
-| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) (st.`2, pt.`2) ir
-| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) ((st.`2, (t.`1).`2), t.`2) k ir
-| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) (Some (((oget st).`2, ((oget t).`1).`2), (oget t).`2)) ir
-end.
-
-op rem_sid_s (s : GAKEc.pr_st_server GAKEc.instance_state) : pr_st_server instance_state =
-match s with 
-| GAKEc.Pending st pt ir => GAKE_mod.Pending (st.`2, st.`3) (g ^ st.`2, pt.`2) ir
-| GAKEc.Accepted st t k ir => GAKE_mod.Accepted (st.`2, st.`3) ((g ^ st.`2, (t.`1).`2), t.`2) k ir
-| GAKEc.Aborted st t ir => GAKE_mod.Aborted (Some ((oget st).`2, (oget st).`3)) (Some ((g ^ (oget st).`2, ((oget t).`1).`2), (oget t).`2)) ir
-end.
 
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -1543,6 +1527,20 @@ by rewrite /image /card -(perm_eq_size _ _ uniq_f) size_map.
 qed.
 
 
+op rem_sid_c (s : GAKEc.pr_st_client GAKEc.instance_state) : GAKE_mod.pr_st_client GAKE_mod.instance_state =
+match s with 
+| Pending st pt ir => Pending_mod (st.`2, st.`3) (st.`2, pt.`2) ir
+| Accepted st t k ir => Accepted_mod (st.`2, st.`3) ((st.`2, (t.`1).`2), t.`2) k ir
+| Aborted st t ir => Aborted_mod (Some ((oget st).`2, (oget st).`3)) (Some (((oget st).`2, ((oget t).`1).`2), (oget t).`2)) ir
+end.
+
+op rem_sid_s (s : GAKEc.pr_st_server GAKEc.instance_state) : GAKE_mod.pr_st_server GAKE_mod.instance_state =
+match s with 
+| Pending st pt ir => Pending_mod (st.`2, st.`3) (g ^ st.`2, pt.`2) ir
+| Accepted st t k ir => Accepted_mod (st.`2, st.`3) ((g ^ st.`2, (t.`1).`2), t.`2) k ir
+| Aborted st t ir => Aborted_mod (Some ((oget st).`2, (oget st).`3)) (Some ((g ^ (oget st).`2, ((oget t).`1).`2), (oget t).`2)) ir
+end.
+
 
 lemma gake_st_mod bit &m: `| Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res]
      - Pr[GAKE_mod.E_GAKE_nodhs(GAKE_mod.GAKEb_nodhs(NTOR_S_mod(GAKE_mod.HROc.RO), NTOR_C_mod(GAKE_mod.HROc.RO), GAKE_mod.HROc.RO), Name_Red(Hon_s_Red(A))).run(bit) @ &m : res] | 
@@ -1600,23 +1598,23 @@ wp; call (: Name_Red.O_GAKE.stop
 
                /\ (forall b, b \in GAKEb_st.servers{1} => get_pkey (oget GAKEb_st.servers{1}.[b]) = (oget Name_Red.O_GAKE.sid_pk{2}.[b])
                                      /\ !get_sr_dh (oget GAKEb_st.servers{1}.[b])
-                                     /\ get_pkey (oget GAKEb_st.servers{1}.[b]) \in GAKEb_nodhs.servers{2}
+                                     /\ get_pkey (oget GAKEb_st.servers{1}.[b]) \in GAKE_mod.GAKEb_nodhs.servers{2}
                                      /\ (get_sr_ltk (oget GAKEb_st.servers{1}.[b]) 
-                                         <=> get_sr_ltk (oget GAKEb_nodhs.servers{2}.[oget Name_Red.O_GAKE.sid_pk{2}.[b]])))
+                                         <=> get_sr_ltk (oget GAKE_mod.GAKEb_nodhs.servers{2}.[oget Name_Red.O_GAKE.sid_pk{2}.[b]])))
 
-               /\ (forall pk b sk1 sk2, pk \in GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKEb_nodhs.servers{2}.[pk] = Some sk1 
+               /\ (forall pk b sk1 sk2, pk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] = Some sk1 
                     => b \in GAKEb_st.servers{1} => obind GAKEc.get_skey GAKEb_st.servers{1}.[b] = Some sk2 
                     => b \in Name_Red.O_GAKE.sid_pk{2} => (oget Name_Red.O_GAKE.sid_pk{2}.[b]) = pk => sk1 = sk2)
 
                /\ (forall b, b \in Name_Red.O_GAKE.sid_pk{2} => (oget Name_Red.O_GAKE.sid_pk{2}.[b{2}]) \in Name_Red.O_GAKE.pk_set{2})
 
                /\ (forall b pk, b \in Name_Red.O_GAKE.sid_pk{2} => oget Name_Red.O_GAKE.sid_pk{2}.[b] = pk
-                    =>  obind GAKE_mod.get_skey GAKEb_nodhs.servers{2}.[pk] <> None)
+                    =>  obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] <> None)
 
-               /\ (forall sk, g ^ sk \in GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKEb_nodhs.servers{2}.[g ^ sk] = Some sk)
+               /\ (forall sk, g ^ sk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[g ^ sk] = Some sk)
 
                /\ (forall sk pk b, b \in Name_Red.O_GAKE.sid_pk{2} => oget Name_Red.O_GAKE.sid_pk{2}.[b] = pk
-                    => pk \in GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKEb_nodhs.servers{2}.[pk] = Some sk 
+                    => pk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] = Some sk 
                     => pk = g ^ sk)
 
                /\ (forall pk j x1 x2 x4 x5, pk \notin Name_Red.O_GAKE.pk_set{2} 
@@ -1772,7 +1770,7 @@ smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
     + auto => />. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
     move => stl str.
     match {1} => //.
-    + match Pending {2} ^match. auto => /#.
+    + match Pending_mod {2} ^match. auto => /#.
       sp; seq 1 1 : (#pre /\ r1{1} = r2{2}). auto => />.
       if => //.  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv *.
 have := inv i{2}.
@@ -1823,7 +1821,7 @@ have : (t_A{2}, sk{2}) = (m3{2}.`2, sk{1}).
         have := inv (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1). 
 
 have-> : (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1) \in
- RO.m{1} by smt().
+ HROc.RO.m{1} by smt().
 have-> :  b{1} \in Name_Red.O_GAKE.sid_pk{2} by smt().
 have-> :  (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1) \notin
  Name_Red.O_GAKE.unreg_ro{2} by smt().
@@ -1835,9 +1833,9 @@ rewrite roxl roxr.
       sp 1 2; if => //.
       + auto => /> &1 &2 *. do !split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       auto => /> &1 &2 *. do !split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).    
-    + match Accepted {2} ^match. auto => /#.
+    + match Accepted_mod {2} ^match. auto => /#.
       auto => />. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-    match Aborted {2} ^match. auto => /#.
+    match Aborted_mod {2} ^match. auto => /#.
     auto => />. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
   match {1} => //. auto => />.
   match {1} => //; auto => />.
@@ -1854,12 +1852,12 @@ rewrite roxl roxr.
   + auto => />.
   move => stl str.
   match {1} => //.
-  + match Pending {2} ^match. auto => /#.
+  + match Pending_mod {2} ^match. auto => /#.
     auto => />.
-  + match Accepted {2} ^match. auto => /#.
+  + match Accepted_mod {2} ^match. auto => /#.
     if => //.
     + auto => /> &1 &2 *. rewrite /untested_partner_c. 
-have<-: (card (get_partners_c t'{1} GAKEb_st.s_smap{1}) = card (get_partners_c t'{2} GAKEb_nodhs.s_smap{2})).
+have<-: (card (get_partners_c t'{1} GAKEb_st.s_smap{1}) = card (get_partners_c t'{2} GAKE_mod.GAKEb_nodhs.s_smap{2})).
 rewrite /get_partners_c.
 print inj_fcard_image_pw.
 search (=) card.
@@ -1878,11 +1876,11 @@ move => xin.
 exists (t'{1}.`1.`1, x.`2).
 admit.
 
-have<-: (card (get_untested_partners_c t'{1} GAKEb_st.s_smap{1}) = card (get_untested_partners_c t'{2} GAKEb_nodhs.s_smap{2})). admit.
+have<-: (card (get_untested_partners_c t'{1} GAKEb_st.s_smap{1}) = card (get_untested_partners_c t'{2} GAKE_mod.GAKEb_nodhs.s_smap{2})). admit.
 smt().
       + auto => />. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       auto => />.
-  match Aborted {2} ^match. auto => /#.
+  match Aborted_mod {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. sp; match; auto => />. 
   auto => /#.
@@ -1895,9 +1893,9 @@ smt().
       + auto => />.
       move => stl str.
       match {1}. 
-      + match Pending {2} ^match. auto => />. auto => /#.
+      + match Pending_mod {2} ^match. auto => />. auto => /#.
         auto => />.
-      + match Accepted {2} ^match. auto => />. auto => /#.
+      + match Accepted_mod {2} ^match. auto => />. auto => /#.
         if => //.
         + auto => /> &1 &2 *.
 rewrite /untested_partner_s.
@@ -1910,13 +1908,48 @@ have-> : (fdom
           (filter
              (fun (_ : int)
                 (val : GAKE_mod.pr_st_client GAKE_mod.instance_state) =>
-                get_trace val = Some t'{2}) GAKEb_nodhs.c_smap{2})).
+                get_trace val = Some t'{2}) GAKE_mod.GAKEb_nodhs.c_smap{2})).
 rewrite fsetP.
 move => x.
 rewrite !mem_fdom !mem_filter //=.
+split. 
+move => H1.
+split.
+smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
 admit.
+move => H1.
+split.
+smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
 admit.
-
+rewrite /get_untested_partners_s.
+have->: (fdom
+            (filter
+               (fun (_ : int)
+                  (val : GAKEc.pr_st_client GAKEc.instance_state) =>
+                  get_trace val = Some t'{1} /\ get_ir_test val = false)
+               GAKEb_st.c_smap{1})) = (fdom
+            (filter
+               (fun (_ : int)
+                  (val : GAKE_mod.pr_st_client GAKE_mod.instance_state) =>
+                  get_trace val = Some t'{2} /\ get_ir_test val = false)
+               GAKE_mod.GAKEb_nodhs.c_smap{2})).
+rewrite fsetP.
+move => x.
+rewrite !mem_fdom !mem_filter //=.
+split. 
+move => H1.
+split.
+smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+split.
+admit.
+smt().
+move => H1.
+split.
+smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+split.
+admit.
+smt().
+smt().
         + auto => /> &1 &2 *. do !split; ~2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
           move => b0 j0.
           case ((b0 = b{2}) /\ (j0 = j{2})); 2: smt(get_setE mem_set).
@@ -1924,7 +1957,7 @@ admit.
           rewrite beq jeq mem_set //=.
           smt(mem_set get_setE).
         auto => />.
-      match Aborted {2} ^match. auto => />. auto => /#.
+      match Aborted_mod {2} ^match. auto => />. auto => /#.
       auto => />.
     match None {1} ^match. auto => />. auto => /#.
     auto => />.
@@ -1939,14 +1972,14 @@ admit.
     + auto => />.
     move => stl str.
     match {1} => //.
-    + match Honest {2} ^match. auto => /#.
+    + match Honest_mod {2} ^match. auto => /#.
       if => //.
       + auto => /> &1 &2 *. admit. (* relate things *)
       + auto => /> &1 &2 *. do !split; smt(get_setE mem_set). 
       auto => />.
-    + match Corrupt {2} ^match. auto => /#.
+    + match Corrupt_mod {2} ^match. auto => /#.
       auto => />.
-    match Dishonest {2} ^match. auto => /#.
+    match Dishonest_mod {2} ^match. auto => /#.
     auto => />.
   match {1} => //. match {1} => //. auto => /#.
 - move => &2 bad; proc; inline. sp; match; auto => />. 
@@ -1960,17 +1993,17 @@ admit.
     + auto => />.
     move => stl str.
     match {1} => //.
-    + match Pending {2} ^match. auto => /#.
+    + match Pending_mod {2} ^match. auto => /#.
       if => //.
       + admit. (* relate untested_origins_c *)
       + auto => /> &1 &2 *. smt(get_setE mem_set).
       auto => />.
-    + match Accepted {2} ^match. auto => /#.
+    + match Accepted_mod {2} ^match. auto => /#.
       if => //.
       + admit. (* relate untested_partner_c *)
       + auto => /> &1 &2 *. smt(get_setE mem_set).
       auto => />.
-    match Aborted {2} ^match. auto => /#.
+    match Aborted_mod {2} ^match. auto => /#.
     auto => />.
   match {1}; auto => />.
 - move => &2 bad; proc; inline. sp; match; auto => />. 
@@ -1984,14 +2017,14 @@ admit.
     + auto => />.
     move => stl str.
     match {1}. 
-    + match Pending {2} ^match. auto => /#.
+    + match Pending_mod {2} ^match. auto => /#.
       auto => />.
-    + match Accepted {2} ^match. auto => /#.
+    + match Accepted_mod {2} ^match. auto => /#.
       if => //.
       + admit. (* relate untested_partner_s *)
       + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       auto => />.
-    match Aborted {2} ^match. auto => /#.
+    match Aborted_mod {2} ^match. auto => /#.
     auto => />.
   match None {1} ^match. auto => /#.
   auto => />.
@@ -2007,16 +2040,16 @@ admit.
       + auto => />.
       move => stl str.
       match {1} => //.
-      + match Pending {2} ^match. auto => /#.
+      + match Pending_mod {2} ^match. auto => /#.
         auto => />.
-      + match Accepted {2} ^match. auto => /#.
+      + match Accepted_mod {2} ^match. auto => /#.
         if => //.
         + auto => &1 &2 *. admit. (* relate fresh_partner_c *)
         + if => //.
           + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
           auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
         auto => />.
-      match Aborted {2} ^match. auto => /#.
+      match Aborted_mod {2} ^match. auto => /#.
       auto => />.
     auto => />.
   if {1} => //; match {1} => //. 
@@ -2035,9 +2068,9 @@ admit.
       + auto => />.
       move => stl str.
       match {1} => //.
-      + match Pending {2} ^match. auto => /#.
+      + match Pending_mod {2} ^match. auto => /#.
         auto => />.
-      + match Accepted {2} ^match. auto => /#.
+      + match Accepted_mod {2} ^match. auto => /#.
         if => //.
         + auto => &1 &2 *. admit. (* relate fresh_partner_s *)
         + if => //.
@@ -2056,7 +2089,7 @@ admit.
           rewrite beq jeq mem_set //=.
           smt(mem_set get_setE).
         auto => />.
-      match Aborted {2} ^match. auto => /#.
+      match Aborted_mod {2} ^match. auto => /#.
       auto => />.
     auto => />.
   if {1} => //.
@@ -2070,6 +2103,6 @@ admit.
 
 auto => />.
 split. smt(emptyE in_fset0).
-move => roeq inj csm ssm pkin inv inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 rl rr al hsl csl pksl ssl sl stl tl url ml ar hsr csr tr str huh ssr sr pksr urr mr.
+move => roeq inj csm ssm pkin inv inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 inv17 inv18 inv19 rl rr al hsl csl pksl ssl sl stl tl url ml ar hsr csr tr str huh ssr sr pksr urr mr.
 by case : (!str) => />.
 qed.
