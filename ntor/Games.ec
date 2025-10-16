@@ -92,7 +92,7 @@ module Game0 : GAKE_nodhs_i = {
     if (pk \notin servers) {
       bad <- bad \/ pk \in kp_set;
       kp_set <- kp_set `|` fset1 pk;
-      servers.[pk] <- Honest sk;
+      servers.[pk] <- Honest_mod sk;
       r <- Some pk;
     }
     return r;
@@ -110,7 +110,7 @@ module Game0 : GAKE_nodhs_i = {
           pk <- g ^ sk;
           bad <- bad \/ pk \in kp_set;
           kp_set <- kp_set `|` fset1 pk;
-          c_smap.[i] <- Pending (m1, sk) (m1, pk) (false, false, false);
+          c_smap.[i] <- Pending_mod (m1, sk) (m1, pk) (false, false, false);
           r <- Some pk;
         }
       | Some st => { (*
@@ -138,7 +138,7 @@ module Game0 : GAKE_nodhs_i = {
           bad <- bad \/ pk \in kp_set;
           kp_set <- kp_set `|` fset1 pk;
           (t_B, key) <@ h(m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
-          s_smap.[(b, j)] <- Accepted (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false);
+          s_smap.[(b, j)] <- Accepted_mod (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false);
           r <- Some (pk, t_B);
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -156,18 +156,18 @@ module Game0 : GAKE_nodhs_i = {
     | None => { } (* Abort? *)
     | Some st => {
         match st with
-        | Pending st pt ir => {
+        | Pending_mod st pt ir => {
             (b, sk_ce) <- st;
             (t_A, key) <@ h(m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
             if (t_A = m3.`2) {
-              c_smap.[i] <- Accepted st (pt, Some m3) key ir;
+              c_smap.[i] <- Accepted_mod st (pt, Some m3) key ir;
               r <- Some ();
             } else {
-              c_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
+              c_smap.[i] <- Aborted_mod (Some st) (Some (pt, Some m3)) ir;
             }
           }
-        | Accepted _ _ _ _ => { }
-        | Aborted _ _ _ => { }
+        | Accepted_mod _ _ _ _ => { }
+        | Aborted_mod _ _ _ => { }
         end;
       }
     end;
@@ -184,10 +184,10 @@ module Game0 : GAKE_nodhs_i = {
     | Some st => {
         (* only accepted client instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
-        if (st is Accepted st' t' k' ir') {
+        if (st is Accepted_mod st' t' k' ir') {
           if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t' s_smap = Some false)) {
             k <- Some k';
-            c_smap.[i] <- set_ir_sess (Accepted st' t' k' ir');
+            c_smap.[i] <- set_ir_sess (Accepted_mod st' t' k' ir');
           }
         }
       }
@@ -203,10 +203,10 @@ module Game0 : GAKE_nodhs_i = {
     | Some st => {
         (* only accepted server instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
-        if (st is Accepted st' t' k' ir') {
+        if (st is Accepted_mod st' t' k' ir') {
           if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+            s_smap.[(b, j)] <- set_ir_sess (Accepted_mod st' t' k' ir');
           }
         }
       }
@@ -222,7 +222,7 @@ module Game0 : GAKE_nodhs_i = {
     | Some st => {
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
-        if (st is Honest sk) {
+        if (st is Honest_mod sk) {
           if (forall j,
                 (b, j) \in s_smap (* just checking instances of b *)
                 => !(   (   get_ir_test (oget s_smap.[b, j])
@@ -230,7 +230,7 @@ module Game0 : GAKE_nodhs_i = {
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
                      /\ get_ir_eph (oget s_smap.[b,j]))) {
             ltk <- Some sk; 
-            servers.[b] <- Corrupt sk; 
+            servers.[b] <- Corrupt_mod sk; 
           }
         }
       }
@@ -247,21 +247,21 @@ module Game0 : GAKE_nodhs_i = {
         match st with
           (* client instances can be ephkey revealed when pending if there isn't 
              a tested origin partner (agreeing on first message *)
-        | Pending st pk_e ir => {
+        | Pending_mod st pk_e ir => {
             if (untested_origins_c (pk_e, None) s_smap <> Some false) {
               ek <- Some (st.`2);
-              c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
+              c_smap.[i] <- set_ir_eph (Pending_mod st pk_e ir);
             }
           }
           (* accepted client instamces can only be ephkey revealed when not tested and 
              if not all partners are tested *)
-        | Accepted st t k ir => {
+        | Accepted_mod st t k ir => {
             if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t s_smap = Some false)) {
               ek <- Some (st.`2);
-              c_smap.[i] <- set_ir_eph (Accepted st t k ir);
+              c_smap.[i] <- set_ir_eph (Accepted_mod st t k ir);
             }
           }
-        | Aborted _ _ _ => {  }
+        | Aborted_mod _ _ _ => {  }
         end;
       }
     end;
@@ -276,12 +276,12 @@ module Game0 : GAKE_nodhs_i = {
     | Some st => {
         (* only accepted server instances that are not ltkey revealed in case they 
            or all partners are tested can be ephkey revealed *)
-        if (st is Accepted st t k ir) { (* No Pending on Server side *)
+        if (st is Accepted_mod st t k ir) { (* No Pending on Server side *)
           if (!((   get_ir_test (oget s_smap.[b, j])
                  \/ untested_partner_s t c_smap = Some false)
                 /\ get_sr_ltk (oget servers.[b]))) {
             ek <- Some (oget st.`2);
-            s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+            s_smap.[(b, j)] <- set_ir_eph (Accepted_mod st t k ir);
           }
         }
       }
@@ -299,16 +299,16 @@ module Game0 : GAKE_nodhs_i = {
       | Some st => {
           (* only accepted client instances that are not sesskey revealed, not ephkey revealed 
              and not all partner instances are unfresh can be tested *)
-          if (st is Accepted st' t' k' ir') {
+          if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
                   \/ fresh_partner_c t' s_smap servers = Some false)) {
               if (b0 = false) {
                 k <- Some k';
-                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+                c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
+                c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
               }
               tested <- Some i;
            }
@@ -329,17 +329,17 @@ module Game0 : GAKE_nodhs_i = {
       | Some st => {
           (* only accepted server instances that are not sesskey revealed, not trivially broken
              and not all partner instances are unfresh can be tested *)
-          if (st is Accepted st' t' k' ir') {
+          if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget s_smap.[b, j]) 
                   \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
                   \/ fresh_partner_s t' c_smap = Some false)) {
               if (b0 = false) {
                 k <- Some k';
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(b, j)] <- set_ir_test (Accepted_mod st' t' k' ir');
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(b, j)] <- set_ir_test (Accepted_mod st' t' k' ir');
               }
               tested <- Some (pick (get_fresh_partners_s t' c_smap));
             }
@@ -412,7 +412,7 @@ module Game2 = Game1 with {
     var ts : tag
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#Pending.2 ~ { x <- (m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
+    ^match#Some.^match#Pending_mod.2 ~ { x <- (m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
                                      ts <$ dtag;
                                      if (x \notin h1m) {h1m.[x] <- ts;} 
                                      t_A <- oget h1m.[x];
@@ -427,14 +427,14 @@ module Game2 = Game1 with {
 
   proc c_test [
     var x : pkey * pkey * pkey * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 
   proc s_test [
     var x : pkey * pkey * pkey * pkey * pkey
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 }.
 
@@ -444,7 +444,7 @@ print Game2.
 (* Step3: Removing case of adversary guessing the right tag *)
 module Game3 = Game2 with {
   proc send_msg3 [
-    [^match#Some.^match#Pending.^badt<- - 3] + (!badt)
+    [^match#Some.^match#Pending_mod.^badt<- - 3] + (!badt)
   ]
 }.
 
@@ -465,14 +465,14 @@ module Game4 = Game3 with {
   ]
 
   proc send_msg3 [
-    ^match#Some.^match#Pending.^ks<$ ~ {key <- witness;}
-    [^match#Some.^match#Pending.^if{2} - ^key<-] -
+    ^match#Some.^match#Pending_mod.^ks<$ ~ {key <- witness;}
+    [^match#Some.^match#Pending_mod.^if{2} - ^key<-] -
   ]
 
   proc c_rev_skey [
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); 
+    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); 
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}
@@ -481,7 +481,7 @@ module Game4 = Game3 with {
   proc s_rev_skey [
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2));
+    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2));
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}
@@ -490,10 +490,10 @@ module Game4 = Game3 with {
   proc c_test [
     var ks2 : key
     var p : (pkey * int)
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
                                                     p <- pick (get_fresh_partners_c t' s_smap servers); 
                                                     test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];
                                                        p <- pick (get_fresh_partners_c t' s_smap servers); 
                                                        test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
 
@@ -501,8 +501,8 @@ module Game4 = Game3 with {
 
   proc s_test [
     var ks2 : key
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
-    ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
   ]
 }.
 
@@ -556,39 +556,39 @@ module GameDDH = Game4 with {
   ]
 
   proc send_msg3 [
-    ^match#Some.^match#Pending.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h1mDDH)
-    ^match#Some.^match#Pending.^if.^h1m<- ~ {h1mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ts;}
-    ^match#Some.^match#Pending.^t_A<- ~ {t_A <- oget h1mDDH.[(None, None, x.`3, x.`4, x.`5)];}
+    ^match#Some.^match#Pending_mod.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h1mDDH)
+    ^match#Some.^match#Pending_mod.^if.^h1m<- ~ {h1mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ts;}
+    ^match#Some.^match#Pending_mod.^t_A<- ~ {t_A <- oget h1mDDH.[(None, None, x.`3, x.`4, x.`5)];}
   ]
 
   proc c_rev_skey [
-    ^match#Some.^match#Accepted.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^match#Some.^match#Accepted.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^match#Some.^match#Accepted.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
+    ^match#Some.^match#Accepted_mod.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^match#Some.^match#Accepted_mod.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
   ]
 
   proc s_rev_skey [
-    ^match#Some.^match#Accepted.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^match#Some.^match#Accepted.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^match#Some.^match#Accepted.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
+    ^match#Some.^match#Accepted_mod.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^match#Some.^match#Accepted_mod.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
   ]
 
   proc c_test [
-    ^if.^match#Some.^match#Accepted.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
-    ^if.^match#Some.^match#Accepted.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
-    ^if.^match#Some.^match#Accepted.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
   ]
 
   proc s_test [
-    ^if.^match#Some.^match#Accepted.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
-    ^if.^match#Some.^match#Accepted.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
-    ^if.^match#Some.^match#Accepted.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
+    ^if.^match#Some.^match#Accepted_mod.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
   ]
 
 }.

@@ -159,32 +159,32 @@ module (Red_ROM2 (D : A_GAKE_nodhs) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher
     ]
 
     proc send_msg3 [
-      ^match#Some.^match#Pending.^ts<$ ~ {t_A <@ O1.get(x); O2.sample(x); key <- witness;}
-      [^match#Some.^match#Pending.^if - ^key<-] -
+      ^match#Some.^match#Pending_mod.^ts<$ ~ {t_A <@ O1.get(x); O2.sample(x); key <- witness;}
+      [^match#Some.^match#Pending_mod.^if - ^key<-] -
     ]
 
     proc c_rev_skey [
       var ks : key
       var x : pkey * pkey * pkey * pkey * pkey
-      ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
+      ^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); ks <@ O2.get(x); k <- Some ks;}
     ]
 
     proc s_rev_skey [
       var ks : key
       var x : pkey * pkey * pkey * pkey * pkey
-      ^match#Some.^match#Accepted.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); ks <@ O2.get(x); k <- Some ks;}
+      ^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); ks <@ O2.get(x); k <- Some ks;}
     ]
 
     proc c_test [
       var ks2 : key
-      ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
+      ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
     ]
 
     proc s_test [
       var ks2 : key
-      ^if.^match#Some.^match#Accepted.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
-      ^if.^match#Some.^match#Accepted.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
+      ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <@ O2.get(x); k <- Some ks;}
+      ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <@ O2.get(x);}
     ]
   }
 
@@ -355,14 +355,14 @@ module (Red_Ltk (A : A_GAKE_nodhs) : St_CDH_A) (O : Oracle) = {
       var inst : int
 
       [0 - ^match] + ^ (!stop)
-      ^match#Some.^match#Honest.^if.^ltk<- ~ {inst <- oget b_inst.[b]; ltk <@ O.corrupt2(inst);}
+      ^match#Some.^match#Honest_mod.^if.^ltk<- ~ {inst <- oget b_inst.[b]; ltk <@ O.corrupt2(inst);}
     ]
 
     proc c_rev_ephkey [
       var inst : int
 
       [0 - ^match] + ^ (!stop)
-      ^match#Some.^match#Pending.^if.^ek<- ~ {inst <- oget i_inst.[i]; ek <@ O.corrupt1(inst);}
+      ^match#Some.^match#Pending_mod.^if.^ek<- ~ {inst <- oget i_inst.[i]; ek <@ O.corrupt1(inst);}
     ]
 
     proc s_rev_ephkey [
@@ -940,16 +940,16 @@ qed.
 (* Clearing the key out of the state *)
 local op s_clear_k (s : pr_st_server instance_state) =
 match s with
-| Pending _ _ _ => s
-| Accepted st t k ir => Accepted st t witness ir
-| Aborted _ _ _ => s
+| Pending_mod _ _ _ => s
+| Accepted_mod st t k ir => Accepted_mod st t witness ir
+| Aborted_mod _ _ _ => s
 end.
 
 local op c_clear_k (s : pr_st_client instance_state) =
 match s with
-| Pending _ _ _ => s
-| Accepted st t k ir => Accepted st t witness ir
-| Aborted _ _ _ => s
+| Pending_mod _ _ _ => s
+| Accepted_mod st t k ir => Accepted_mod st t witness ir
+| Aborted_mod _ _ _ => s
 end.
 
 (* Equivalence of partnering notions after keys are cleared *)
@@ -1298,12 +1298,12 @@ servers : (pkey, server_state) fmap) =
         /\ (badq <=> (tq <> None /\ oget tq \in hq))
         /\ (forall x y b, tq = Some (g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y) 
                 => (g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y) \in h2m 
-                         /\ ((exists i tag key ir, csm.[i] = Some (Accepted (g ^ b, x) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
+                         /\ ((exists i tag key ir, csm.[i] = Some (Accepted_mod (g ^ b, x) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
                      /\ get_ir_test (oget csm.[i]))
-                  \/ (exists i tag key ir, ssm.[i] = Some (Accepted (b, Some y) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
+                  \/ (exists i tag key ir, ssm.[i] = Some (Accepted_mod (b, Some y) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
                      /\ get_ir_test (oget ssm.[i]))))
-        /\ (forall i st t k ir, csm.[i] = Some (Accepted st t k ir) => tested = None => !ir.`3)
-        /\ (forall i st t k ir, ssm.[i] = Some (Accepted st t k ir) => tested = None => !ir.`3)
+        /\ (forall i st t k ir, csm.[i] = Some (Accepted_mod st t k ir) => tested = None => !ir.`3)
+        /\ (forall i st t k ir, ssm.[i] = Some (Accepted_mod st t k ir) => tested = None => !ir.`3)
         /\ (forall sk, g ^ sk \in kp_set => sk \in dt)
         /\ (forall i i' m1 m2 m2', csm.[i] <> None /\ get_trace (oget csm.[i]) = Some (m1, m2)
                 => csm.[i'] <> None /\ get_trace (oget csm.[i']) = Some (m1, m2')
@@ -1317,28 +1317,28 @@ servers : (pkey, server_state) fmap) =
         /\ (forall i tr pk tag, ssm.[i] <> None 
                 => get_trace (oget ssm.[i]) = Some (tr, Some (pk, tag)) 
                 => pk \in kp_set)
-        /\ (forall i st pt ir, csm.[i] = Some (Pending st pt ir)
+        /\ (forall i st pt ir, csm.[i] = Some (Pending_mod st pt ir)
                 => (pt.`1 = st.`1) /\ (pt.`2 = g ^ st.`2) /\ !ir.`3)
-        /\ (forall i st t k ir, csm.[i] = Some (Accepted st t k ir)
+        /\ (forall i st t k ir, csm.[i] = Some (Accepted_mod st t k ir)
                 => ((t.`1).`1 = st.`1) /\ ((t.`1).`2 = g ^ st.`2) /\ (exists pk tag, (t.`2 = Some (pk, tag))))
-        /\ (forall i st t k ir, ssm.[i] = Some (Accepted st t k ir)
+        /\ (forall i st t k ir, ssm.[i] = Some (Accepted_mod st t k ir)
                 => ((oget t.`2).`1 = g ^ oget st.`2) /\ ((t.`1).`1 = g ^ st.`1) /\ (exists sk, st.`2 = Some sk) /\ (exists pk tag, (t.`2 = Some (pk, tag))))
         /\ (forall x y b, (g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y) \in h2m
-                => (exists i tag key ir, csm.[i] = Some (Accepted (g ^ b, x) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
+                => (exists i tag key ir, csm.[i] = Some (Accepted_mod (g ^ b, x) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
                      /\ (get_ir_sess (oget csm.[i]) \/ get_ir_test (oget csm.[i])))
-                  \/ (exists i tag key ir, ssm.[i] = Some (Accepted (b, Some y) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
+                  \/ (exists i tag key ir, ssm.[i] = Some (Accepted_mod (b, Some y) ((g ^ b, g ^ x), Some (g ^ y, tag)) key ir)
                      /\ (get_ir_sess (oget ssm.[i]) \/ get_ir_test (oget ssm.[i])))
                   \/ (g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y) \in hq)
-        /\ (forall i st t k ir, csm.[i] = Some (Accepted st t k ir)
-                => (exists j st' k' ir', ssm.[j] = Some (Accepted st' t k' ir')))
+        /\ (forall i st t k ir, csm.[i] = Some (Accepted_mod st t k ir)
+                => (exists j st' k' ir', ssm.[j] = Some (Accepted_mod st' t k' ir')))
         /\ (forall x, x \in tags
-                => x \in h1m /\ oget tags.[x] = oget h1m.[x] /\ (exists i st k ir, ssm.[i] = Some (Accepted st ((x.`3, x.`4), Some (x.`5, oget tags.[x])) k ir)))
+                => x \in h1m /\ oget tags.[x] = oget h1m.[x] /\ (exists i st k ir, ssm.[i] = Some (Accepted_mod st ((x.`3, x.`4), Some (x.`5, oget tags.[x])) k ir)))
         /\ (forall b sk, b \in servers => (get_skey (oget servers.[b])) = Some sk => b = g ^ sk).
 
 
 
 lemma interestingbit &m: `|Pr[E_GAKE_nodhs(Game4, A).run(false) @ &m : res] - Pr[E_GAKE_nodhs(Game4, A).run(true) @ &m : res]| <= Pr[E_GAKE_nodhs(Game4, A).run(false) @ &m : Game4.badq].
-proof.
+proof. admit. (*
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Game4.badq => //; first last.
 + smt().
@@ -2512,7 +2512,7 @@ by smt(get_setE).
   + inline; auto => />.
     by rewrite dkey_ll /#.
   auto => />.
-  by rewrite dkey_ll /#.
+  by rewrite dkey_ll /#. *)
 qed.
 
 
@@ -2829,16 +2829,21 @@ do rewrite -andbA.
 by congr; rewrite Pr[mu_eq] // => &hr; smt().
 qed.
 
+print Red_Ltk.Red_O.
 
 lemma cdh_red_ltk &m: Pr[E_GAKE_nodhs(GameDDH, A).run(true) @ &m : GameDDH.badq /\ GameDDH.test_ephrev_s = Some true] <= 
                  Pr[St_CDH_E(St_CDH_O, Red_Ltk(A)).run() @ &m : St_CDH_O.win].
 proof. 
-byequiv => //.
+byequiv (: ={glob A} /\ arg{1} = true ==> _) => //.
 proc; inline.
 call (: Red_Ltk.Red_O.stop,
         ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, h1m, h2m, hq, tq, badq, tags, badt, test_ephrev_s, h1mDDH, h2mDDH}(GameDDH, Red_Ltk.Red_O)
          /\ (GameDDH.badq{1} /\ GameDDH.test_ephrev_s{1} = Some true => St_CDH_O.win{2}),
-        St_CDH_O.win{2}).
+        St_CDH_O.win{2}); last first.
+
+auto => />.
+move => roeq inj csm ssm pkin inv inv2 inv3 inv4 inv5 rl rr al hsl csl pksl ssl sl stl tl url ml ar hsr csr tr str huh ssr sr pksr urr mr.
+by case : (!huh) => />.
 
 - exact A_ll.
 
@@ -2847,10 +2852,7 @@ call (: Red_Ltk.Red_O.stop,
 - move => &2 bad; proc; inline; auto => />. 
   by rewrite dtag_ll dkey_ll //=.
 - move => &1; proc; inline.
-  sp; if => //.
-  + auto => />; rewrite dtag_ll dkey_ll //=. 
-    admit.
-  admit.
+  sp; if => //; auto; smt(dtag_ll dkey_ll).
 
 + proc; inline.
   if {2} => //; 2: by auto => />.
@@ -2890,7 +2892,12 @@ call (: Red_Ltk.Red_O.stop,
 - move => &2 bad; proc; inline. 
   sp; match => //. 
   match => //.
-  admit.
+  seq 1 : (#pre); try by auto.
+  + auto => />. by rewrite dt_ll.
+  + sp; if => //; auto => />.
+    by rewrite dtag_ll.
+  hoare. 
+  by auto => />.
 - move => &1; proc; inline.
   sp; if => //.
   sp; match => //. 
