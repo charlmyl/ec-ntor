@@ -2831,18 +2831,38 @@ qed.
 
 print Red_Ltk.Red_O.
 
+local op clear_sk (s : server_state) =
+match s with
+| Honest_mod sk => Honest_mod witness
+| Corrupt_mod sk => Corrupt_mod witness
+| Dishonest_mod => s
+end.
+
+(*
+local op clear_esk (s : pr_st_client instance_state) = 
+match s with
+| Pending_mod st pt ir => 
+  let (pk, sk) = st in Pending_mod (pk, witness) pt ir
+| Accepted_mod st t k ir => 
+  let (pk, sk) = st in Accepted_mod (pk, witness) t k ir
+| Aborted_mod st t ir => 
+  if st = (Some (pk, sk)) then Aborted_mod (Some (pk, witness)) t ir else s
+end.*)
+
 lemma cdh_red_ltk &m: Pr[E_GAKE_nodhs(GameDDH, A).run(true) @ &m : GameDDH.badq /\ GameDDH.test_ephrev_s = Some true] <= 
                  Pr[St_CDH_E(St_CDH_O, Red_Ltk(A)).run() @ &m : St_CDH_O.win].
 proof. 
 byequiv (: ={glob A} /\ arg{1} = true ==> _) => //.
 proc; inline.
 call (: Red_Ltk.Red_O.stop,
-        ={b0, hm, servers, c_smap, s_smap, tested, kp_set, bad, h1m, h2m, hq, tq, badq, tags, badt, test_ephrev_s, h1mDDH, h2mDDH}(GameDDH, Red_Ltk.Red_O)
+        ={b0, hm, c_smap, s_smap, tested, kp_set, bad, h1m, h2m, hq, tq, badq, tags, badt, test_ephrev_s, h1mDDH, h2mDDH}(GameDDH, Red_Ltk.Red_O)
+         /\ (forall pk, omap clear_sk GameDDH.servers{1}.[pk] = Red_Ltk.Red_O.servers{2}.[pk])
          /\ (GameDDH.badq{1} /\ GameDDH.test_ephrev_s{1} = Some true => St_CDH_O.win{2}),
         St_CDH_O.win{2}); last first.
 
 auto => />.
-move => roeq inj csm ssm pkin inv inv2 inv3 inv4 inv5 rl rr al hsl csl pksl ssl sl stl tl url ml ar hsr csr tr str huh ssr sr pksr urr mr.
+split. smt(emptyE).
+move => inv1 roeq inj csm ssm pkin inv inv2 inv3 inv4 inv5 rl rr al hsl csl pksl ssl sl stl tl url ml ar hsr csr tr str huh ssr sr pksr urr mr.
 by case : (!huh) => />.
 
 - exact A_ll.
@@ -2857,8 +2877,7 @@ by case : (!huh) => />.
 + proc; inline.
   if {2} => //; 2: by auto => />.
   sp; seq 1 1 : (#pre /\ sk{1} = y_m{2}). auto => />.
-  auto => />.
-  admit. (* admit servers only equal upto honesty since we remove the sk *)
+  auto => />. smt(mem_set get_setE).
 - move => &2 bad; proc; inline; auto => />. 
   by rewrite dt_ll //=.
 - move => &1; proc; inline.
@@ -2867,7 +2886,7 @@ by case : (!huh) => />.
 
 + proc; inline.
   if {2} => //.
-  + sp; if => //.
+  + sp; if => //. auto => /#.
     match = => //.
     auto => />. 
     admit. (* I need to remove the secret key from the client state *)
@@ -2883,7 +2902,17 @@ by case : (!huh) => />.
 
 + proc; inline.
   if {2} => //.
-  + sim />.
+  + sp; match {1} => //.
+    + match None {2} ^match => //. auto => /#.
+    match Some {2} ^match => //. auto => /#.
+    match = => //.
+    seq 1 1: (#pre /\ ={sk}). auto => />.
+    sp; if => //.
+    sp; seq 1 1: (#pre /\ ={ts}). auto => />.
+    rcondt {1} ^if. auto => /> &1 *. admit.
+    rcondt {2} ^if. auto => /> &1 *. admit.
+    auto => /> &1 &2 *.
+    rewrite !get_setE //=. admit.
   sp; match {1} => //.
   match {1} => //.
   seq 1 0 : (#pre /\ sk{1} \in dt). auto => />.
@@ -2902,53 +2931,124 @@ by case : (!huh) => />.
   sp; if => //.
   sp; match => //. 
   match; auto => />.
-  admit.
+  seq 1 : (#pre); try by auto.
+  sp; if => //; auto => />.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
+- move => &2 bad; proc; inline. 
+  sp; match => //. 
+  match => //.
+  seq 1 : (#pre); try by auto.
+  + auto => />. by rewrite dtag_ll.
+  hoare. 
+  by auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; match => //. 
+  match; auto => />.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
+- move => &2 bad; proc; inline. 
+  sp; match => //. 
+  match => //.
+  if => //.
+  sp; seq 1 : (#pre); try by auto.
+  + auto => />. by rewrite dkey_ll.
+  hoare. 
+  by auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; match => //. 
+  match; auto => />.
+  if => //.
+  sp; seq 1 : (#pre); try by auto.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
+- move => &2 bad; proc; inline. 
+  sp; match => //. 
+  match => //.
+  if => //.
+  sp; seq 1 : (#pre); try by auto.
+  + auto => />. by rewrite dkey_ll.
+  hoare. 
+  by auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; match => //. 
+  match; auto => />.
+  if => //.
+  sp; seq 1 : (#pre); try by auto.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
+- move => &2 bad; proc; inline. 
+  sp; match => //. 
+  match => //.
+  by auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; match => //. 
+  by auto => />.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
+- move => &2 bad; proc; inline. 
+  sp; match => //. 
+  by match => //; auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; match => //. 
+  by match; auto => />.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
+- move => &2 bad; proc; inline. 
+  sp; match => //. 
+  by match => //; auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; match => //. 
+  by match; auto => />.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
+- move => &2 bad; proc; inline. 
+  sp; if => //; match => //. 
+  match => //.
+  if => //; if => //.
+  + auto => />. by rewrite dkey_ll.
+  sp; seq 1 : (#pre); try by auto.
+  + auto => />. by rewrite dkey_ll.
+  + auto => />. by rewrite dkey_ll.
+  hoare. 
+  by auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; if => //; match => //. 
+  match; auto => />.
+  if => //; if => //; auto => />.
 
 + proc; inline.
   admit.
-- admit.
-- admit.
-
-auto => />.
-move => &2.
-split. 
-move => &2 roeq inj csm ssm pkin inv inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 rl rr al hsl csl pksl ssl sl stl tl url ml ar hsr csr tr str huh ssr sr pksr urr mr.
-by case : (!str) => />.
+- move => &2 bad; proc; inline. 
+  sp; if => //; match => //. 
+  match => //.
+  if => //; if => //.
+  + auto => />. by rewrite dkey_ll.
+  sp; seq 1 : (#pre); try by auto.
+  + auto => />. by rewrite dkey_ll.
+  + auto => />. by rewrite dkey_ll.
+  hoare. 
+  by auto => />.
+- move => &1; proc; inline.
+  sp; if => //.
+  sp; if => //; match => //. 
+  match; auto => />.
+  if => //; if => //; auto => />.
+qed.
 
 
 module Reduction_Eph (A : A_GAKE_nodhs) (D : DDH_oracle) = {
