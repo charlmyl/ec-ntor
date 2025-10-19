@@ -379,17 +379,20 @@ module Game2 = Game1 with {
   var hq : (pkey * pkey * pkey * pkey * pkey) fset
   var tq : (pkey * pkey * pkey * pkey * pkey) option
   var badq : bool
-  var tags : (pkey * pkey * pkey * pkey * pkey, tag) fmap
-  var badt : bool
+  var tags_adv : (pkey * pkey * pkey * pkey * pkey, tag) fmap
+  var tags_prot : (pkey * pkey * pkey * pkey * pkey, tag) fmap
+  var badt1 : bool
+  var badt2 : bool
 
   proc init_mem [
-    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; tags <- empty; badt <- false; }
+    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; 
+             tags_adv <- empty; tags_prot <- empty; badt1 <- false; badt2 <- false;}
   ]
 
   proc h [
     var t : tag
     var k : key
-    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
+    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} tags_adv.[x] <- oget h1m.[x]; }
     ^if -
     1 + ^ {hq <- hq `|` fset1 x; badq <- badq \/ (tq <> None /\ oget tq \in hq);}
   ] res ~ ((oget h1m.[x], oget h2m.[x]))
@@ -405,7 +408,7 @@ module Game2 = Game1 with {
                                       ks <$ dkey;
                                       if (x \notin h2m) {h2m.[x] <- ks;} 
                                       key <- oget h2m.[x]; 
-                                      tags.[x] <- t_B; }
+                                      tags_prot.[x] <- t_B; }
   ]
 
   proc send_msg3 [
@@ -419,7 +422,8 @@ module Game2 = Game1 with {
                                      ks <$ dkey;
                                      if (x \notin h2m) {h2m.[x] <- ks;} 
                                      key <- oget h2m.[x];
-                                     badt <- badt \/ x \notin tags; }
+                                     badt1 <- badt1 \/ x \in tags_adv; 
+                                     badt2 <- badt2 \/ x \notin tags_prot \/ badt1;}
 
   ]
   
@@ -444,7 +448,7 @@ print Game2.
 (* Step3: Removing case of adversary guessing the right tag *)
 module Game3 = Game2 with {
   proc send_msg3 [
-    [^match#Some.^match#Pending_mod.^badt<- - 3] + (!badt)
+    [^match#Some.^match#Pending_mod.^badt2<- - 3] + (!badt2)
   ]
 }.
 
@@ -452,7 +456,7 @@ print Game3.
 
 
 (* Step4: Replacing key computation on real side with sampling *)
-module Game4 = Game3 with {
+module Game4 = Game2 with {
   var test_ephrev_s : bool option
 
   proc init_mem [
