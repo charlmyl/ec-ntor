@@ -835,7 +835,7 @@ declare axiom A_ll (G <: GAKEc.GAKE{-A}):
 lemma gake_hon bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] = Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), Hon_Red(A)).run(bit) @ &m : res].
 proof.
 byequiv => //.
-proc; inline. admit. (*
+proc; inline.
 wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
   
               /\ (GAKEc.GAKEb.c_smap{1} = (GAKEc.GAKEb_hon.c_smap{2} + Hon_Red.O_GAKE.dhc_smap{2}))
@@ -1376,7 +1376,7 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
   match None {1} ^match. auto => /#.
   auto => />.
 
-auto => />; smt(fmap_eqP joinE mem_empty emptyE).*)
+auto => />; smt(fmap_eqP joinE mem_empty emptyE).
 qed.
 
 lemma rem_dhs bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S(GAKEc.HROc.RO), NTOR_C(GAKEc.HROc.RO), GAKEc.HROc.RO), A).run(bit) @ &m : res] = 
@@ -2156,11 +2156,13 @@ smt().
     match {1} => //.
     + match Honest_mod {2} ^match. auto => /#.
       if => //.
-      + auto => /> &1 &2 15? inv ? inv2*. 
+      + auto => /> &1 &2 15? inv ? inv2*.
+split.
+move => + j pkin - /(_ j).
+have : (b{2}, j) \in GAKEb_st.s_smap{1} by smt().
+move => bjin //=.
 rewrite /untested_partner_s.
 rewrite /get_partners_s /get_untested_partners_s.
-split.
-move => ass j. 
 have->: (fdom
              (filter
                 (fun (_ : int)
@@ -2184,14 +2186,7 @@ have->: (fdom
 rewrite fsetP.
 move => x.
 rewrite !mem_fdom !mem_filter //=.
-split. 
-move => [] xin.
-have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
-move => trx.
-split.
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
- admit.
-admit.
+smt().
 have->: (fdom (filter (fun (_ : int) (val : GAKE_mod.pr_st_client GAKE_mod.instance_state) =>
                      get_trace val =
                      Some (oget (get_trace (oget
@@ -2205,11 +2200,26 @@ have->: (fdom (filter (fun (_ : int) (val : GAKE_mod.pr_st_client GAKE_mod.insta
                               (oget
                                  (get_trace
                                     (oget GAKEb_st.s_smap{1}.[b{2}, j]))) /\
-                            get_ir_test val = false) GAKEb_st.c_smap{1})). admit.
-have := ass j. smt().
-
-
-move => ass j. 
+                            get_ir_test val = false) GAKEb_st.c_smap{1})).
+rewrite fsetP.
+move => x.
+rewrite !mem_fdom !mem_filter //=.
+split.
+move => [#] xin trx.
+have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
+rewrite /rem_sid_c.
+move => xnt.
+do split; smt().
+move => [#] xin trx xnt.
+have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
+rewrite /rem_sid_c.
+do split; smt().
+smt().
+move => + j pkin - /(_ j).
+have : (b{2}, j) \in GAKEb_st.s_smap{1} by smt().
+move => bjin //=.
+rewrite /untested_partner_s.
+rewrite /get_partners_s /get_untested_partners_s.
 have<-: (fdom
              (filter
                 (fun (_ : int)
@@ -2229,8 +2239,12 @@ have<-: (fdom
                           Some
                             (oget
                                (get_trace (oget GAKEb_st.s_smap{1}.[b{2}, j]))))
-                       GAKEb_st.c_smap{1})). admit.
-have<-: (fdom (filter (fun (_ : int) (val : GAKE_mod.pr_st_client GAKE_mod.instance_state) =>
+                       GAKEb_st.c_smap{1})).
+rewrite fsetP.
+move => x.
+rewrite !mem_fdom !mem_filter //=.
+smt().
+have->: (fdom (filter (fun (_ : int) (val : GAKE_mod.pr_st_client GAKE_mod.instance_state) =>
                      get_trace val =
                      Some (oget (get_trace (oget
                                 GAKE_mod.GAKEb_nodhs.s_smap{2}.[oget Name_Red.O_GAKE.sid_pk{2}.[b{2}], j]))) /\
@@ -2243,8 +2257,21 @@ have<-: (fdom (filter (fun (_ : int) (val : GAKE_mod.pr_st_client GAKE_mod.insta
                               (oget
                                  (get_trace
                                     (oget GAKEb_st.s_smap{1}.[b{2}, j]))) /\
-                            get_ir_test val = false) GAKEb_st.c_smap{1})). admit.
-have := ass j. smt().
+                            get_ir_test val = false) GAKEb_st.c_smap{1})).
+rewrite fsetP.
+move => x.
+rewrite !mem_fdom !mem_filter //=.
+split.
+move => [#] xin trx.
+have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
+rewrite /rem_sid_c.
+move => xnt.
+do split; smt().
+move => [#] xin trx xnt.
+have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
+rewrite /rem_sid_c.
+do split; smt().
+smt().
       + auto => /> &1 &2 *. do !split; smt(get_setE mem_set). 
       auto => />.
     + match Corrupt_mod {2} ^match. auto => /#.
