@@ -379,20 +379,15 @@ module Game2 = Game1 with {
   var hq : (pkey * pkey * pkey * pkey * pkey) fset
   var tq : (pkey * pkey * pkey * pkey * pkey) option
   var badq : bool
-  var tags_adv : (pkey * pkey * pkey * pkey * pkey, tag) fmap
-  var tags_prot : (pkey * pkey * pkey * pkey * pkey, tag) fmap
-  var badt1 : bool
-  var badt2 : bool
 
   proc init_mem [
-    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false; 
-             tags_adv <- empty; tags_prot <- empty; badt1 <- false; badt2 <- false;}
+    -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false;}
   ]
 
   proc h [
     var t : tag
     var k : key
-    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} tags_adv.[x] <- oget h1m.[x]; }
+    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
     ^if -
     1 + ^ {hq <- hq `|` fset1 x; badq <- badq \/ (tq <> None /\ oget tq \in hq);}
   ] res ~ ((oget h1m.[x], oget h2m.[x]))
@@ -407,8 +402,7 @@ module Game2 = Game1 with {
                                       t_B <- oget h1m.[x];
                                       ks <$ dkey;
                                       if (x \notin h2m) {h2m.[x] <- ks;} 
-                                      key <- oget h2m.[x]; 
-                                      tags_prot.[x] <- t_B; }
+                                      key <- oget h2m.[x]; }
   ]
 
   proc send_msg3 [
@@ -421,9 +415,7 @@ module Game2 = Game1 with {
                                      t_A <- oget h1m.[x];
                                      ks <$ dkey;
                                      if (x \notin h2m) {h2m.[x] <- ks;} 
-                                     key <- oget h2m.[x];
-                                     badt1 <- badt1 \/ x \in tags_adv; 
-                                     badt2 <- badt2 \/ x \notin tags_prot \/ badt1;}
+                                     key <- oget h2m.[x];}
 
   ]
   
@@ -444,19 +436,8 @@ module Game2 = Game1 with {
 
 print Game2. 
 
-
-(* Step3: Removing case of adversary guessing the right tag *)
+(* Step3: Moving the sampling of keys *)
 module Game3 = Game2 with {
-  proc send_msg3 [
-    [^match#Some.^match#Pending_mod.^badt2<- - 3] + (!badt2)
-  ]
-}.
-
-print Game3.
-
-
-(* Step4: Replacing key computation on real side with sampling *)
-module Game4 = Game2 with {
   var test_ephrev_s : bool option
 
   proc init_mem [
@@ -509,92 +490,3 @@ module Game4 = Game2 with {
     ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
   ]
 }.
-
-
-module DDH_valid = {
-  proc ddh_input(x : group * group * group * group * group) : (group option * group option) = {
-    var r <- (Some x.`1, Some x.`2);
-    var ddh1, ddh2;
-
-    ddh1 <- (x.`4 ^ (loge x.`5) = x.`1);
-    ddh2 <- (x.`4 ^ (loge x.`3) = x.`2);
-    if (ddh1 /\ ddh2) {
-      r <- (None, None);
-    }
-
-    return r;
-  }
-}.
-
-
-print Game4.
-
-module GameDDH = Game4 with {
-  var h1mDDH : (pkey option * pkey option * pkey * pkey * pkey, tag) fmap
-  var h2mDDH : (pkey option * pkey option * pkey * pkey * pkey, key) fmap
-
-  proc init_mem [
-    -1 + { h1mDDH <- empty; h2mDDH <- empty; }
-  ]
-  
-  proc h [
-    var x1, x2 : group option
-    var rt : tag
-    var rk : key
-    
-    ^badq<- + {(x1, x2) <@ DDH_valid.ddh_input(x);}
-    ^if ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h1mDDH)
-    ^if.^h1m<- ~ {h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- t;}
-    ^if + {rt <- oget h1mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
-    ^if{2} ~ ((x1, x2, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if{2}.^h2m<- ~ {h2mDDH.[(x1, x2, x.`3, x.`4, x.`5)] <- k;}
-    ^if{2} + {rk <- oget h2mDDH.[(x1, x2, x.`3, x.`4, x.`5)];}
-    
-    
-    ] res ~ (rt, rk)
-
-  proc send_msg2 [
-    ^match#Some.^match#None.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h1mDDH)
-    ^match#Some.^match#None.^if.^if.^h1m<- ~ {h1mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ts;}
-    ^match#Some.^match#None.^if.^t_B<- ~ {t_B <- oget h1mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
-  ]
-
-  proc send_msg3 [
-    ^match#Some.^match#Pending_mod.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h1mDDH)
-    ^match#Some.^match#Pending_mod.^if.^h1m<- ~ {h1mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ts;}
-    ^match#Some.^match#Pending_mod.^t_A<- ~ {t_A <- oget h1mDDH.[(None, None, x.`3, x.`4, x.`5)];}
-  ]
-
-  proc c_rev_skey [
-    ^match#Some.^match#Accepted_mod.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^match#Some.^match#Accepted_mod.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
-  ]
-
-  proc s_rev_skey [
-    ^match#Some.^match#Accepted_mod.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^match#Some.^match#Accepted_mod.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
-  ]
-
-  proc c_test [
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
-  ]
-
-  proc s_test [
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks;}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];} 
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if ~ ((None, None, x.`3, x.`4, x.`5) \notin h2mDDH)
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^if.^h2m<- ~ {h2mDDH.[(None, None, x.`3, x.`4, x.`5)] <- ks2;}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^k<- ~ {k <- h2mDDH.[(None, None, x.`3, x.`4, x.`5)];}
-  ]
-
-}.
-
-print GameDDH.
