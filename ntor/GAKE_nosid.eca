@@ -84,6 +84,11 @@ with s_st = Honest_mod    _ => false
 with s_st = Corrupt_mod   _ => true
 with s_st = Dishonest_mod   => true.
 
+op get_sr_dh s_st : bool =
+with s_st = Honest_mod    _ => false
+with s_st = Corrupt_mod   _ => false
+with s_st = Dishonest_mod   => true.
+
 (* helping operators for getting a set of all partners (with some specific revealed status *)
 op get_partners_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
 fdom (
@@ -195,13 +200,24 @@ op fresh_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : 
 if 1 <= card (get_origins_s t fmap) then Some (1 <= card (get_fresh_partners_s t fmap)) else None.
 
 
+(* Rondom oracle *)
+clone import PROM.FullRO as HROc with
+  type in_t    <= h_input,
+  type out_t   <= tag * key,
+  op   dout _  <= dtag `*` dkey,
+  type d_in_t  <= unit,
+  type d_out_t <= bool
+proof *.
+
+print RO.
+
 (* protocol definition split into Server and Client side *)
-module type Server = {
+module type Server (H : HROc.RO) = {
   proc keygen() : pkey * skey
   proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
 }.
 
-module type Client = {
+module type Client (H : HROc.RO) = {
   proc new_session(pk: pkey) : pr_st_client * pkey
   proc complete_session(st: pr_st_client, m: pkey * tag) : (pr_st_client * key) option
 }.
@@ -236,18 +252,6 @@ module type GAKE = {
 module type GAKE_nodhs = {
   include GAKE [-set_cert]
 }.
-
-
-(* Rondom oracle *)
-clone import PROM.FullRO as HROc with
-  type in_t    <= h_input,
-  type out_t   <= tag * key,
-  op   dout _  <= dtag `*` dkey,
-  type d_in_t  <= unit,
-  type d_out_t <= bool
-proof *.
-
-print RO.
 
 (* oracles that are exposed to the experiment *)
 module type GAKE_i = {
@@ -291,7 +295,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     var pk, sk;
     var r <- None;
 
-    (pk, sk) <@ S.keygen();
+    (pk, sk) <@ S(H).keygen();
     if (pk \notin servers) {
       servers.[pk] <- Honest_mod sk;
       r <- Some pk;
@@ -307,7 +311,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     if (m1 \in servers) {
       match st with
       | None => {
-          (st', m2) <@ C.new_session(m1);
+          (st', m2) <@ C(H).new_session(m1);
            c_smap.[i] <- Pending_mod st' (m1, m2) (false, false, false);
           r <- Some m2;
         }
@@ -331,7 +335,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     if (sko is Some sk) (* Server was initialised as honest *) {
       match s_smap.[b, j] with
       | None => {
-          resp <@ S.respond_session(Some (sk, None), m2);
+          resp <@ S(H).respond_session(Some (sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
             s_smap.[(b, j)] <- Accepted_mod st' ((b, m2), Some m3) k (false, false, false);
@@ -356,7 +360,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
     | Some st => {
         match st with
         | Pending_mod st pt ir => {
-            resp <@ C.complete_session(st, m3);
+            resp <@ C(H).complete_session(st, m3);
             if (resp is Some r') {
               (st', k) <- r';
               c_smap.[i] <- Accepted_mod st' (pt, Some m3) k ir;

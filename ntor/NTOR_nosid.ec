@@ -27,19 +27,9 @@ clone import PROM.FullRO as HRO_mod_c with
   type d_out_t <= bool
 proof *.
 
-module type Server_mod = {
-  proc keygen() : pkey * skey
-  proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
-}.
-
-module type Client_mod = {
-  proc new_session(pk: pkey) : pr_st_client * pkey
-  proc complete_session(st: pr_st_client, m: pkey * tag) : (pr_st_client * key) option
-}.
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Protocol using all public values as input *)
-module NTOR_S_mod (H : RO) : Server_mod = {
+module (NTOR_S_mod : GAKE_mod.Server) (H : RO) = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
 
@@ -68,7 +58,7 @@ module NTOR_S_mod (H : RO) : Server_mod = {
   }
 }.
 
-module NTOR_C_mod (H : RO) : Client = {
+module (NTOR_C_mod : GAKE_mod.Client) (H : RO) = {
   proc new_session(pk) : pr_st_client * pkey = {
     var pk_ce, sk_ce;
 

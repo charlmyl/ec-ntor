@@ -26,7 +26,7 @@ clone import GAKE as GAKEc with
 import HROc.
 
 
-module NTOR_S (H : RO) : Server = {
+module (NTOR_S : Server) (H : RO) = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
 
@@ -56,7 +56,7 @@ module NTOR_S (H : RO) : Server = {
   }
 }.
 
-module NTOR_C (H : RO) : Client = {
+module (NTOR_C : Client) (H : RO) = {
   proc new_session(b, pk) : pr_st_client * pkey = {
     var pk_ce, sk_ce;
 

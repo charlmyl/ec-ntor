@@ -57,7 +57,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
     var kp;
 
     if (b \notin servers) {
-      kp <@ S.keygen();
+      kp <@ S(H).keygen();
       stop <- stop \/ kp.`1 \in pk_set;
       pk_set <- pk_set `|` fset1 kp.`1;
       servers.[b] <- GAKEc.Honest kp;
@@ -74,7 +74,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
       pk_b <- get_pkey (oget servers.[m1]);
       match st with
       | None => {
-          (st', m2) <@ C.new_session(m1, pk_b);
+          (st', m2) <@ C(H).new_session(m1, pk_b);
            c_smap.[i] <- Pending st' (m1, m2) (false, false, false);
           r <- Some m2;
         }
@@ -99,7 +99,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
     if (sko is Some sk) (* Server was initialised as honest *) {
       match s_smap.[b, j] with
       | None => {
-          resp <@ S.respond_session(Some (b, sk, None), m2);
+          resp <@ S(H).respond_session(Some (b, sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
             s_smap.[(b, j)] <- Accepted st' ((b, m2), Some m3) k (false, false, false);
@@ -132,7 +132,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
     | Some st => {
         match st with
         | Pending st pt ir => {
-            resp <@ C.complete_session(st, m3);
+            resp <@ C(H).complete_session(st, m3);
             if (resp is Some r') {
               (st', k) <- r';
               c_smap.[i] <- Accepted st' (pt, Some m3) k ir;
@@ -352,7 +352,7 @@ op get_sr_in s_st : bool =
 with s_st = Inner _ bool => bool
 with s_st = Outer _ => true.
 
-module (Hon_Red (A : GAKEc.A_GAKE) (C: GAKEc.Client) : GAKEc.A_GAKE) (O : GAKEc.GAKE) = {
+module (Hon_Red (A : GAKEc.A_GAKE) : GAKEc.A_GAKE) (O : GAKEc.GAKE) = {
   module O_GAKE : GAKEc.GAKE = {
     var dh_ro : (pkey * pkey * s_id * pkey * pkey, (tag * key)) fmap
     var c_inst : (int, bool) fmap
@@ -384,7 +384,7 @@ module (Hon_Red (A : GAKEc.A_GAKE) (C: GAKEc.Client) : GAKEc.A_GAKE) (O : GAKEc.
     }
   
     proc send_msg1(i: int, m1: s_id) = {
-      var st', m2, pk_b; 
+      var sk_ce, pk_ce, pk_b; 
       var r <- None;
   
       if (m1 \in servers) {
@@ -395,10 +395,11 @@ module (Hon_Red (A : GAKEc.A_GAKE) (C: GAKEc.Client) : GAKEc.A_GAKE) (O : GAKEc.
           }
         } else {
           if (i \notin c_inst) {
+            sk_ce <$ dt;
+            pk_ce <- g ^ sk_ce;
             pk_b <- get_pkey_mod (oget servers.[m1]);
-            (st', m2) <@ C.new_session(m1, pk_b);
-            dhc_smap.[i] <- GAKEc.Pending st' (m1, m2) (false, false, false);
-            r <- Some m2;
+            r <- Some pk_ce;
+            dhc_smap.[i] <- GAKEc.Pending (m1, pk_b, sk_ce) (m1, pk_ce) (false, false, false);
             c_inst.[i] <- true;
           }
         }
@@ -410,7 +411,7 @@ module (Hon_Red (A : GAKEc.A_GAKE) (C: GAKEc.Client) : GAKEc.A_GAKE) (O : GAKEc.
     proc send_msg2 = O.send_msg2
   
     proc send_msg3(i: int, m3: pkey * tag) = {
-      var resp, st', k;
+      var pk_b, sk_ce, b, t_A, k;
       var r <- None;
   
       if (i \notin dhc_smap) {
@@ -421,13 +422,13 @@ module (Hon_Red (A : GAKEc.A_GAKE) (C: GAKEc.Client) : GAKEc.A_GAKE) (O : GAKEc.
         | Some st => {
             match st with
             | GAKEc.Pending st pt ir => {
-                resp <@ C.complete_session(st, m3);
-                if (resp is Some r') {
-                  (st', k) <- r';
-                  dhc_smap.[i] <- Accepted st' (pt, Some m3) k ir;
+                (b, pk_b, sk_ce) <- st;
+                (t_A, k) <@ O.h(m3.`1 ^ sk_ce, pk_b ^ sk_ce, b, g ^ sk_ce, m3.`1);
+                if (t_A = m3.`2) {
+                  dhc_smap.[i] <- GAKEc.Accepted st (pt, Some m3) k ir;
                   r <- Some ();
                 } else {
-                  dhc_smap.[i] <- Aborted (Some st) (Some (pt, Some m3)) ir;
+                  dhc_smap.[i] <- GAKEc.Aborted (Some st) (Some (pt, Some m3)) ir;
                 }
               }
             | GAKEc.Accepted _ _ _ _ => { }
@@ -601,24 +602,8 @@ module (Hon_s_Red (A : GAKEc.A_GAKE) : GAKEc.A_GAKE_nodhs) (O : GAKEc.GAKE_nodhs
 
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Reduction from restricted to non-restricted model  *)
-module (Dh_Red (A : GAKEc.A_GAKE_nodhs) (C: GAKEc.Client) : GAKEc.A_GAKE) (O : GAKEc.GAKE) = {
-  module O_GAKE : GAKEc.GAKE_nodhs = {
-   include O [-set_cert]
-  }
-
-  proc run() : bool = {
-    var b';
-
-    b' <@ A(O_GAKE).run();
-
-    return b';
-  }
-}.
-
-
-(* ------------------------------------------------------------------------------------------ *)
 (* Reduction preventing collisions and prediction of public keys  *)
+
 module (Name_Red (A : GAKEc.A_GAKE_nodhs) : GAKE_mod.A_GAKE_nodhs) (O : GAKE_mod.GAKE_nodhs) = {
   module O_GAKE : GAKEc.GAKE_nodhs = {
     var unreg_ro : (pkey * pkey * s_id * pkey * pkey, (tag * key)) fmap
@@ -828,17 +813,7 @@ module (Name_Red (A : GAKEc.A_GAKE_nodhs) : GAKE_mod.A_GAKE_nodhs) (O : GAKE_mod
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module S <: GAKEc.Server {-GAKEb, -GAKEb_hon, -GAKEb_nodhs, -GAKEb_st, -Hon_Red, -Hon_s_Red, -HROc.RO }.
-declare module C <: GAKEc.Client {-GAKEb, -GAKEb_hon, -GAKEb_nodhs, -GAKEb_st, -Hon_Red, -Hon_s_Red, -HROc.RO, -S }.
-
-declare module S_mod <: GAKE_mod.Server {-GAKEb, -GAKEb_hon, -GAKEb_nodhs, -GAKEb_st, -Hon_Red, -Hon_s_Red, -HROc.RO }.
-declare module C_mod <: GAKE_mod.Client {-GAKEb, -GAKEb_hon, -GAKEb_nodhs, -GAKEb_st, -Hon_Red, -Hon_s_Red, -HROc.RO, -S }.
-
-
-declare module A <: GAKEc.A_GAKE {-C, -S, -C_mod, -S_mod, -GAKE_mod.HROc.RO, -GAKEc.HROc.RO, -Hon_Red, -Hon_s_Red, -Name_Red, -GAKEc.GAKEb, -GAKEc.GAKEb_hon, -GAKEc.GAKEb_nodhs, -GAKEb_st, -GAKE_mod.GAKEb_nodhs }.
-
-
-declare module A_mod <: GAKEc.A_GAKE_nodhs {-C, -S, -C_mod, -S_mod, -GAKE_mod.HROc.RO, -GAKEc.HROc.RO, -Hon_Red, -Hon_s_Red, -Name_Red, -GAKEc.GAKEb, -GAKEc.GAKEb_hon, -GAKEc.GAKEb_nodhs, -GAKEb_st, -GAKE_mod.GAKEb_nodhs }.
+declare module A <: GAKEc.A_GAKE {-GAKE_mod.HROc.RO, -GAKEc.HROc.RO, -Hon_Red, -Hon_s_Red, -Name_Red, -GAKEc.GAKEb, -GAKEc.GAKEb_hon, -GAKEc.GAKEb_nodhs, -GAKEb_st, -GAKE_mod.GAKEb_nodhs }.
 
 declare axiom A_ll (G <: GAKEc.GAKE{-A}):
   islossless G.h =>
@@ -855,67 +830,14 @@ declare axiom A_ll (G <: GAKEc.GAKE{-A}):
   islossless G.c_test =>
   islossless G.s_test => 
   islossless A(G).run. 
-
-
-lemma gake_extend bit &m: Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(S, C, HROc.RO), A_mod).run(bit) @ &m : res] = Pr[GAKEc.E_GAKE(GAKEc.GAKEb(S, C, HROc.RO), Dh_Red(A_mod, C)).run(bit) @ &m : res].
-proof. 
-byequiv => //.
-proc; inline.
-wp; call (: ={glob S, glob C} /\ ={b0, servers, c_smap, s_smap, tested}(GAKEb_nodhs, GAKEc.GAKEb) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
-              /\ (forall i s pt ir, i \in GAKEb.c_smap{2} => GAKEb.c_smap{2}.[i] = Some (Pending s pt ir)
-                   => pt.`1 \in GAKEb.servers{2})
-              /\ (forall i s t k ir, i \in GAKEb.c_smap{2} => GAKEb.c_smap{2}.[i] = Some (Accepted s t k ir) 
-                   => t.`1.`1 \in GAKEb.servers{2})
-              /\ (forall b, b \in GAKEb.servers{2} => ! get_sr_dh (oget GAKEb.servers{2}.[b]))); try sim />.
-
-+ proc; inline.
-  if => //.
-  seq 1 1: (#pre /\ ={kp}). call (: true). skip => />. 
-  auto => />. smt(get_setE mem_set). 
-
-+ proc; inline.
-  sp 2 2; if => //. auto => /#. 
-  sp; match = => //.
-  seq 1 1: (#pre /\ ={st', m2}). call (: true). skip => />.
-  auto => />. smt(get_setE mem_set).
-
-+ proc; inline.
-  sp; match = => // st.
-  match = => // s pt ir.
-  seq 1 1: (#pre /\ ={resp}). call (: true). skip => />. 
-  match = => //; auto => />; smt(get_setE mem_set).
-
-+ proc; inline.
-  sp; match = => // st.
-  match = => // kp.
-  auto => />. smt(get_setE).
-
-+ proc; inline.
-  sp; match = => // st.
-  match = => // kp.
-  auto => />. smt(get_setE).
-
-+ proc; inline.
-  sp; match = => // st.
-  match = => // [s pt ir|s t k ir]; auto => />; smt(get_setE).
-
-+ proc; inline.
-  sp 1 1; if => //.
-  match = => // st.
-  match = => // s t k ir.
-  if => //. auto => /#.
-  if => //; auto => />; smt(get_setE).
-
-auto => />.
-smt(emptyE mem_empty).
-qed.
-
-
-lemma gake_restrict bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(S, C, HROc.RO), A).run(bit) @ &m : res] = Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(S, C, HROc.RO), Hon_Red(A, C)).run(bit) @ &m : res].
+ 
+ 
+lemma gake_hon bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S, NTOR_C, GAKEc.HROc.RO), A).run(bit) @ &m : res] = Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_Red(A)).run(bit) @ &m : res].
 proof.
 byequiv => //.
 proc; inline.
-wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
+wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
+  
               /\ (GAKEc.GAKEb.c_smap{1} = (GAKEc.GAKEb_hon.c_smap{2} + Hon_Red.O_GAKE.dhc_smap{2}))
               /\ (forall i, i \in Hon_Red.O_GAKE.dhc_smap{2} => i \notin GAKEc.GAKEb_hon.c_smap{2})
               /\ (forall i, i \in GAKEc.GAKEb_hon.c_smap{2} => i \notin Hon_Red.O_GAKE.dhc_smap{2})
@@ -928,8 +850,8 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
                                        /\ get_name (oget Hon_Red.O_GAKE.dhc_smap{2}.[i]) \in GAKEb_hon.servers{2}
                                        /\ get_sr_dh (oget GAKEb_hon.servers{2}.[get_name (oget Hon_Red.O_GAKE.dhc_smap{2}.[i])]))
               /\ (forall b j , b \notin GAKEc.GAKEb_hon.servers{2} => (b, j) \notin GAKEc.GAKEb_hon.s_smap{2})
-              /\ (forall b j, (b, j) \in GAKEc.GAKEb_hon.s_smap{2} => (*get_name (oget GAKEc.GAKEb_hon.s_smap{2}.[(b, j)]) = b
-                                       /\*) (exists pk m3, get_trace (oget GAKEc.GAKEb_hon.s_smap{2}.[(b, j)]) = Some ((b, pk), m3)))
+              /\ (forall b j, (b, j) \in GAKEc.GAKEb_hon.s_smap{2} => get_name (oget GAKEc.GAKEb_hon.s_smap{2}.[(b, j)]) = b
+                                       /\ (exists pk m3, get_trace (oget GAKEc.GAKEb_hon.s_smap{2}.[(b, j)]) = Some ((b, pk), Some m3)))
               /\ (forall b j, b \in GAKEc.GAKEb_hon.servers{2} => get_sr_dh (oget GAKEc.GAKEb_hon.servers{2}.[b])
                    => (b, j) \notin GAKEc.GAKEb_hon.s_smap{2} /\ get_sr_ltk (oget GAKEc.GAKEb_hon.servers{2}.[b]))
               /\ (forall i j, i \in Hon_Red.O_GAKE.dhc_smap{2}  
@@ -944,10 +866,9 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
 + sim />.
 
 + proc; inline.
-  sp 0 2; if => //. 
-  + auto => />. smt(get_setE mem_set).
-  + seq 1 1: (#pre /\ ={kp}). call (: true). skip => />. auto => /> &1 &2 *. smt(get_setE mem_set). 
-  auto => /> &2 *. smt(get_setE mem_set).
+  sp 0 2; if => //.
+  + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
+  auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp 1 4; if => //.
@@ -959,15 +880,13 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
   if {2} => //.
   + rcondt {2} ^if. auto => /#.
     sp; match = => //. auto => /> &2 *. smt(joinE).
-    + seq 1 1 : (#pre /\ st'{1} = st'0{2} /\ m2{1} = m20{2}). call (: true). skip => />.
-      auto => /> &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1). 
+    + auto => /> &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1). 
       rewrite -fmap_eqP. smt(joinE get_setE).
     move => st.
     auto => />. 
   sp; match {1} => //.
   + rcondt {2} ^if. auto => /#.
-    sp. seq 1 1: (#pre /\ ={st', m2}). call (: true). skip => /#.
-    auto => /> &2 ? ? ? ? ? ? ? ? inv *. do !split; 2..6: smt(get_setE mem_set in_fsetU in_fset1 joinE).
+    auto => /> &2 ? ? ? ? ? ? ? ? inv ? ? ? ? ? ? ? sk *. do !split; 2..6: smt(get_setE mem_set in_fsetU in_fset1 joinE).
     + rewrite -fmap_eqP. smt(joinE get_setE).
     + move => i1 st0 pt ir0 m3.
       case (i1 = i{2}) => ieq.
@@ -1025,16 +944,15 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
   sp; match = => //.
   move => sk.
   match = => //.
-  seq 1 1: (#pre /\ ={resp}). call (: true). skip => />.
-  match = => //.
-  + auto => /> &2 14? inv inv2 inv3 *. do !split; ~2,5..7: smt(get_setE mem_set in_fsetU in_fset1).
-    + move => b0 j0.
-      case ((b0 = b{2}) /\ j0 = j{2}) => [[] beq jeq|]; 2: by smt(get_setE mem_set in_fsetU in_fset1). 
-      rewrite mem_set beq jeq //=.
-      rewrite get_setE //=.
-      exists m2{2} None.
-      smt(get_setE).
+  sp; match = => //.
+  + auto => />.
+  move => sts.
+  sp; seq 1 1 : (#pre /\ ={sk_se}). auto => />.
+  sp; seq 1 1 : (#pre /\ ={r1}). auto => />. 
+  if => //.
+  + auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1).
     + move => i1 st0 pt ir0 m3 iin ipen.
+      rewrite get_setE //=.
       rewrite /get_partners_c.
       rewrite filter_set.
       rewrite rem_id. 
@@ -1043,28 +961,24 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
       rewrite /get_partners_c. 
       by smt(get_setE mem_set in_fsetU in_fset1). 
     + move => i1 st0 pt ir0 iin ipen.
+      rewrite get_setE //=.
       rewrite /get_origins_c.
       rewrite filter_set.
       rewrite rem_id. 
       rewrite mem_filter negb_and. smt().
       have := inv2 i1 st0 pt ir0 iin ipen.
       rewrite /get_origins_c. 
-      by smt(get_setE mem_set in_fsetU in_fset1).  
-    move => i1 st0 t k ir0 iin iacc.
+      by smt(get_setE mem_set in_fsetU in_fset1).   
+    move => i1 st0 t k0 ir0 iin ipen.
+    rewrite get_setE //=.
     rewrite /get_partners_c.
     rewrite filter_set.
     rewrite rem_id. 
     rewrite mem_filter negb_and. smt().
-    have := inv3 i1 st0 t k ir0 iin iacc.
+    have := inv3 i1 st0 t k0 ir0 iin ipen.
     rewrite /get_partners_c. 
     by smt(get_setE mem_set in_fsetU in_fset1).
-  move => sts.
-  auto => /> &2 14? inv inv2 inv3 *. do !split; ~2,5..7: smt(get_setE mem_set in_fsetU in_fset1).
-  + move => b0 j0.
-    case ((b0 = b{2}) /\ j0 = j{2}) => [[] beq jeq|]; 2: by smt(get_setE mem_set in_fsetU in_fset1). 
-    rewrite mem_set beq jeq //=.
-    exists m2{2} (Some sts.`2).
-    smt(get_setE).
+  auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1).
   + move => i1 st0 pt ir0 m3 iin ipen.
     rewrite /get_partners_c.
     rewrite filter_set.
@@ -1081,14 +995,14 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
     have := inv2 i1 st0 pt ir0 iin ipen.
     rewrite /get_origins_c. 
     by smt(get_setE mem_set in_fsetU in_fset1). 
-  move => i1 st0 t k ir0 iin iacc.
+  move => i1 st0 t k0 ir0 iin ipen.
   rewrite /get_partners_c.
   rewrite filter_set.
   rewrite rem_id. 
   rewrite mem_filter negb_and. smt().
-  have := inv3 i1 st0 t k ir0 iin iacc.
+  have := inv3 i1 st0 t k0 ir0 iin ipen.
   rewrite /get_partners_c. 
-  by smt(get_setE mem_set in_fsetU in_fset1). 
+  by smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
   sp 1 1; if {2} => //.
@@ -1097,12 +1011,19 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
     move => sto.
     match = => //.
     + move => s pt ir.
-      sp; seq 1 1 : (#pre /\ resp{1} = resp0{2}). call (: true). skip => />.
-      match = => //.
-      + auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).
+      sp; seq 1 1 : (#pre /\ r1{1} = r3{2}). auto => />.
+      if. auto => />.
+      + sp 2 2; if => //. auto => /#.
+        + auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
+          rewrite -fmap_eqP. have->: sk{1} = sk{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
+        auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
         rewrite -fmap_eqP. smt(joinE get_setE).
-      move => r'.
-      auto => /> &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).
+      sp 1 1; if => //. auto => /#.
+      + auto => /> &1 &2 rol ror *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
+        rewrite -fmap_eqP. 
+        have->: sk{1} = sk{2}. have : (t_A0{2}, sk{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
+        by smt(joinE get_setE).
+      auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
       rewrite -fmap_eqP. smt(joinE get_setE).
     + move => s t k ir.
       auto => />.
@@ -1112,12 +1033,21 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
   move => st.
   match = => //.
   move => s pt ir.
-  sp; seq 1 1 : (#pre /\ ={resp}). call (: true). auto => />.
-  match = => //.
-  + auto => /> &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).
+  sp; seq 1 1 : (#pre /\ ={r1}). auto => />.
+  if => //.
+  + sp 2 2; if => //. auto => /#.
+    + match Some {1} ^match. auto => /#.
+      auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
+      rewrite -fmap_eqP. have->: sk{1} = k{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
+    auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1). 
     rewrite -fmap_eqP. smt(joinE get_setE).
-  move => r'.
-  auto => /> &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).
+  sp 1 1; if => //. auto => /#.
+  + match Some {1} ^match. auto => /#.
+    auto => /> &1 &2 rol ror *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
+    rewrite -fmap_eqP. 
+    have->: sk{1} = k{2}. have : (t_A{2}, k{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
+    by smt(joinE get_setE).
+  auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
   rewrite -fmap_eqP. smt(joinE get_setE).
 
 + proc; inline.
@@ -1449,12 +1379,12 @@ wp; call (: ={glob S, glob C} /\ ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAK
 auto => />; smt(fmap_eqP joinE mem_empty emptyE).
 qed.
 
-lemma gake_rem_dhs bit &m: Pr[GAKEc.E_GAKE(GAKEb_hon(S, C, GAKEc.HROc.RO), A).run(bit) @ &m : res] = 
-  Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(S, C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res].
+lemma rem_dhs bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S, NTOR_C, GAKEc.HROc.RO), A).run(bit) @ &m : res] = 
+  Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res].
 proof.
 byequiv => //.
 proc; inline.
-wp; call (: ={glob S, glob C} /\ ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.GAKEb_nodhs) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
+wp; call (: ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.GAKEb_nodhs) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
                /\ (forall b, b \in GAKEb_hon.servers{1} <=> b \in Hon_s_Red.O_GAKE.servers{2})
                /\ (forall b, b \notin Hon_s_Red.O_GAKE.servers{2} => b \notin GAKEc.GAKEb_nodhs.servers{2})
                /\ (forall b, b \in GAKEb_hon.servers{1} => ! get_sr_dh (oget GAKEb_hon.servers{1}.[b])
@@ -1472,7 +1402,6 @@ wp; call (: ={glob S, glob C} /\ ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.
 + proc; inline.
   if => //. auto => /#.
   + rcondt {2} ^if. auto => /#.
-    sp; seq 1 1: (#pre /\ ={kp}). call (: true). skip => />. 
     auto => />; smt(get_setE mem_set).
   auto => />. smt(get_setE mem_set).
 
@@ -1483,26 +1412,19 @@ wp; call (: ={glob S, glob C} /\ ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.
 + proc; inline.
   sp 2 2; if => //. auto => /#.
   sp; match => //.
-  seq 1 1: (#pre /\ ={st', m2}). call (: true). skip => /#.  
   auto => />. smt(get_setE mem_set).
 
 + proc; inline.
   sp; match = => //; 1: auto => /#.
   move => sk.
   match = => //.
-  seq 1 1: (#pre /\ ={resp}). call (: true). skip => />.  
-  sp; match = => //.
-  + auto => />. smt(get_setE mem_set).
+  sp; match = => //; 1: auto => />.
   move => st.
   auto => />. smt(get_setE mem_set).
 
 + proc; inline.
   sp; match = => // st.
   match = => // s pt ir.
-  seq 1 1: (#pre /\ ={resp}). call (: true). skip => />. 
-  match = => //.
-  + auto => />. smt(get_setE mem_set).
-  move => r'.
   auto => />. smt(get_setE mem_set).
 
 + proc; inline.
@@ -1581,24 +1503,19 @@ auto => />. smt(mem_empty emptyE).
 qed.
 
 
-(************************************************************************************************************)
-(* Relation between name-based and public key only model *)
-
-(* introducing stop in original game *)
-lemma gake_st bit &m: Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(S, C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res] 
-                = Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(S, C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res].
+lemma gake_st bit &m: Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res] 
+                = Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res].
 proof.
 byequiv => //.
 proc; inline.
-wp; call (: ={glob S, glob C} /\ ={b0, servers, c_smap, s_smap, tested}(GAKEc.GAKEb_nodhs, GAKEb_st) /\ ={servers}(Hon_s_Red.O_GAKE, Hon_s_Red.O_GAKE)
-               /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)); try sim />.
+wp; call (: ={b0, servers, c_smap, s_smap, tested}(GAKEc.GAKEb_nodhs, GAKEb_st) /\ ={servers}(Hon_s_Red.O_GAKE, Hon_s_Red.O_GAKE) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)); try sim />.
 
 + proc; inline.
   auto => />.
 qed.
 
 
-(* formulating lemma pointwise - needed to relate the partnering notions on server side *)
+
 lemma inj_fcard_image_pw (f : 'a -> 'b) (A : 'a fset) :
       (forall x y, x \in A => y \in A => f x = f y => x = y) => card (image f A) = card A.
 proof.
@@ -1610,7 +1527,6 @@ by rewrite /image /card -(perm_eq_size _ _ uniq_f) size_map.
 qed.
 
 
-(* operators removing the server name from the states *)
 op rem_sid_c (s : GAKEc.pr_st_client GAKEc.instance_state) : GAKE_mod.pr_st_client GAKE_mod.instance_state =
 match s with 
 | Pending st pt ir => Pending_mod (st.`2, st.`3) (st.`2, pt.`2) ir
@@ -1625,9 +1541,10 @@ match s with
 | Aborted st t ir => Aborted_mod (Some ((oget st).`2, (oget st).`3)) (Some ((g ^ (oget st).`2, ((oget t).`1).`2), (oget t).`2)) ir
 end.
 
-lemma gake_name_pkonly bit &m: `| Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(S, C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res]
-     - Pr[GAKE_mod.E_GAKE_nodhs(GAKE_mod.GAKEb_nodhs(S_r, C_r, GAKE_mod.HROc.RO), Name_Red(Hon_s_Red(A))).run(bit) @ &m : res] | 
-                 <= Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(S, C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : GAKEb_st.stop].
+
+lemma gake_st_mod bit &m: `| Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res]
+     - Pr[GAKE_mod.E_GAKE_nodhs(GAKE_mod.GAKEb_nodhs(NTOR_S_mod, NTOR_C_mod, GAKE_mod.HROc.RO), Name_Red(Hon_s_Red(A))).run(bit) @ &m : res] | 
+                 <= Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : GAKEb_st.stop].
 proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Name_Red.O_GAKE.stop => //; first last.
@@ -1635,74 +1552,107 @@ byequiv (: _ ==> _) : Name_Red.O_GAKE.stop => //; first last.
 symmetry; proc; inline*.
 wp; call (: Name_Red.O_GAKE.stop
           , ={b0, tested}(GAKEb_st, GAKE_mod.GAKEb_nodhs) /\ ={pk_set, stop}(GAKEb_st, Name_Red.O_GAKE) /\ ={servers}(Hon_s_Red.O_GAKE, Hon_s_Red.O_GAKE)
+
                /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`3 \in Name_Red.O_GAKE.sid_pk{2} => x \notin Name_Red.O_GAKE.unreg_ro{2}
                     => GAKEc.HROc.RO.m{1}.[x] = GAKE_mod.HROc.RO.m{2}.[(x.`1, x.`2, (oget Name_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5)])
+
                /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`3 \notin Name_Red.O_GAKE.sid_pk{2} => x \in Name_Red.O_GAKE.unreg_ro{2})
+
                /\ (forall x, x \notin GAKEc.HROc.RO.m{1} => x.`3 \in Name_Red.O_GAKE.sid_pk{2}
                     => (x.`1, x.`2, (oget Name_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5) \notin GAKE_mod.HROc.RO.m{2})
+
                /\ (forall x, x \in Name_Red.O_GAKE.unreg_ro{2} => x \in GAKEc.HROc.RO.m{1} /\ Name_Red.O_GAKE.unreg_ro{2}.[x] = GAKEc.HROc.RO.m{1}.[x])
+
                /\ (forall x, x \in GAKEb_st.unreg_ro{1} <=> x \in Name_Red.O_GAKE.unreg_ro{2})
+
                /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x \in Name_Red.O_GAKE.unreg_ro{2} 
                          \/ (x.`3 \in Name_Red.O_GAKE.sid_pk{2} /\ (x.`1, x.`2, (oget Name_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5) \in GAKE_mod.HROc.RO.m{2}))
+
                /\ (forall x, x \in Name_Red.O_GAKE.unreg_ro{2} => x.`3 \in Name_Red.O_GAKE.sid_pk{2} 
                     => (x.`1, x.`2, (oget Name_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5) \notin GAKE_mod.HROc.RO.m{2})
+
                /\ (forall x, x \in GAKE_mod.HROc.RO.m{2} => (exists b, b \in Name_Red.O_GAKE.sid_pk{2} /\ Name_Red.O_GAKE.sid_pk{2}.[b] = Some x.`3 
                                     /\ (x.`1, x.`2, b, x.`4, x.`5) \notin Name_Red.O_GAKE.unreg_ro{2}))
+
                /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`4 \in Name_Red.O_GAKE.pk_set{2} /\ x.`5 \in Name_Red.O_GAKE.pk_set{2})
                /\ (forall x, x \in GAKE_mod.HROc.RO.m{2} => x.`4 \in Name_Red.O_GAKE.pk_set{2} /\ x.`5 \in Name_Red.O_GAKE.pk_set{2})
                /\ (forall x, x \in Name_Red.O_GAKE.unreg_ro{2} => x.`4 \in Name_Red.O_GAKE.pk_set{2} /\ x.`5 \in Name_Red.O_GAKE.pk_set{2})
+
                /\ (forall i, omap rem_sid_c GAKEb_st.c_smap{1}.[i] = GAKE_mod.GAKEb_nodhs.c_smap{2}.[i])
+
                /\ (forall i b pk m3, i \in GAKEb_st.c_smap{1} => get_trace (oget GAKEb_st.c_smap{1}.[i]) = Some ((b, pk), m3)
                    => b \in Name_Red.O_GAKE.sid_pk{2}
                                      /\ get_trace (rem_sid_c (oget GAKEb_st.c_smap{1}.[i])) 
                                          = Some ((oget Name_Red.O_GAKE.sid_pk{2}.[b], pk), m3))
+                                       
                /\ (forall i pk_s pk m3, i \in GAKE_mod.GAKEb_nodhs.c_smap{2} => get_trace (oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[i]) = Some ((pk_s, pk), m3)
                     => pk_s \in Name_Red.O_GAKE.pk_set{2})
+
                /\ (forall i pk_s b pk m3, i \in GAKE_mod.GAKEb_nodhs.c_smap{2} => get_trace (rem_sid_c (oget GAKEb_st.c_smap{1}.[i])) = Some ((pk_s, pk), m3)
                     => b \in Name_Red.O_GAKE.sid_pk{2} => pk_s = oget Name_Red.O_GAKE.sid_pk{2}.[b]
                     => get_trace (oget GAKEb_st.c_smap{1}.[i]) = Some ((b, pk), m3))
+                   
                /\ (forall i st pt ir x1 x2 x5, i \in GAKEb_st.c_smap{1} => GAKEb_st.c_smap{1}.[i] = Some (Pending st pt ir) 
                     => st.`1 \in GAKEb_st.servers{1} /\ get_pkey (oget GAKEb_st.servers{1}.[st.`1]) = st.`2
                                      /\ st.`1 = pt.`1
                                      /\ g ^ st.`3 \in Name_Red.O_GAKE.pk_set{2} 
                                      /\ (x1, x2, st.`1, g ^ st.`3, x5) \notin GAKEb_st.unreg_ro{1})
+
                /\ (forall i st t k ir, i \in GAKEb_st.c_smap{1} => GAKEb_st.c_smap{1}.[i] = Some (Accepted st t k ir)
                     => st.`1 \in Name_Red.O_GAKE.sid_pk{2} /\ (oget Name_Red.O_GAKE.sid_pk{2}.[st.`1]) = st.`2 /\ st.`1 = t.`1.`1 /\ t.`2 <> None)
+
                /\ (forall b j, (b, j) \in GAKEb_st.s_smap{1} => b \in Name_Red.O_GAKE.sid_pk{2}
                                      /\ ((oget Name_Red.O_GAKE.sid_pk{2}.[b]), j) \in GAKE_mod.GAKEb_nodhs.s_smap{2}
                                      /\ rem_sid_s (oget GAKEb_st.s_smap{1}.[(b, j)]) = oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[(oget Name_Red.O_GAKE.sid_pk{2}.[b]), j])
+
                /\ (forall b j, b \in Name_Red.O_GAKE.sid_pk{2}
                     => (oget Name_Red.O_GAKE.sid_pk{2}.[b], j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} <=> (b, j) \in GAKEb_st.s_smap{1})
+
                /\ (forall b j st t k ir, (b, j) \in GAKEb_st.s_smap{1} => GAKEb_st.s_smap{1}.[(b, j)] = Some (Accepted st t k ir)
                     => t.`1.`1 = b /\ t.`2 <> None /\ Name_Red.O_GAKE.sid_pk{2}.[b] = Some (g ^ st{1}.`2))
+
                /\ (forall pk j st t k ir, (pk, j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} => GAKE_mod.GAKEb_nodhs.s_smap{2}.[(pk, j)] = Some (Accepted_mod st t k ir)
                     => t.`1.`1 = pk)
-               /\ (forall pk_s j, (pk_s, j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} => (exists pk m3, get_trace (oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[pk_s, j]) = Some ((pk_s, pk), m3)))
+
+           (*    /\ (forall bj, bj \in GAKEb_st.s_smap{1} => get_name (oget GAKEb_st.s_smap{1}.[bj]) = bj.`1)*)
+
+               /\ (forall pk_s j, (pk_s, j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} => (exists pk m3, get_trace (oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[pk_s, j]) = Some ((pk_s, pk), m3))) 
+
                /\ (forall bj pk m3, bj \in GAKEb_st.s_smap{1} => get_trace (oget GAKEb_st.s_smap{1}.[bj]) = Some ((bj.`1, pk), m3)
                     => bj.`1 \in Name_Red.O_GAKE.sid_pk{2}
                                      /\ get_trace (rem_sid_s (oget GAKEb_st.s_smap{1}.[bj])) 
                                          = Some ((oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], pk), m3))
+
                /\ (forall b j pk_s pk m3, (pk_s, j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} => get_trace (oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[(pk_s,j)]) = Some ((pk_s, pk), m3)
                     => b \in Name_Red.O_GAKE.sid_pk{2} => pk_s = oget Name_Red.O_GAKE.sid_pk{2}.[b]
                     => get_trace (oget GAKEb_st.s_smap{1}.[(b, j)]) = Some ((b, pk), m3))
+
                /\ (forall b, b \in GAKEb_st.servers{1} <=> b \in Name_Red.O_GAKE.sid_pk{2})
+
                /\ (forall b, b \in GAKEb_st.servers{1} => get_pkey (oget GAKEb_st.servers{1}.[b]) = (oget Name_Red.O_GAKE.sid_pk{2}.[b])
                                      /\ !get_sr_dh (oget GAKEb_st.servers{1}.[b])
                                      /\ get_pkey (oget GAKEb_st.servers{1}.[b]) \in GAKE_mod.GAKEb_nodhs.servers{2}
                                      /\ (get_sr_ltk (oget GAKEb_st.servers{1}.[b]) 
                                          <=> get_sr_ltk (oget GAKE_mod.GAKEb_nodhs.servers{2}.[oget Name_Red.O_GAKE.sid_pk{2}.[b]])))
+
                /\ (forall pk b sk1 sk2, pk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] = Some sk1 
                     => b \in GAKEb_st.servers{1} => obind GAKEc.get_skey GAKEb_st.servers{1}.[b] = Some sk2 
                     => b \in Name_Red.O_GAKE.sid_pk{2} => (oget Name_Red.O_GAKE.sid_pk{2}.[b]) = pk => sk1 = sk2)
+
                /\ (forall b, b \in Name_Red.O_GAKE.sid_pk{2} => (oget Name_Red.O_GAKE.sid_pk{2}.[b{2}]) \in Name_Red.O_GAKE.pk_set{2})
+
                /\ (forall b pk, b \in Name_Red.O_GAKE.sid_pk{2} => oget Name_Red.O_GAKE.sid_pk{2}.[b] = pk
                     =>  obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] <> None)
+
                /\ (forall sk, g ^ sk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[g ^ sk] = Some sk)
+
                /\ (forall sk pk b, b \in Name_Red.O_GAKE.sid_pk{2} => oget Name_Red.O_GAKE.sid_pk{2}.[b] = pk
                     => pk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] = Some sk 
                     => pk = g ^ sk)
+
                /\ (forall pk j x1 x2 x4 x5, pk \notin Name_Red.O_GAKE.pk_set{2} 
                     => pk \notin GAKE_mod.GAKEb_nodhs.servers{2} /\ (pk, j) \notin GAKE_mod.GAKEb_nodhs.s_smap{2} /\ (x1, x2, pk, x4, x5) \notin GAKE_mod.HROc.RO.m{2})
+
                /\ (forall b1 b2, b1 \in Name_Red.O_GAKE.sid_pk{2} => b2 \in Name_Red.O_GAKE.sid_pk{2} 
                     => (oget Name_Red.O_GAKE.sid_pk{2}.[b1]) = (oget Name_Red.O_GAKE.sid_pk{2}.[b2])
                     => b1 = b2)
