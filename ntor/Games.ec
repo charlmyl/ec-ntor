@@ -55,8 +55,8 @@ module Game0 : GAKE_nodhs_i = {
   
   var tested : int option
   
-  var x_set, y_set, m_set, kp_set : pkey fset
-  var bad1, bad2, bad3 : bool
+  var x_set, y_set, kp_set : pkey fset
+  var bad1, bad2 : bool
 
 
   proc init_mem(b: bool) : unit = {
@@ -69,10 +69,8 @@ module Game0 : GAKE_nodhs_i = {
     kp_set <- fset0;
     x_set <- fset0;
     y_set <- fset0;
-    m_set <- fset0;
     bad1 <- false;
     bad2 <- false;
-    bad3 <- false;
   }
   
   (* random oracle *)
@@ -84,8 +82,12 @@ module Game0 : GAKE_nodhs_i = {
       hm.[x] <- tk;
     }
 
-    x_set <- x_set `|` fset1 x.`4;
-    y_set <- y_set `|` fset1 x.`5;
+    if (x.`4 \notin kp_set) {
+      x_set <- x_set `|` fset1 x.`4;
+    }
+    if (x.`5 \notin kp_set) {
+      y_set <- y_set `|` fset1 x.`5;
+    }
 
     return oget hm.[x];
   }
@@ -116,7 +118,6 @@ module Game0 : GAKE_nodhs_i = {
       | None => {
           sk <$ dt;
           pk <- g ^ sk;
-          bad3 <- bad3 \/ pk \in m_set;
           bad2 <- bad2 \/ pk \in x_set;
           bad1 <- bad1 \/ pk \in kp_set;
           kp_set <- kp_set `|` fset1 pk;
@@ -148,7 +149,6 @@ module Game0 : GAKE_nodhs_i = {
           bad2 <- bad2 \/ pk \in y_set;
           bad1 <- bad1 \/ pk \in kp_set;
           kp_set <- kp_set `|` fset1 pk;
-          m_set <- m_set `|` fset1 m2;
           (t_B, key) <@ h(m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
           s_smap.[(b, j)] <- Accepted_mod (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false);
           r <- Some (pk, t_B);
@@ -395,16 +395,8 @@ module Game2 = Game1 with {
 
 print Game2.
 
-module Game3 = Game2 with {
-  proc send_msg1 [
-    ^if.^match#None.^if ~ (!bad1 /\ !bad2 /\ !bad3)
-  ]
-}.
-
-print Game3.
-
 (* Step2: Splitting the random oracle and tracking bad event of overlap between RO queries and test query *)
-module Game4 = Game3 with {
+module Game3 = Game2 with {
   var h1m : (pkey * pkey * pkey * pkey * pkey, tag) fmap
   var h2m : (pkey * pkey * pkey * pkey * pkey, key) fmap
   var hq : (pkey * pkey * pkey * pkey * pkey) fset
@@ -433,7 +425,8 @@ module Game4 = Game3 with {
                                       t_B <- oget h1m.[x];
                                       ks <$ dkey;
                                       if (x \notin h2m) {h2m.[x] <- ks;} 
-                                      key <- oget h2m.[x]; }
+                                      key <- oget h2m.[x]; 
+                                      if (m2 \notin kp_set) {x_set <- x_set `|` fset1 m2;}}
   ]
 
   proc send_msg3 [
@@ -446,11 +439,11 @@ module Game4 = Game3 with {
                                      t_A <- oget h1m.[x];
                                      ks <$ dkey;
                                      if (x \notin h2m) {h2m.[x] <- ks;} 
-                                     key <- oget h2m.[x];}
+                                     key <- oget h2m.[x]; 
+                                     if (g ^ sk_ce \notin kp_set) {x_set <- x_set `|` fset1 (g ^ sk_ce);}
+                                     if (m3.`1 \notin kp_set) {y_set <- y_set `|` fset1 m3.`1;}}
 
   ]
-  
-
 
   proc c_test [
     var x : pkey * pkey * pkey * pkey * pkey
@@ -465,10 +458,10 @@ module Game4 = Game3 with {
   ]
 }.
 
-print Game4. 
+print Game3. 
 
 (* Step3: Moving the sampling of keys *)
-module Game5 = Game4 with {
+module Game4 = Game3 with {
   var test_ephrev_s : bool option
 
   proc init_mem [
