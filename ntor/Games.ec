@@ -55,7 +55,7 @@ module Game0 : GAKE_nodhs_i = {
   
   var tested : int option
   
-  var x_set, y_set, kp_set : pkey fset
+  var b_set, x_set, y_set, kp_set : pkey fset
   var bad1, bad2 : bool
 
 
@@ -67,6 +67,7 @@ module Game0 : GAKE_nodhs_i = {
     s_smap <- empty;
     tested <- None;
     kp_set <- fset0;
+    b_set <- fset0;
     x_set <- fset0;
     y_set <- fset0;
     bad1 <- false;
@@ -82,6 +83,9 @@ module Game0 : GAKE_nodhs_i = {
       hm.[x] <- tk;
     }
 
+    if (x.`3 \notin kp_set) {
+      b_set <- b_set `|` fset1 x.`4;
+    }
     if (x.`4 \notin kp_set) {
       x_set <- x_set `|` fset1 x.`4;
     }
@@ -100,6 +104,7 @@ module Game0 : GAKE_nodhs_i = {
     sk <$ dt;
     pk <- g ^ sk;
     if (pk \notin servers) {
+      bad2 <- bad2 \/ pk \in b_set;
       bad1 <- bad1 \/ pk \in kp_set;
       kp_set <- kp_set `|` fset1 pk;
       servers.[pk] <- Honest_mod sk;
@@ -384,6 +389,10 @@ module Game1 = Game0 with {
 print Game1.
 
 module Game2 = Game1 with {
+  proc init_s [
+    ^if.^if ~ (!bad1 /\ !bad2)
+  ]
+
   proc send_msg1 [
     ^if.^match#None.^if ~ (!bad1 /\ !bad2)
   ]
@@ -475,6 +484,8 @@ module Game4 = Game3 with {
 
   proc send_msg3 [
     ^match#Some.^match#Pending_mod.^ks<$ ~ {key <- witness;}
+    ^match#Some.^match#Pending_mod.^if{2} ~ (pt.`2 \notin kp_set)
+    ^match#Some.^match#Pending_mod.^if{2}.^x_set<- ~ {x_set <- x_set `|` fset1 pt.`2;}
     [^match#Some.^match#Pending_mod.^if{2} - ^key<-] -
   ]
 
@@ -514,3 +525,5 @@ module Game4 = Game3 with {
     ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
   ]
 }.
+
+print Game4.
