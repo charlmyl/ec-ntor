@@ -55,7 +55,7 @@ module Game0 : GAKE_nodhs_i = {
   
   var tested : int option
   
-  var b_set, x_set, y_set, kp_set : pkey fset
+  var b_set, x_set, y_set, m2_set, kp_set : pkey fset
   var bad1, bad2 : bool
 
 
@@ -70,6 +70,7 @@ module Game0 : GAKE_nodhs_i = {
     b_set <- fset0;
     x_set <- fset0;
     y_set <- fset0;
+    m2_set <- fset0;
     bad1 <- false;
     bad2 <- false;
   }
@@ -126,6 +127,7 @@ module Game0 : GAKE_nodhs_i = {
           bad2 <- bad2 \/ pk \in x_set;
           bad1 <- bad1 \/ pk \in kp_set;
           kp_set <- kp_set `|` fset1 pk;
+          m2_set <- m2_set `|` fset1 pk;
           c_smap.[i] <- Pending_mod (m1, sk) (m1, pk) (false, false, false);
           r <- Some pk;
         }
