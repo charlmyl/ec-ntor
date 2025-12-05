@@ -84,13 +84,13 @@ module Game0 : GAKE_nodhs_i = {
       hm.[x] <- tk;
     }
 
-    if (x.`3 \notin kp_set) {
+    if (x.`3 \notin kp_set /\ x.`3 \notin b_set) {
       b_set <- b_set `|` fset1 x.`4;
     }
-    if (x.`4 \notin kp_set) {
+    if (x.`4 \notin kp_set /\ x.`4 \notin x_set) {
       x_set <- x_set `|` fset1 x.`4;
     }
-    if (x.`5 \notin kp_set) {
+    if (x.`5 \notin kp_set /\ x.`5 \notin y_set) {
       y_set <- y_set `|` fset1 x.`5;
     }
 
