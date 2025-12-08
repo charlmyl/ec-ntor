@@ -3018,6 +3018,12 @@ call (: Game4.badq,
               => !(exists j, (j \in St_CDH_O.y_map{1}) /\ x.`5 = g ^ oget St_CDH_O.y_map{1}.[j] /\ x.`1 = x.`4 ^ oget St_CDH_O.y_map{1}.[j]) 
               => (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h1m_opt{1} /\ Game4.h1m{2}.[x] = Red_Ltk.Red_O.h1m_opt{1}.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)])
          /\ (forall x, x \in Game4.h1m{2} 
+              => (x.`3 \in Red_Ltk.Red_O.servers{1}) => ! ((x{2}.`4 \notin Game4.m2_set{2}) /\ (x{2}.`5 \in Game4.kp_set{2}) /\ (x{2}.`5 \notin Red_Ltk.Red_O.servers{1}))
+              => (exists j, (j \in St_CDH_O.y_map{1}) /\ x.`3 = g ^ oget St_CDH_O.y_map{1}.[j] /\ x.`2 = x.`4 ^ oget St_CDH_O.y_map{1}.[j]) 
+              => !(exists i, i \in St_CDH_O.x_map{1} /\ x.`4 = g ^ oget St_CDH_O.x_map{1}.[i] /\ x.`1 = x.`5 ^ oget St_CDH_O.x_map{1}.[i]) 
+              => !(exists j, (j \in St_CDH_O.y_map{1}) /\ x.`5 = g ^ oget St_CDH_O.y_map{1}.[j] /\ x.`1 = x.`4 ^ oget St_CDH_O.y_map{1}.[j]) 
+              => (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h1m_opt{1} /\ Game4.h1m{2}.[x] = Red_Ltk.Red_O.h1m_opt{1}.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)])
+         /\ (forall x, x \in Game4.h1m{2} 
               => x.`3 \notin Red_Ltk.Red_O.servers{1}
               => (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h1m_opt{1} /\ Game4.h1m{2}.[x] = Red_Ltk.Red_O.h1m_opt{1}.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)])
          /\ (forall x, x \in Game4.h2m{2}
@@ -3048,6 +3054,12 @@ call (: Game4.badq,
               => !(exists j, (j \in St_CDH_O.y_map{1}) /\ x.`5 = g ^ oget St_CDH_O.y_map{1}.[j] /\ x.`1 = x.`4 ^ oget St_CDH_O.y_map{1}.[j]) 
               => (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h2m_opt{1} /\ Game4.h2m{2}.[x] = Red_Ltk.Red_O.h2m_opt{1}.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)])
          /\ (forall x, x \in Game4.h2m{2} 
+              => (x.`3 \in Red_Ltk.Red_O.servers{1}) => ! ((x{2}.`4 \notin Game4.m2_set{2}) /\ (x{2}.`5 \in Game4.kp_set{2}) /\ (x{2}.`5 \notin Red_Ltk.Red_O.servers{1}))
+              => (exists j, (j \in St_CDH_O.y_map{1}) /\ x.`3 = g ^ oget St_CDH_O.y_map{1}.[j] /\ x.`2 = x.`4 ^ oget St_CDH_O.y_map{1}.[j]) 
+              => !(exists i, i \in St_CDH_O.x_map{1} /\ x.`4 = g ^ oget St_CDH_O.x_map{1}.[i] /\ x.`1 = x.`5 ^ oget St_CDH_O.x_map{1}.[i]) 
+              => !(exists j, (j \in St_CDH_O.y_map{1}) /\ x.`5 = g ^ oget St_CDH_O.y_map{1}.[j] /\ x.`1 = x.`4 ^ oget St_CDH_O.y_map{1}.[j]) 
+              => (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h2m_opt{1} /\ Game4.h2m{2}.[x] = Red_Ltk.Red_O.h2m_opt{1}.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)])
+         /\ (forall x, x \in Game4.h2m{2} 
               => x.`3 \notin Red_Ltk.Red_O.servers{1}
               => (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h2m_opt{1} /\ Game4.h2m{2}.[x] = Red_Ltk.Red_O.h2m_opt{1}.[(Some x.`1, Some x.`2, x.`3, x.`4, x.`5)])
          /\ (forall b x y, (None, None, b, x, y) \in Red_Ltk.Red_O.h1m_opt{1} => (x ^ (loge y), x ^ (loge b), b, x, y) \in Game4.h1m{2}
@@ -3059,6 +3071,7 @@ call (: Game4.badq,
          /\ (forall (x : group * group * group * group * group), (Some x.`1, Some x.`2, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h2m_opt{1} => x \in Game4.h2m{2})
      (*    /\ (forall x, Game4.tq{2} = Some x => (None, None, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h1m_opt{1} /\ (None, None, x.`3, x.`4, x.`5) \in Red_Ltk.Red_O.h2m_opt{1})*)
          /\ (Game4.tq{2} <> None => oget Game4.tq{2} \in Game4.hq{2} => St_CDH_O.win{1})
+         /\ (Game4.badq{2} => (Game4.tq{2} <> None /\ oget Game4.tq{2} \in Game4.hq{2}))
          /\ (forall pk, omap clear_sk Game4.servers{2}.[pk] = Red_Ltk.Red_O.servers{1}.[pk])
          /\ (forall bj, omap clear_ltsk Game4.s_smap{2}.[bj] = Red_Ltk.Red_O.s_smap{1}.[bj])
          /\ (forall i, omap clear_esk Game4.c_smap{2}.[i] = Red_Ltk.Red_O.c_smap{1}.[i])
@@ -3082,18 +3095,17 @@ call (: Game4.badq,
          /\ (forall m, m \in Game4.m2_set{2} <=> (exists i, i \in St_CDH_O.x_map{1} /\ m = g ^ oget St_CDH_O.x_map{1}.[i]))
          /\ (forall i pk, i \in St_CDH_O.x_map{1} => pk = g ^ oget St_CDH_O.x_map{1}.[i] => pk \in Game4.kp_set{2})
          /\ (forall j pk, j \in St_CDH_O.y_map{1} => pk = g ^ oget St_CDH_O.y_map{1}.[j] => pk \in Game4.kp_set{2})
-         /\ (forall x, x \in Game4.h1m{2} => x.`4 \in Game4.kp_set{2} \/ x.`4 \in Game4.x_set{2})
-         /\ (forall x, x \in Game4.h2m{2} => x.`4 \in Game4.kp_set{2} \/ x.`4 \in Game4.x_set{2})
-         /\ (forall x, x \in Game4.h1m{2} => x.`5 \in Game4.kp_set{2} \/ x.`5 \in Game4.y_set{2})
-         /\ (forall x, x \in Game4.h2m{2} => x.`5 \in Game4.kp_set{2} \/ x.`5 \in Game4.y_set{2})
+         /\ (forall x, x \in Game4.h1m{2} => (x.`3 \in Game4.servers{2} \/ x.`3 \in Game4.b_set{2}) /\ (x.`4 \in Game4.kp_set{2} \/ x.`4 \in Game4.x_set{2}) 
+                        /\ (x.`5 \in Game4.kp_set{2} \/ x.`5 \in Game4.y_set{2}))
+         /\ (forall x, x \in Game4.h2m{2} => (x.`3 \in Game4.servers{2} \/ x.`3 \in Game4.b_set{2}) /\ (x.`4 \in Game4.kp_set{2} \/ x.`4 \in Game4.x_set{2}) 
+                        /\ (x.`5 \in Game4.kp_set{2} \/ x.`5 \in Game4.y_set{2}))
          /\ (forall x, x \in Red_Ltk.Red_O.h1m_opt{1} => x.`5 \in Red_Ltk.Red_O.kp_set{1} \/ x.`5 \in Red_Ltk.Red_O.y_set{1})
          /\ (forall x, x \in Red_Ltk.Red_O.h2m_opt{1} => x.`5 \in Red_Ltk.Red_O.kp_set{1} \/ x.`5 \in Red_Ltk.Red_O.y_set{1})
          /\ (forall b, b \in Game4.servers{2} <=> (b \in Game4.kp_set{2} /\ (exists j, j \in St_CDH_O.y_map{1} /\ b = g ^ oget St_CDH_O.y_map{1}.[j])))
          /\ (Red_Ltk.Red_O.b0{1})
          /\ (forall n, St_CDH_O.n < n => n \notin St_CDH_O.x_map){1}
          /\ (forall m, St_CDH_O.m < m => m \notin St_CDH_O.y_map){1}
-         /\ (forall x, Game4.tq{2} = Some x => (x.`3 \in Red_Ltk.Red_O.servers{1}) /\ (x.`5 \in Red_Ltk.Red_O.kp_set{1}) /\ x.`3 <> x.`5 /\ (x.`5 \notin Red_Ltk.Red_O.servers{1}))
-         /\ (forall x, Game4.tq{2} = Some x => (exists (i j : int),
+         /\ (forall x, Game4.tq{2} = Some x => (x.`3 \in Red_Ltk.Red_O.servers{1}) /\ (exists (i j : int),
         (i \in St_CDH_O.x_map{1}) /\
         x.`4 = g ^ oget St_CDH_O.x_map{1}.[i] /\
         x.`1 = x{2}.`5 ^ oget St_CDH_O.x_map{1}.[i] /\
@@ -3120,7 +3132,7 @@ by case : (!br) => />.
 
 + proc; inline.
   if {1} => //.
-  + sp 2 0; if {1} => //. admit. (*
+  + sp 2 0; if {1} => //.
     + if {1} => //.
       + rcondt {1} ^if. auto => /#.
         sp 5 0; if {1} => //.
@@ -3269,7 +3281,7 @@ by case : (!br) => />.
           auto => /> &1 &2 *. smt(expgK expM).
         if {1} => //.
         + rcondt {1} ^if. auto => /#.
-          sp 2 0; if {1} => //.
+          sp 2 0; if {1} => //. 
           + sp; seq 1 1: (#pre /\ ={t}). auto => />.
             if => //. auto => /> &1 &2 *. smt(expgK expM).
             + sp 1 1; seq 1 1: (#pre /\ ={k}). auto => />.
@@ -3341,7 +3353,7 @@ by case : (!br) => />.
         rcondf {1} ^if. auto => /#.
         rcondf {1} ^if. auto => /#.
         sp; seq 1 1: (#pre /\ ={t}). auto => />.
-        if => //. auto => /> &1 &2 *. smt(expgK loggK expM). 
+        if => //. auto => /> &1 &2 *. smt(expgK loggK expM).
         + sp 1 1; seq 1 1: (#pre /\ ={k}). auto => />.
           if => //. auto => /> &1 &2 *. smt(expgK expM).
           + rcondf {1} ^if. auto => /#.
@@ -3378,7 +3390,7 @@ by case : (!br) => />.
         auto => /> &1 &2 *. smt(expgK expM).
       rcondt {1} ^if. auto => /#.
       sp 4 0; if {1} => //.
-      + if {1} => //.
+      + if {1} => //. 
         + rcondt {1} ^if. auto => /#.
           rcondt {1} ^if. auto => />. smt(expgK expM).
           sp; seq 1 1: (#pre /\ ={t}). auto => />.
@@ -3400,7 +3412,7 @@ by case : (!br) => />.
             + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM).
             auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM).
           seq 1 1: (#pre /\ ={k}). auto => />.
-          if => //. smt(expgK expM).
+          if => //. smt(expgK expM loggK).
           + rcondf {1} ^if. auto => /#.
             rcondf {2} ^if. auto => /#.
             rcondf {1} ^if{2}. auto => /#.
@@ -3420,7 +3432,7 @@ by case : (!br) => />.
         sp; seq 1 1: (#pre /\ ={t}). auto => />.
         if => //. auto => /> &1 &2 *. smt(expgK expM).
         + sp 1 1; seq 1 1: (#pre /\ ={k}). auto => />.
-          if => //. smt(expgK expM).
+          if => //. smt(expgK expM loggK).
           + rcondf {1} ^if. auto => /#.
             rcondf {2} ^if. auto => /#.
             sp 3 1; if => //. 
@@ -3491,7 +3503,8 @@ by case : (!br) => />.
       rcondf {2} ^if{2}. auto => /#.
       sp 2 0; if => //. 
       + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM).
-      auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM). *)
+      auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM).
+
     if {1} => //.
     + rcondt {1} ^if. auto => /#.
       sp 4 0; if {1} => //.
@@ -3535,7 +3548,7 @@ by case : (!br) => />.
         rcondt {1} ^if. auto => /#.
         rcondt {1} ^if. auto => />. smt(expgK expM loggK).
         sp; seq 1 1: (#pre /\ ={t}). auto => />.
-        if => //. auto => /> &1 &2 *. smt(expgK expM). admit. (*
+        if => //. auto => /> &1 &2 *. smt(expgK expM).
         + sp 1 1; seq 1 1: (#pre /\ ={k}). auto => />.
           if => //. smt(expgK expM).
           + rcondf {1} ^if. auto => /#.
@@ -3553,7 +3566,7 @@ by case : (!br) => />.
           rcondf {2} ^if{2}. auto => /#.
           sp 2 0; if => //. 
           + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM).
-          auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM). *)
+          auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM).
         seq 1 1: (#pre /\ ={k}). auto => />.
         if => //. smt(expgK expM).
         + rcondf {1} ^if. auto => /#.
@@ -3570,7 +3583,7 @@ by case : (!br) => />.
         sp 2 0; if => //. 
         + auto => /> &1 &2 *. smt(expgK expM).
         auto => /> &1 &2 *. smt(expgK expM).
-      if {1} => //. admit. (*
+      if {1} => //.
       + rcondt {1} ^if. auto => /#.
         rcondf {1} ^if. auto => />. smt(expgK expM loggK).
         sp; seq 1 1: (#pre /\ ={t}). auto => />.
@@ -3606,9 +3619,9 @@ by case : (!br) => />.
         rcondf {2} ^if{2}. auto => /#.
         sp 2 0; if => //. 
         + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
-        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM). *)
+        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM).
       rcondf {1} ^if. auto => /#.    
-      sp 1 0; if {1} => //. admit. (*
+      sp 1 0; if {1} => //.
       + sp; seq 1 1: (#pre /\ ={t}). auto => />.
         if => //. auto => /> &1 &2 *. smt(expgK expM loggK).
         + sp 1 1; seq 1 1: (#pre /\ ={k}). auto => />.
@@ -3642,11 +3655,11 @@ by case : (!br) => />.
         rcondf {2} ^if{2}. auto => /#.
         sp 2 0; if => //. 
         + auto => /> &1 &2 *. smt(loggK expgK expM in_fsetU1).
-        auto => /> &1 &2 *. smt(loggK expgK expM in_fsetU1). *)
+        auto => /> &1 &2 *. smt(loggK expgK expM in_fsetU1).
       sp; seq 1 1: (#pre /\ ={t}). auto => />.
-      if => //. auto => /> &1 &2 *. split. smt(loggK expgK expM). admit.
+      if => //. auto => /> &1 &2 *. smt(loggK expgK expM).
       + sp 1 1; seq 1 1: (#pre /\ ={k}). auto => />.
-        if => //. auto => /> &1 &2 *. split. smt(loggK expgK expM). admit.
+        if => //. auto => /> &1 &2 *. smt(loggK expgK expM).
         + rcondf {1} ^if. auto => /#.
           rcondf {2} ^if. auto => /#.
           sp 3 1; if => //. 
@@ -3655,30 +3668,30 @@ by case : (!br) => />.
             auto => /> *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
           if => //.
           + auto => /> &1 &2 *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
-          auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; admit.
+          auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
         rcondf {1} ^if. auto => /#.
         rcondf {2} ^if. auto => /#.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         sp 2 0; if => //. 
         + auto => /> &1 &2 *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
-        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; admit.
+        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
       seq 1 1: (#pre /\ ={k}). auto => />.
-      if => //. auto => /> &1 &2 *. split. smt(loggK expgK expM). admit.
+      if => //. auto => /> &1 &2 *. smt(loggK expgK expM).
       + rcondf {1} ^if. auto => /#.
         rcondf {2} ^if. auto => /#.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         sp 3 1; if => //. 
         + auto => /> &1 &2 *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
-        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; admit.
+        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
       rcondf {1} ^if. auto => /#.
       rcondf {2} ^if. auto => /#.
       rcondf {1} ^if{2}. auto => /#.
       rcondf {2} ^if{2}. auto => /#.
       sp 2 0; if => //. 
       + auto => /> &1 &2 *. smt(loggK expgK expM in_fsetU1).
-      auto => /> &1 &2 *. admit. 
+      auto => /> &1 &2 *. smt(loggK expgK expM in_fsetU1). 
     rcondf {1} ^if. auto => /#.
     sp; seq 1 1: (#pre /\ ={t}). auto => />.
     if => //. smt(loggK expgK expM).
@@ -3723,7 +3736,7 @@ by case : (!br) => />.
     + sp 3 1; if => //.
       + sp 1 1; if => //.
         + sp 1 1; if => //.
-          + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+          + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; ~24,25: smt(mem_set get_setE expgK expM in_fsetU1).
           auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
         if => //.
         + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
@@ -3781,7 +3794,7 @@ by case : (!br) => />.
     auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
   if => //.
   + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-  auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1). 
+  auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1). *)
 - move => &2 bad; proc; inline; auto => />. 
   by rewrite dtag_ll dkey_ll //=.
 - move => &1; proc; inline.
@@ -3791,11 +3804,15 @@ by case : (!br) => />.
   sp; seq 1 1 : (#pre /\ sk{2} = y_m{1}). auto => />.
   sp 3 1; if => //. smt().
   + sp 2 2; if => //. 
-    + auto => /> &1 &2 3? m 34? inv *. do split; ~1..3,6..8,24: smt(mem_set get_setE expgK expM in_fsetU1). 
-move => x *.
-(* since g ^ y_m is not in kp_set it cannot be in a query made by the protocol, but also it cannot be x.`3 since that would trigger bad2.
-The problem is that it can be x.`5... No because then it would be in servers *)
-admit. admit. admit. admit. admit. admit. 
+    + auto => /> &1 &2 3? m 36? inv *. do split; ~3,10,26: smt(mem_set get_setE expgK expM in_fsetU1). 
+move => x xin.
+rewrite mem_set //=.
+move => []. admit.
+smt(mem_set get_setE expgK expM in_fsetU1). 
+move => x xin.
+rewrite mem_set //=.
+move => []. admit.
+smt(mem_set get_setE expgK expM in_fsetU1).
 move => b.
 case (b = g ^ y_m{1}) => beq.
 + rewrite mem_set beq //=.
@@ -3831,14 +3848,18 @@ smt(mem_set get_setE).
   + match None {2} ^match. auto => /#.
     sp; seq 1 1: (#pre /\ x_n{1} = sk{2}). auto => />.
     sp 5 3; if => //.
-    + auto => /> &1 &2 3? n 23? inv inv2 ? ? inv3 *. do split; ~3,4,8,9,12,13,15: smt(mem_set get_setE expgK expM in_fsetU1).
+    + auto => /> &1 &2 3? n 27? inv inv2 ? ? inv3 *. do split; 1,7,16,18..27: smt(mem_set get_setE expgK expM in_fsetU1).
 move => x xin x3in.
 rewrite in_fsetU1.
-move => [[x5in|x5eq]|]. admit. admit. admit. (* Adversary can have predicted this X in the place of Y *)
+move => [] x5in x5nin.
+rewrite in_fsetU1 negb_or //=.
+admit. admit.
+
+admit. admit. admit.
 admit.
 admit.
-admit.
-move => i0 s pt ir.
+admit. admit. admit. admit. admit. admit.
+(*move => i0 s pt ir.
 case (i0 = i{2}) => ieq. 
 + rewrite get_setE ieq mem_set //=.
   move => [#] steq pteq ireq. 
@@ -3852,7 +3873,7 @@ do split; ~2,5: smt(). smt(in_fsetU1).
 have := inv i0 s pt ir iin ipen.
 move => [#] pt2 pt2in pt1 pt1in [no noin].
 exists no.
-smt(mem_set get_setE).
+smt(mem_set get_setE).*)
 move => i0 s t k ir.
 case (i0 = i{2}) => ieq. 
 + rewrite get_setE ieq mem_set //=.
@@ -3905,7 +3926,9 @@ smt(mem_set get_setE).
     rcondt {2} ^if. auto => /#.
     sp 3 3; if => //.
     + auto => /> &1 &2 *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1). 
-    auto => /> &1 &2 *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1). 
+    auto => /> &1 &2 *. do split; ~4: smt(mem_set get_setE loggK expgK expM in_fsetU1).
+have : m2{2} <> g ^ sk{2}. admit.
+smt(mem_set get_setE loggK expgK expM in_fsetU1).
   match Some {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
@@ -3941,57 +3964,51 @@ smt(mem_set get_setE).
       sp 3 3; if => //. smt(expM expgK loggK).
       + sp 1 1; if => //.
         + auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-        auto => /> &1 &2 6? inv *. do split; ~7: smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
-move => b0 x0 y0.
-rewrite mem_set //=.
-move => [].
-smt(get_setE mem_set loggK expgK expM).
-smt(get_setE mem_set loggK expgK expM).
+        auto => /> &1 &2 6? inv *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
       if => //.
-      + auto => /> &1 &2 *. do split; ~11: smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
+      + auto => /> &1 &2 *. do split; ~6,8: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+move => x0.
+rewrite mem_set //=.
+move => []. smt(get_setE mem_set expgK expM).
+move => -> //=.
+smt(get_setE mem_set expgK expM).
 move => b0 x0 y0.
 rewrite mem_set //=.
 move => [].
 smt(get_setE mem_set loggK expgK expM).
 smt(get_setE mem_set loggK expgK expM).
-      auto => /> &1 &2 *. do split; ~1,5,6: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+      auto => /> &1 &2 *. do split; ~1,6,8,14: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 move => x0.
 rewrite mem_set //=.
 move => [].
 smt(get_setE mem_set loggK expgK expM).
-move => x0eq *.
-rewrite x0eq //=.
+move => -> //= *. 
+split. smt(mem_set). 
+do rewrite get_setE ifT //=.
 smt(get_setE mem_set loggK expgK expM).
 move => x0.
 rewrite mem_set //=.
-move => [].
-move => *. split. 
-smt(get_setE mem_set loggK expgK expM).
-rewrite get_setE ifF //=. smt(get_setE mem_set loggK expgK expM).
-rewrite get_setE ifF //=. smt(get_setE mem_set loggK expgK expM).
-move => x0eq. 
-have->: x0.`3 \in Red_Ltk.Red_O.servers{1} by smt().
-have->: x0.`5 \in Game4.kp_set{2} by smt().
-smt().
+move => []. smt(get_setE mem_set expgK expM).
+move => -> //=.
+smt(get_setE mem_set expgK expM).
 move => b0 x0 y0.
 rewrite mem_set //=.
 move => [].
 smt(get_setE mem_set loggK expgK expM).
-smt(get_setE mem_set loggK expgK expM).
+move => [#] -> -> ->.
+split. smt(mem_set loggK expgK expM).
+smt(get_setE loggK expgK expM).
+move => x0.
+rewrite mem_set.
+move => []. smt().
+move => -> //=.
+smt(loggK expgK expM).
     rcondf {1} ^if. auto => /#.
     rcondf {2} ^if. auto => /#.
     + sp 2 2; if => //.
       + sp 1 1; if => //. smt(expM expgK loggK).
-        + auto => /> &1 &2 *. do split; ~13: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-move => i0 s t k ir.
-case (i0 = i{2}) => ieq.
-+ rewrite get_setE ieq mem_set //=.
-  move => [#] steq teq keq ireq. 
-  smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-rewrite get_setE ieq mem_set ieq //=.
-move => iin iacc.
-smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-        auto => /> &1 &2 6? inv *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        + auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
       if => //. smt(expM expgK loggK).
       + auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
       auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
@@ -4052,10 +4069,10 @@ smt(get_setE mem_set in_fsetU1 loggK expgK expM).
     + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
       if => //.
       + auto => /> &1 &2 *. 
-        have->: t'{1} = t'{2}. smt(). split.
-        smt(get_setE mem_set expgK expM loggK). admit. 
-      + auto => /> &1 &2 *. do split; ~6,7,14: smt(get_setE mem_set in_fsetU1 loggK expgK expM). admit. admit. admit.
-      auto => /> &1 &2 8? inv*. do split; ~1: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        have->: t'{1} = t'{2}. smt().
+        smt(get_setE mem_set expgK expM loggK).
+      + auto => /> &1 &2 *. do split; ~2,9,15,16: smt(get_setE mem_set in_fsetU1 loggK expgK expM). admit. admit. admit. admit.
+      auto => /> &1 &2 8? inv*. do split; admit. (*
 have : ((oget t'{2}.`2).`1 ^ st'{2}.`2, st'{2}.`1 ^ st'{2}.`2, st'{2}.`1, g ^ st'{2}.`2, (oget t'{2}.`2).`1) \in Game4.h2m{2}. smt(expgK expM). move => xin.
 have := inv ((oget t'{2}.`2).`1 ^ st'{2}.`2, st'{2}.`1 ^ st'{2}.`2, st'{2}.`1, g ^ st'{2}.`2, (oget t'{2}.`2).`1) xin.
 rewrite //=.
@@ -4063,7 +4080,7 @@ have->: st'{2}.`1 \in Red_Ltk.Red_O.servers{1} by smt().
 have->: (oget t'{2}.`2).`1 \in Game4.kp_set{2} by admit.
 have->: st'{2}.`1 <> (oget t'{2}.`2).`1 by admit.
 have->: (oget t'{2}.`2).`1 \notin Red_Ltk.Red_O.servers{1} by admit.
-smt(expgK expM).
+smt(expgK expM).*)
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
@@ -4083,7 +4100,7 @@ smt(expgK expM).
   hoare. 
   by auto => />.
 
-+ proc; inline.
++ proc; inline. admit. (*
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
     auto => />.
@@ -4157,7 +4174,7 @@ have := inv (t'{2}.`1.`2 ^ oget st'{2}.`2, t'{2}.`1.`2 ^ st'{2}.`1, g ^ st'{2}.`
 rewrite /clear_ddh //=.
 smt(loggK expM).
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />.*)
 - move => &2 bad; proc; inline. 
   sp; match => //. 
   match => //.
@@ -4184,10 +4201,9 @@ smt(loggK expM).
   + match Honest_mod {2} ^match. auto => /#.
     if => //.
     + auto => /> &1 &2 *. admit. (* relate complicated partnering notion *)
-    rcondt {1} ^if. admit. (* add invariant *)
-    auto => /> &1 &2 *. do split; 2,3: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-    + admit. (* add invariant *)
-    admit. (* j0 can't be corrupted one? *)
+    rcondt {1} ^if. auto => /> &1 &2 *. admit. (* add invariant *)
+    auto => /> &1 &2 *. do split; ~1: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+    admit. (* add invariant *)
   + match Corrupt_mod {2} ^match. auto => /#.
     auto => />.
   match Dishonest_mod {2} ^match. auto => /#.
@@ -4211,12 +4227,35 @@ smt(loggK expM).
     if => //.
     + auto => /> &1 &2 *.
       rewrite /untested_origins_c.
-      rewrite /get_origins_c /get_untested_origins_c.
-      admit.
+      rewrite /get_origins_c /get_untested_origins_c //=.
+      have->: (fdom (filter
+             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
+                exists (m2o : (pkey * tag) option),
+                  get_trace val = Some (pk_e{2}, m2o)) Game4.s_smap{2})) = (fdom (filter
+             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
+                exists (m2o : (pkey * tag) option),
+                  get_trace val = Some (pk_e{1}, m2o)) Red_Ltk.Red_O.s_smap{1})).
+      + rewrite fsetP.
+        move => x.
+        do rewrite mem_fdom mem_filter.
+        smt(get_setE mem_set).
+      have->: (fdom (filter
+             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
+                  (exists (m2o : (pkey * tag) option),
+                     get_trace val = Some (pk_e{1}, m2o)) /\
+                  get_ir_test val = false) Red_Ltk.Red_O.s_smap{1})) = (fdom (filter
+             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
+                  (exists (m2o : (pkey * tag) option),
+                     get_trace val = Some (pk_e{2}, m2o)) /\
+                  get_ir_test val = false) Game4.s_smap{2})).
+      + rewrite fsetP.
+        move => x.
+        do rewrite mem_fdom mem_filter.
+        smt(get_setE mem_set).
+      smt().
     rcondt {1} ^if. admit. (* add invariant *)
-    auto => /> &1 &2 *. do split; 2,3,4: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-    + admit. (* add invariant *)
-    admit. (* i1 can't be corrupted one? *)
+    auto => /> &1 &2 *. do split; ~1: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+    admit. (* add invariant *)
   + match Accepted_mod {2} ^match. auto => /#.
     if => //.
     + auto => /> &1 &2 *. 
@@ -4244,9 +4283,8 @@ smt(loggK expM).
         smt(get_setE mem_set).
       smt().
     rcondt {1} ^if. admit. (* add invariant *)
-    auto => /> &1 &2 *. do split; 2,3,4: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-    + admit. (* add invariant *)
-    admit. (* i1 can't be corrupted one? *)
+    auto => /> &1 &2 *. do split; ~1: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+    admit. (* add invariant *)
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
@@ -4356,7 +4394,7 @@ smt(loggK expM).
     + auto => /> &1 &2 *. 
       have : t'{1} = t'{2}. smt().
       smt(get_setE mem_set expgK expM loggK).
-    + auto => /> &1 &2 *. split. admit. move => *. do split; 4..6: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+    + auto => /> &1 &2 *. split. admit. move => *. do split; ~1,2,15,16,18..22: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 have->: (get_fresh_partners_c t'{1} Red_Ltk.Red_O.s_smap{1}
                      Red_Ltk.Red_O.servers{1}) = (get_fresh_partners_c t'{2} Game4.s_smap{2} Game4.servers{2}).
 rewrite /get_fresh_partners_c. 
@@ -4378,13 +4416,35 @@ rewrite /get_fresh_partners_c.
                   get_ir_sess val = false /\
                   (get_ir_eph val = false \/
                    get_sr_ltk (oget Red_Ltk.Red_O.servers{1}.[bj.`1]) =
-                   false)) Red_Ltk.Red_O.s_smap{1})).
+                   false)) Red_Ltk.Red_O.s_smap{1})). 
       + rewrite fsetP.
         move => x.
         do rewrite mem_fdom mem_filter.
-        smt(get_setE mem_set).
+        split. move => *. split.
+        smt(get_setE mem_set). smt(get_setE mem_set).
+        move => *. split.
+        smt(get_setE mem_set). smt(get_setE mem_set).
       smt().
-smt().
+    smt().
+move => x0.
+rewrite mem_set //=.
+move => []. smt(get_setE mem_set expgK expM).
+move => -> //=.
+smt(get_setE mem_set expgK expM).
+move => x0.
+rewrite mem_set //=.
+move => [].
+smt(get_setE mem_set loggK expgK expM).
+move => -> //= *. 
+split. smt().
+split. smt().
+admit. (* add invariant *)
+move => x0.
+rewrite mem_set.
+move => []. smt().
+move => -> //=.
+admit. (* add invariant *)
+
 move => x0.
 case (x0 = ((oget t'{2}.`2).`1 ^ st'{2}.`2, st'{2}.`1 ^ st'{2}.`2, st'{2}.`1, g ^ st'{2}.`2, (oget t'{2}.`2).`1)) => x0eq.
 rewrite -x0eq mem_set //=.

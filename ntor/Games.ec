@@ -85,7 +85,7 @@ module Game0 : GAKE_nodhs_i = {
     }
 
     if (x.`3 \notin kp_set /\ x.`3 \notin b_set) {
-      b_set <- b_set `|` fset1 x.`4;
+      b_set <- b_set `|` fset1 x.`3;
     }
     if (x.`4 \notin kp_set /\ x.`4 \notin x_set) {
       x_set <- x_set `|` fset1 x.`4;
