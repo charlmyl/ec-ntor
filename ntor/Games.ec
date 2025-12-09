@@ -376,7 +376,7 @@ print Game0.
 (* Step1: Removing key collisions *)
 module Game1 = Game0 with {
   proc init_s [
-    [^if.^bad1<- - ^servers<-] + (!bad1)
+    [^if.^kp_set<- - ^servers<-] + (!bad1)
   ]
 
   proc send_msg1 [
