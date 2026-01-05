@@ -126,9 +126,9 @@ module Game0 : GAKE_nodhs_i = {
           pk <- g ^ sk;
           bad2 <- bad2 \/ pk \in x_set;
           bad1 <- bad1 \/ pk \in kp_set;
+          c_smap.[i] <- Pending_mod (m1, sk) (m1, pk) (false, false, false);
           kp_set <- kp_set `|` fset1 pk;
           m2_set <- m2_set `|` fset1 pk;
-          c_smap.[i] <- Pending_mod (m1, sk) (m1, pk) (false, false, false);
           r <- Some pk;
         }
       | Some st => { (*
@@ -376,11 +376,11 @@ print Game0.
 (* Step1: Removing key collisions *)
 module Game1 = Game0 with {
   proc init_s [
-    [^if.^kp_set<- - ^servers<-] + (!bad1)
+    [^if.^kp_set<- - ^r<-] + (!bad1)
   ]
 
   proc send_msg1 [
-    [^if.^match#None.^bad1<- - ^r<-] + (!bad1)
+    [^if.^match#None.^bad1<- - ^c_smap<-] + (!bad1)
   ]
 
   proc send_msg2 [
@@ -392,7 +392,7 @@ print Game1.
 
 module Game2 = Game1 with {
   proc init_s [
-    ^if.^if ~ (!bad1 /\ !bad2)
+    ^if ~ (!bad1 /\ !bad2)
   ]
 
   proc send_msg1 [
