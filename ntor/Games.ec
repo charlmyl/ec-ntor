@@ -55,7 +55,7 @@ module Game0 : GAKE_nodhs_i = {
   
   var tested : int option
   
-  var b_set, x_set, y_set, m2_set, kp_set : pkey fset
+  var b_set, x_set, y_set, pk_set, m1_set, m2_set : pkey fset
   var bad1, bad2 : bool
 
 
@@ -66,11 +66,12 @@ module Game0 : GAKE_nodhs_i = {
     c_smap <- empty;
     s_smap <- empty;
     tested <- None;
-    kp_set <- fset0;
+    pk_set <- fset0;
+    m1_set <- fset0;
+    m2_set <- fset0;
     b_set <- fset0;
     x_set <- fset0;
     y_set <- fset0;
-    m2_set <- fset0;
     bad1 <- false;
     bad2 <- false;
   }
@@ -84,13 +85,13 @@ module Game0 : GAKE_nodhs_i = {
       hm.[x] <- tk;
     }
 
-    if (x.`3 \notin kp_set /\ x.`3 \notin b_set) {
+    if (x.`3 \notin pk_set /\ x.`3 \notin b_set) {
       b_set <- b_set `|` fset1 x.`3;
     }
-    if (x.`4 \notin kp_set /\ x.`4 \notin x_set) {
+    if (x.`4 \notin m1_set /\ x.`4 \notin x_set) {
       x_set <- x_set `|` fset1 x.`4;
     }
-    if (x.`5 \notin kp_set /\ x.`5 \notin y_set) {
+    if (x.`5 \notin m2_set /\ x.`5 \notin y_set) {
       y_set <- y_set `|` fset1 x.`5;
     }
 
@@ -106,8 +107,8 @@ module Game0 : GAKE_nodhs_i = {
     pk <- g ^ sk;
     if (pk \notin servers) {
       bad2 <- bad2 \/ pk \in b_set;
-      bad1 <- bad1 \/ pk \in kp_set;
-      kp_set <- kp_set `|` fset1 pk;
+      bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
+      pk_set <- pk_set `|` fset1 pk;
       servers.[pk] <- Honest_mod sk;
       r <- Some pk;
     }
@@ -125,10 +126,9 @@ module Game0 : GAKE_nodhs_i = {
           sk <$ dt;
           pk <- g ^ sk;
           bad2 <- bad2 \/ pk \in x_set;
-          bad1 <- bad1 \/ pk \in kp_set;
+          bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
           c_smap.[i] <- Pending_mod (m1, sk) (m1, pk) (false, false, false);
-          kp_set <- kp_set `|` fset1 pk;
-          m2_set <- m2_set `|` fset1 pk;
+          m1_set <- m1_set `|` fset1 pk;
           r <- Some pk;
         }
       | Some st => { (*
@@ -154,8 +154,8 @@ module Game0 : GAKE_nodhs_i = {
           sk <$ dt;
           pk <- g ^ sk;
           bad2 <- bad2 \/ pk \in y_set;
-          bad1 <- bad1 \/ pk \in kp_set;
-          kp_set <- kp_set `|` fset1 pk;
+          bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
+          m2_set <- m2_set `|` fset1 pk;
           (t_B, key) <@ h(m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
           s_smap.[(b, j)] <- Accepted_mod (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false);
           r <- Some (pk, t_B);
@@ -376,7 +376,7 @@ print Game0.
 (* Step1: Removing key collisions *)
 module Game1 = Game0 with {
   proc init_s [
-    [^if.^kp_set<- - ^r<-] + (!bad1)
+    [^if.^pk_set<- - ^r<-] + (!bad1)
   ]
 
   proc send_msg1 [
@@ -392,7 +392,7 @@ print Game1.
 
 module Game2 = Game1 with {
   proc init_s [
-    ^if ~ (!bad1 /\ !bad2)
+    ^if.^if ~ (!bad1 /\ !bad2)
   ]
 
   proc send_msg1 [
@@ -437,7 +437,7 @@ module Game3 = Game2 with {
                                       ks <$ dkey;
                                       if (x \notin h2m) {h2m.[x] <- ks;} 
                                       key <- oget h2m.[x]; 
-                                      if (m2 \notin kp_set) {x_set <- x_set `|` fset1 m2;}}
+                                      if (m2 \notin m1_set /\ m2 \notin x_set) {x_set <- x_set `|` fset1 m2;}}
   ]
 
   proc send_msg3 [
@@ -451,8 +451,8 @@ module Game3 = Game2 with {
                                      ks <$ dkey;
                                      if (x \notin h2m) {h2m.[x] <- ks;} 
                                      key <- oget h2m.[x]; 
-                                     if (g ^ sk_ce \notin kp_set) {x_set <- x_set `|` fset1 (g ^ sk_ce);}
-                                     if (m3.`1 \notin kp_set) {y_set <- y_set `|` fset1 m3.`1;}}
+                                     if (g ^ sk_ce \notin m1_set /\ g ^ sk_ce \notin x_set) {x_set <- x_set `|` fset1 (g ^ sk_ce);}
+                                     if (m3.`1 \notin m2_set /\ m3.`1 \notin y_set) {y_set <- y_set `|` fset1 m3.`1;}}
 
   ]
 
@@ -486,7 +486,7 @@ module Game4 = Game3 with {
 
   proc send_msg3 [
     ^match#Some.^match#Pending_mod.^ks<$ ~ {key <- witness;}
-    ^match#Some.^match#Pending_mod.^if{2} ~ (pt.`2 \notin kp_set)
+    ^match#Some.^match#Pending_mod.^if{2} ~ (pt.`2 \notin m1_set /\ pt.`2 \notin x_set)
     ^match#Some.^match#Pending_mod.^if{2}.^x_set<- ~ {x_set <- x_set `|` fset1 pt.`2;}
     [^match#Some.^match#Pending_mod.^if{2} - ^key<-] -
   ]
