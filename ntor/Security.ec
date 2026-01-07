@@ -3113,10 +3113,17 @@ call (: Game4.badq,
                       /\ (get_sr_ltk (oget Game4.servers{2}.[b]) => (oget Red_Ltk.Red_O.b_inst{1}.[b]) \in St_CDH_O.cr2{1}))
 
          /\ (Red_Ltk.Red_O.b0{1})
-         /\ (forall n, St_CDH_O.n < n => n \notin St_CDH_O.x_map /\ n \notin St_CDH_O.cr1){1}
+         /\ (forall n i, St_CDH_O.n < n => n \notin St_CDH_O.x_map /\ n \notin St_CDH_O.cr1 /\ Red_Ltk.Red_O.i_inst{1}.[i] <> Some n){1}
          /\ (forall m, St_CDH_O.m < m => m \notin St_CDH_O.y_map /\ m \notin St_CDH_O.cr2){1}
          /\ (St_CDH_O.n = Red_Ltk.Red_O.count_i){1}
          /\ (St_CDH_O.m = Red_Ltk.Red_O.count_b){1}
+         /\ (forall i i', i \in Red_Ltk.Red_O.i_inst{1} => i' \in Red_Ltk.Red_O.i_inst{1}
+              => Red_Ltk.Red_O.i_inst{1}.[i] = Red_Ltk.Red_O.i_inst{1}.[i']
+              => i = i')
+         /\ (forall b b', b \in Red_Ltk.Red_O.b_inst{1} => b' \in Red_Ltk.Red_O.b_inst{1}
+              => Red_Ltk.Red_O.b_inst{1}.[b] = Red_Ltk.Red_O.b_inst{1}.[b']
+              => b = b')
+
          /\ (forall x, Game4.tq{2} = Some x => (x.`3 \in Red_Ltk.Red_O.servers{1}) (* /\ !get_sr_ltk (oget Red_Ltk.Red_O.servers{1}.[x.`3])
                       /\ x.`4 \in Red_Ltk.Red_O.m1_set{1}
                       /\ (exists (i j : int), (i \in St_CDH_O.x_map{1}) /\ x.`4 = g ^ oget St_CDH_O.x_map{1}.[i] 
@@ -3126,7 +3133,7 @@ call (: Game4.badq,
 
 auto => />.
 split. do split; smt(emptyE mem_empty in_fset0).
-move => inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 inv17 inv18 inv19 inv20 inv21 inv22 inv23 inv24 inv25 inv26 inv27 inv28 inv29 inv30 inv31 inv32 inv33 inv34 inv35 inv36 inv37 inv38 inv39 inv40 inv41 inv42 inv43 inv44 inv45 inv46 inv47 inv48 inv49 inv50 inv51 inv52 inv53 rl rr al bl b1l b2l h1l h2l pksl m1l m2l tel tl xsl ysl wl ar br b1r b2r bqr h1r h2r hqr pksr m1r m2r tr tqr xsr ysr.
+move => inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 inv17 inv18 inv19 inv20 inv21 inv22 inv23 inv24 inv25 inv26 inv27 inv28 inv29 inv30 inv31 inv32 inv33 inv34 inv35 inv36 inv37 inv38 inv39 inv40 inv41 inv42 inv43 inv44 inv45 inv46 inv47 inv48 inv49 inv50 inv51 inv52 inv53 inv54 inv55 inv56 rl rr al bl b1l b2l h1l h2l pksl m1l m2l tel tl xsl ysl wl ar br b1r b2r bqr h1r h2r hqr pksr m1r m2r tr tqr xsr ysr.
 by case : (!br) => />.
 
 - exact A_ll.
@@ -3892,17 +3899,113 @@ admit. (* Should I really have collision free assumption? *) *)
     sp; seq 1 1: (#pre /\ x_n{1} = sk{2}). auto => />.
     if {1} => //.
     + sp 5 3; if => //.
-      + auto => /> &1 &2 4? n 31? inv *. do split; 1,2,7,8,13..16,18..21: smt(mem_set get_setE expgK expM in_fsetU1).
-admit. admit.
+      + auto => /> &1 &2 3? x_map n 31? inv *. do split; 1,2,7,8,13..16,18..22: smt(mem_set get_setE expgK expM in_fsetU1).
 move => x xin x3in.
-rewrite in_fsetU1.
-move => [x4in|x4eq].
-rewrite negb_exists.
-move => j.
-admit.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]). 
+rewrite implybNN.
+move => [i iin].
+exists i.
 smt(mem_set get_setE expgK expM in_fsetU1).
-admit. 
-admit. admit. admit. admit. 
+smt(mem_set get_setE).
+move => x.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE expgK expM in_fsetU1).
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE expgK expM in_fsetU1).
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]). 
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE expgK expM in_fsetU1).
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE expgK expM in_fsetU1).
 move => m.
 split; 2: by smt(mem_set get_setE in_fsetU1).
 rewrite in_fsetU1.
@@ -3914,17 +4017,129 @@ move => [min|meq].
   smt(mem_set get_setE).
 exists (n + 1).
 smt(mem_set get_setE).
-      auto => /> &1 &2 4? n 31? inv *. do split; 2,8,13..15,17..20: smt(mem_set get_setE expgK expM in_fsetU1).
+      auto => /> &1 &2 3? x_map n 31? inv *. do split; 2,8,13..15,17..21: smt(mem_set get_setE expgK expM in_fsetU1).
 move => x xin x3in.
 rewrite in_fsetU1.
 move => [x4in|x4eq] i0.
 smt(mem_set get_setE expgK expM in_fsetU1).
-admit. 
-move => x xin x3in + noj.
-rewrite negb_exists //=.
-move => i.
-admit. (* same problem of collisions in CDH here as above *)
-admit. admit. admit. admit. admit. admit. admit. admit. 
+admit. (* there can be collisions no? *)
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]). 
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x xin x3in.
+rewrite in_fsetU1.
+move => [].
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+admit.
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+admit.
+move => x xin x3in.
+rewrite in_fsetU1.
+move => [x4in|x4eq] i0.
+smt(mem_set get_setE expgK expM in_fsetU1).
+admit. (* there can be collisions no? *)
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]). 
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`2 = x.`3 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`2 = x.`3 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x xin x3in.
+rewrite in_fsetU1.
+move => [].
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+admit.
+move => x xin x3in.
+have: ! (exists (i0 : int),
+     (i0 \in x_map.[n + 1 <- sk{2}]) /\
+     x.`4 = g ^ oget x_map.[n + 1 <- sk{2}].[i0] /\
+     x.`1 = x.`5 ^ oget x_map.[n + 1 <- sk{2}].[i0]) => ! (exists (i0 : int),
+          (i0 \in x_map) /\ x.`4 = g ^ oget x_map.[i0] /\ x.`1 = x.`5 ^ oget x_map.[i0]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+admit.
 move => m.
 split; 2: by smt(mem_set get_setE in_fsetU1).
 rewrite in_fsetU1.
@@ -3937,8 +4152,9 @@ move => [min|meq].
 exists (n + 1).
 smt(mem_set get_setE).
     sp 4 3; if => //.
-    + auto => /> &1 &2 4? n 31? inv *. do split; admit.
-    auto => /> &1 &2 4? n 31? inv *. do split; admit.
+    + auto => /> &1 &2 4? n 31? inv *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+    auto => /> &1 &2 4? n 31? inv *. do split; ~4,7,8: smt(mem_set get_setE expgK expM in_fsetU1).
+admit. admit. admit.
   match Some {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
@@ -3968,14 +4184,6 @@ smt(mem_set get_setE).
     rcondt {2} ^if. auto => /#.
     sp 3 3; if => //.
     + auto => /> &1 &2 50? inv *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
-(*
-move => x0 x0eq.
-split. smt(). split. smt().
-have := inv x0 x0eq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-smt(mem_set get_setE).*)
     auto => /> &1 &2 *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1 pow_bij).
   match Some {2} ^match. auto => /#.
   auto => />.
@@ -4218,22 +4426,14 @@ smt(mem_set get_setE loggK expgK expM).
           have->: t'{1} = t'{2}. smt().
           have->: st'{1}.`2 = st'{2}.`2. smt().
           smt(get_setE mem_set expgK expM loggK). 
-        + auto => /> &1 &2 43? inv *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-(* move => x0 x0eq.
-split. smt(). split. smt().
-have := inv x0 x0eq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-smt(mem_set get_setE). *)
+        + auto => /> &1 &2 43? inv *. do split; ~10: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+move => xy b0 x0 y0.
+rewrite mem_set //=.
+move => [].
+smt(get_setE mem_set loggK expgK expM).
+move => [#] -> -> ->.
+smt(mem_set get_setE loggK expgK expM).
         auto => /> &1 &2 43? inv *.  do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-(*move => x0 x0eq.
-split. smt(). split. smt().
-have := inv x0 x0eq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-smt(mem_set get_setE). *)
       sp 1 0; if => //.
       + auto => /> &1 &2 *.
           have->: t'{1} = t'{2}. smt().
@@ -4251,23 +4451,9 @@ smt(get_setE mem_set).
 move => x0.
 have: t'{1} = t'{2} by smt().
 smt(mem_set get_setE loggK expgK expM).
-(*move => x0 x0eq.
-split. smt(). split. smt().
-have := inv x0 x0eq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-smt(mem_set get_setE).*)
       auto => /> &1 &2 43? inv *. do split; ~1: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 have: t'{1} = t'{2} by smt().
 smt(mem_set get_setE loggK expgK expM).
-(*move => x0 x0eq.
-split. smt(). split. smt().
-have := inv x0 x0eq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-smt(mem_set get_setE).*)
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
@@ -4320,7 +4506,7 @@ have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
 rewrite fsetP.
 move => x.
 rewrite !mem_fdom !mem_filter //=.
-smt(get_setE mem_set).
+admit. (* too much in context *)
 smt().
 move => + j pkin - /(_ j).
 have : (b{2}, j) \in Red_Ltk.Red_O.s_smap{1} by smt().
@@ -4344,24 +4530,12 @@ have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
 rewrite fsetP.
 move => x.
 rewrite !mem_fdom !mem_filter //=.
-smt(get_setE mem_set).
+admit. (* too much in context *)
 smt().
     rcondt {1} ^if. auto => /#.
     auto => /> &1 &2 43? inv *. do split; ~1: smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
 have : b{2} = g ^ sk{2}. smt(loggK expgK expM).
 smt(pow_bij).
-(*move => x xeq.
-split. smt(mem_set). 
-split.
-have : (b{2} <> x.`3). admit.
-smt(get_setE).
-smt().
-have := inv x xeq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-do split; 1..7: smt(mem_set get_setE).
-admit.*)
   + match Corrupt_mod {2} ^match. auto => /#.
     auto => />.
   match Dishonest_mod {2} ^match. auto => /#.
@@ -4412,27 +4586,7 @@ admit.*)
         smt(get_setE mem_set).
       smt().
     rcondt {1} ^if. auto => /#.
-    auto => /> &1 &2 43? inv *. split. smt(in_fsetU1).  move => *. do split; 1,4: smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
-move => i0 s pt ir'.
-case (i0 = i{2}) => ieq. 
-+ rewrite get_setE ieq mem_set //=.
-  move => [#] steq pteq ireq. 
-  rewrite -steq -pteq //=.
-  do split; smt(mem_set get_setE in_fsetU1).
-rewrite get_setE ieq mem_set ieq //=.
-move => iin ipen.
-do split; ~9: smt(mem_set get_setE in_fsetU1). rewrite in_fsetU1. move => []. 
-smt(mem_set get_setE in_fsetU1). admit. (* add invariant *)
-admit. (* same here *)
-(*move => x xeq.
-split. smt(mem_set). 
-split. smt(get_setE).
-have := inv x xeq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-do split; ~7: smt(mem_set get_setE).
-admit. (* fix this *)*)
+    auto => /> &1 &2 43? inv *. split. smt(in_fsetU1).  move => *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
   + match Accepted_mod {2} ^match. auto => /#.
     if => //.
     + auto => /> &1 &2 *. 
@@ -4460,23 +4614,7 @@ admit. (* fix this *)*)
         smt(get_setE mem_set).
       smt().
     rcondt {1} ^if. auto => /#.
-    auto => /> &1 &2 43? inv *. do split; ~3,4: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-move => i0 s pt ir'.
-case (i0 = i{2}) => ieq; 1: smt(mem_set get_setE in_fsetU1).
-rewrite get_setE ieq mem_set ieq //=.
-move => iin ipen.
-do split; ~9: smt(mem_set get_setE in_fsetU1). rewrite in_fsetU1. move => []. 
-smt(mem_set get_setE in_fsetU1). admit. (* add invariant *)
-admit. (* same here *)
-(*move => x xeq.
-split. smt(mem_set). 
-split. smt(get_setE).
-have := inv x xeq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-do split; ~7: smt(mem_set get_setE).
-admit. (* fix this *)*)
+    auto => /> &1 &2 43? inv *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
@@ -4522,13 +4660,6 @@ admit. (* fix this *)*)
       have->: get_ir_test (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j{2}]) = (get_ir_test (oget Game4.s_smap{2}.[b{2}, j{2}])) by smt().
       smt().
     auto => /> &1 &2 43? inv *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-(*move => x xeq.
-split. smt(). split. smt().
-have := inv x xeq.
-move => [#] _ _ [j0 j0in] [i1 j1 i1in].
-split. exists j0. smt(mem_set get_setE).
-exists i1 j1.
-smt(mem_set get_setE).*)
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
