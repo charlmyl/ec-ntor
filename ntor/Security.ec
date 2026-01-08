@@ -217,7 +217,7 @@ module type Oracle_i = {
   proc init_mem() : unit
 }.
 
-module St_CDH_O_c : Oracle_i = {
+module St_CDH_O : Oracle_i = {
   var win : bool
   var n, m : int
   var cr1, cr2 : int fset
@@ -293,7 +293,7 @@ module St_CDH_O_c : Oracle_i = {
   }
 }.
 
-module St_CDH_O : Oracle_i = {
+module St_CDH_O_nc : Oracle_i = {
   var win : bool
   var n, m : int
   var cr1, cr2 : int fset
@@ -2980,6 +2980,8 @@ match s with
 | Aborted_mod st t ir => Aborted_mod (clear_opt_s st) t ir
 end.
 
+print Game4.
+
 lemma cdh_red_ltk &m: Pr[E_GAKE_nodhs(Game4, A).run(true) @ &m : Game4.badq /\ Game4.test_ephrev_s = Some true] <= 
                  Pr[St_CDH_E(St_CDH_O, Red_Ltk(A)).run() @ &m : St_CDH_O.win].
 proof. 
@@ -3100,7 +3102,7 @@ call (: Game4.badq,
               => b = g ^ sk)
          /\ (forall m, m \in Game4.m1_set{2} <=> (exists i, i \in St_CDH_O.x_map{1} /\ m = g ^ oget St_CDH_O.x_map{1}.[i]))
          /\ (forall i pk, i \in St_CDH_O.x_map{1} => pk = g ^ oget St_CDH_O.x_map{1}.[i] => pk \in Game4.m1_set{2})
-         /\ (forall j pk, j \in St_CDH_O.y_map{1} => pk = g ^ oget St_CDH_O.y_map{1}.[j] => pk \in Game4.m2_set{2} /\ pk \in Game4.servers{2})
+         /\ (forall j pk, j \in St_CDH_O.y_map{1} => pk = g ^ oget St_CDH_O.y_map{1}.[j] => pk \in Game4.pk_set{2})
          /\ (forall x, x \in Game4.h1m{2} => (x.`3 \in Game4.pk_set{2} \/ x.`3 \in Game4.b_set{2}) /\ (x.`4 \in Game4.m1_set{2} \/ x.`4 \in Game4.x_set{2}) 
                       /\ (x.`5 \in Game4.m2_set{2} \/ x.`5 \in Game4.y_set{2}))
          /\ (forall x, x \in Game4.h2m{2} => (x.`3 \in Game4.pk_set{2} \/ x.`3 \in Game4.b_set{2}) /\ (x.`4 \in Game4.m1_set{2} \/ x.`4 \in Game4.x_set{2}) 
@@ -3113,8 +3115,8 @@ call (: Game4.badq,
                       /\ (get_sr_ltk (oget Game4.servers{2}.[b]) => (oget Red_Ltk.Red_O.b_inst{1}.[b]) \in St_CDH_O.cr2{1}))
 
          /\ (Red_Ltk.Red_O.b0{1})
-         /\ (forall n i, St_CDH_O.n < n => n \notin St_CDH_O.x_map /\ n \notin St_CDH_O.cr1 /\ Red_Ltk.Red_O.i_inst{1}.[i] <> Some n){1}
-         /\ (forall m, St_CDH_O.m < m => m \notin St_CDH_O.y_map /\ m \notin St_CDH_O.cr2){1}
+         /\ (forall n i, St_CDH_O.n < n => n \notin St_CDH_O.x_map /\ n \notin St_CDH_O.cr1 /\ Red_Ltk.Red_O.i_inst.[i] <> Some n){1}
+         /\ (forall m b, St_CDH_O.m < m => m \notin St_CDH_O.y_map /\ m \notin St_CDH_O.cr2 /\ Red_Ltk.Red_O.b_inst.[b] <> Some m){1}
          /\ (St_CDH_O.n = Red_Ltk.Red_O.count_i){1}
          /\ (St_CDH_O.m = Red_Ltk.Red_O.count_b){1}
          /\ (forall i i', i \in Red_Ltk.Red_O.i_inst{1} => i' \in Red_Ltk.Red_O.i_inst{1}
@@ -3133,7 +3135,7 @@ call (: Game4.badq,
 
 auto => />.
 split. do split; smt(emptyE mem_empty in_fset0).
-move => inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 inv17 inv18 inv19 inv20 inv21 inv22 inv23 inv24 inv25 inv26 inv27 inv28 inv29 inv30 inv31 inv32 inv33 inv34 inv35 inv36 inv37 inv38 inv39 inv40 inv41 inv42 inv43 inv44 inv45 inv46 inv47 inv48 inv49 inv50 inv51 inv52 inv53 inv54 inv55 inv56 rl rr al bl b1l b2l h1l h2l pksl m1l m2l tel tl xsl ysl wl ar br b1r b2r bqr h1r h2r hqr pksr m1r m2r tr tqr xsr ysr.
+move => inv1 inv2 inv3 inv4 inv5 inv6 inv7 inv8 inv9 inv10 inv11 inv12 inv13 inv14 inv15 inv16 inv17 inv18 inv19 inv20 inv21 inv22 inv23 inv24 inv25 inv26 inv27 inv28 inv29 inv30 inv31 inv32 inv33 inv34 inv35 inv36 inv37 inv38 inv39 inv40 inv41 inv42 inv43 inv44 inv45 inv46 inv47 inv48 inv49 inv50 inv51 inv52 inv53 inv54 inv55 rl rr al bl b1l b2l h1l h2l pksl m1l m2l tel tl xsl ysl wl ar br b1r b2r bqr h1r h2r hqr pksr m1r m2r tr tqr xsr ysr.
 by case : (!br) => />.
 
 - exact A_ll.
@@ -3806,86 +3808,133 @@ by case : (!br) => />.
 - move => &1; proc; inline.
   sp; auto; smt(dtag_ll dkey_ll).
 
-+ proc; inline. admit. (*
++ proc; inline.
   sp; seq 1 1 : (#pre /\ sk{2} = y_m{1}). auto => />.
   sp 3 1; if => //. smt().
-  + sp 3 3; if => //. smt().
-    + auto => /> &1 &2 5? m *. do split; ~2,3,10,26: smt(mem_set get_setE expgK expM in_fsetU1). 
-move => x xin.
-rewrite mem_set //=.
-move => [x3in noi|]. 
-rewrite negb_exists //=.
-move => j.
+  + sp 3 3; if => //.
+    + auto => /> &1 &2 4? y_map m *. do split; ~2,3,9,10,23: smt(mem_set get_setE expgK expM in_fsetU1).
 admit.
-smt(mem_set get_setE expgK expM in_fsetU1). 
 move => x xin.
-rewrite mem_set //=.
-move => [x3in noi|]. 
-rewrite negb_exists //=.
-move => j. smt(mem_set get_setE expgK expM in_fsetU1).
+have : ! (exists (j : int),
+     (j \in y_map.[m + 1 <- y_m{1}]) /\
+     x.`3 = g ^ oget y_map.[m + 1 <- y_m{1}].[j] /\
+     x.`2 = x.`4 ^ oget y_map.[m + 1 <- y_m{1}].[j]) => ! (exists (j : int),
+          (j \in y_map) /\
+          x.`3 = g ^ oget y_map.[j] /\ x.`2 = x.`4 ^ oget y_map.[j]).
+rewrite implybNN.
+move => [i iin].
+exists i.
 smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+admit.
 move => x xin.
-rewrite mem_set //=.
-move => [x3in noi|]. 
-rewrite negb_exists //=.
-move => j. smt(mem_set get_setE expgK expM in_fsetU1).
+have : ! (exists (j : int),
+     (j \in y_map.[m + 1 <- y_m{1}]) /\
+     x.`3 = g ^ oget y_map.[m + 1 <- y_m{1}].[j] /\
+     x.`2 = x.`4 ^ oget y_map.[m + 1 <- y_m{1}].[j]) => ! (exists (j : int),
+          (j \in y_map) /\
+          x.`3 = g ^ oget y_map.[j] /\ x.`2 = x.`4 ^ oget y_map.[j]).
+rewrite implybNN.
+move => [i iin].
+exists i.
 smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
 move => b.
-case (b = g ^ y_m{1}) => beq.
-+ rewrite mem_set beq //=.
-  rewrite in_fsetU1 //=.
-  exists (m + 1). smt(mem_set get_setE). 
-rewrite mem_set beq //=.
-rewrite in_fsetU1 beq //=.
-move => bin. split. smt(). 
-have := inv b.
-rewrite bin //=.
-move => [] _ [j jin].
+rewrite mem_set.
+move => [].
+have : (exists (j : int), (j \in y_map) /\ b = g ^ oget y_map.[j]) => (exists (j : int),
+  (j \in y_map.[m + 1 <- y_m{1}]) /\ b = g ^ oget y_map.[m + 1 <- y_m{1}].[j]).
+move => [j jin].
 exists j.
-smt(mem_set get_setE expgK expM in_fsetU1). 
-    auto => /> &1 &2 4? ym m 36? inv *. do split; ~1..3,6..8,13,20,21: smt(mem_set get_setE expgK expM in_fsetU1). 
-move => x xin x3in.
-rewrite in_fsetU1 //=.
-move => [x5in x5nin x4nin noi| x5eq x5nin x4nin noi]. 
-rewrite negb_exists //=.
-move => j. admit.
-admit.
-move => x xin x3in noi.
-rewrite negb_exists //=.
-move => j.
-admit.
-move => x xin x3in noi noi2.
-admit. (* add invarinat that j cannot be m + 1 - does this need cross detection in the RO query? *)
-move => x xin x3in.
-rewrite in_fsetU1 //=.
-move => [x5in x5nin x4nin noi| x5eq x5nin x4nin noi]. 
-rewrite negb_exists //=.
-move => j. 
-admit. admit.
-move => x xin x3in noi.
-rewrite negb_exists //=.
-move => j.
-admit.
-move => x xin x3in noi noi2.
-admit. (* add invarinat that j cannot be m + 1 - does this need cross detection in the RO query? *)
-admit.
-move => b. 
-case (b = g ^ y_m{1}) => beq.
-+ rewrite in_fsetU1 beq //=.
-  move => bin.
-  exists (m + 1). smt(mem_set get_setE).  
-rewrite in_fsetU1 beq //=.
-move => bin. split. smt(). 
-have := inv b.
-rewrite bin //=.
-move => [] _ [j jin].
-exists j.
-smt(mem_set get_setE expgK expM in_fsetU1). 
-move => b bin.
-case (b = g ^ y_m{1}) => beq.
-+ split. smt(mem_set get_setE).  split. smt(mem_set get_setE).  split. smt(mem_set get_setE). admit. (* that is not true! *) 
+smt(mem_set get_setE).
 smt(mem_set get_setE expgK expM in_fsetU1).
-admit. (* Should I really have collision free assumption? *) *)
+move => ->.
+rewrite in_fsetU1 //=.
+exists (m + 1). smt(mem_set get_setE).
+      auto => /> &1 &2 4? y_map m *. do split; ~1,2,3,6,7,8,17: smt(mem_set get_setE expgK expM in_fsetU1). 
+admit.
+move => x xin.
+have : ! (exists (j : int),
+     (j \in y_map.[m + 1 <- y_m{1}]) /\
+     x.`3 = g ^ oget y_map.[m + 1 <- y_m{1}].[j] /\
+     x.`2 = x.`4 ^ oget y_map.[m + 1 <- y_m{1}].[j]) => ! (exists (j : int),
+          (j \in y_map) /\
+          x.`3 = g ^ oget y_map.[j] /\ x.`2 = x.`4 ^ oget y_map.[j]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x xin x3 nex1 nex2 j.
+rewrite mem_set.
+move => [].
+smt(mem_set get_setE).
+admit.
+admit.
+move => x xin.
+have : ! (exists (j : int),
+     (j \in y_map.[m + 1 <- y_m{1}]) /\
+     x.`3 = g ^ oget y_map.[m + 1 <- y_m{1}].[j] /\
+     x.`2 = x.`4 ^ oget y_map.[m + 1 <- y_m{1}].[j]) => ! (exists (j : int),
+          (j \in y_map) /\
+          x.`3 = g ^ oget y_map.[j] /\ x.`2 = x.`4 ^ oget y_map.[j]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => x xin x3 nex1 nex2 j.
+rewrite mem_set.
+move => [].
+smt(mem_set get_setE).
+admit.
+move => b bin.
+have : (exists (j : int), (j \in y_map) /\ b = g ^ oget y_map.[j]) => (exists (j : int),
+  (j \in y_map.[m + 1 <- y_m{1}]) /\ b = g ^ oget y_map.[m + 1 <- y_m{1}].[j]).
+move => [j jin].
+exists j.
+smt(mem_set get_setE).
+smt(mem_set get_setE expgK expM in_fsetU1).
+    auto => /> &1 &2 ? y_map m *. do split; ~1,2,6,7,13,15,16: smt(mem_set get_setE expgK expM in_fsetU1).
+admit.
+move => x xin.
+have : ! (exists (j : int),
+     (j \in y_map.[m + 1 <- y_m{1}]) /\
+     x.`3 = g ^ oget y_map.[m + 1 <- y_m{1}].[j] /\
+     x.`2 = x.`4 ^ oget y_map.[m + 1 <- y_m{1}].[j]) => ! (exists (j : int),
+          (j \in y_map) /\
+          x.`3 = g ^ oget y_map.[j] /\ x.`2 = x.`4 ^ oget y_map.[j]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+admit.
+move => x xin.
+have : ! (exists (j : int),
+     (j \in y_map.[m + 1 <- y_m{1}]) /\
+     x.`3 = g ^ oget y_map.[m + 1 <- y_m{1}].[j] /\
+     x.`2 = x.`4 ^ oget y_map.[m + 1 <- y_m{1}].[j]) => ! (exists (j : int),
+          (j \in y_map) /\
+          x.`3 = g ^ oget y_map.[j] /\ x.`2 = x.`4 ^ oget y_map.[j]).
+rewrite implybNN.
+move => [i iin].
+exists i.
+smt(mem_set get_setE expgK expM in_fsetU1).
+smt(mem_set get_setE).
+move => bj st t k ir bjin bjacc.
+have : bj.`1 <> g ^ y_m{1}. admit. (* I need to remove collisions in CDH smapling *)
+smt(get_setE mem_set).
+move => b bin.
+have : (exists (j : int), (j \in y_map) /\ b = g ^ oget y_map.[j]) => (exists (j : int),
+  (j \in y_map.[m + 1 <- y_m{1}]) /\ b = g ^ oget y_map.[m + 1 <- y_m{1}].[j]).
+move => [j jin].
+exists j.
+smt(mem_set get_setE).
+smt(mem_set get_setE expgK expM in_fsetU1).
+move => b bin.
+do split; 1..3:smt(mem_set get_setE).
+admit. (*  connection to corrption *)
 - move => &2 bad; proc; inline; auto => />. 
   by rewrite dt_ll //=.
 - move => &1; proc; inline.
