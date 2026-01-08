@@ -217,7 +217,7 @@ module type Oracle_i = {
   proc init_mem() : unit
 }.
 
-module St_CDH_O : Oracle_i = {
+module St_CDH_O_c : Oracle_i = {
   var win : bool
   var n, m : int
   var cr1, cr2 : int fset
@@ -293,7 +293,7 @@ module St_CDH_O : Oracle_i = {
   }
 }.
 
-module St_CDH_O_nc : Oracle_i = {
+module St_CDH_O : Oracle_i = {
   var win : bool
   var n, m : int
   var cr1, cr2 : int fset
@@ -3810,9 +3810,10 @@ by case : (!br) => />.
 
 + proc; inline.
   sp; seq 1 1 : (#pre /\ sk{2} = y_m{1}). auto => />.
-  sp 3 1; if => //. smt().
-  + sp 3 3; if => //.
-    + auto => /> &1 &2 4? y_map m *. do split; ~2,3,9,10,23: smt(mem_set get_setE expgK expM in_fsetU1).
+  if {1} => //.
+  + sp 3 1; if => //. smt().
+    + sp 3 3; if => //.
+      + auto => /> &1 &2 4? y_map m *. do split; ~2,3,9,10,23: smt(mem_set get_setE expgK expM in_fsetU1).
 admit.
 move => x xin.
 have : ! (exists (j : int),
@@ -3935,6 +3936,24 @@ smt(mem_set get_setE expgK expM in_fsetU1).
 move => b bin.
 do split; 1..3:smt(mem_set get_setE).
 admit. (*  connection to corrption *)
+  sp 2 1; if => //. smt().
+  + sp 3 3; if => //.
+    + auto => /> &1 &2 3? y_map m *. do split; ~24: smt(mem_set get_setE expgK expM in_fsetU1).
+move => b bin.
+admit. (* I should not update y_map if I don't update CDH y_map *)
+    auto => /> &1 &2 3? y_map m *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+  auto => /> &1 &2 3? y_map m *. do split; ~1..4: smt(mem_set get_setE expgK expM in_fsetU1).
+move => i st pt ir iin ipen.
+have : st.`1 <> g ^y_m{1}. admit. (* I need to remove collisions in CDH smapling *)
+smt(get_setE mem_set).
+move => i st t k ir iin iacc.
+have : st.`1 <> g ^y_m{1}. admit. (* I need to remove collisions in CDH smapling *)
+smt(get_setE mem_set).
+move => bj st t k ir bjin bjpen.
+have : bj.`1 <> g ^y_m{1}. admit. (* I need to remove collisions in CDH smapling *)
+smt(get_setE mem_set).
+move => b bin.
+admit. (* I should not update y_map if I don't update CDH y_map *)
 - move => &2 bad; proc; inline; auto => />. 
   by rewrite dt_ll //=.
 - move => &1; proc; inline.
