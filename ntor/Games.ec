@@ -375,32 +375,112 @@ print Game0.
 
 (* Step1: Removing key collisions *)
 module Game1 = Game0 with {
+  proc h [
+     1 + ^ {tk <- (witness, witness);}
+     [1 - ^if{3} & + 1] + ^ (!bad1)
+     ^if{1} + {tk <- oget hm.[x];}
+  ] res ~ (tk)
+
   proc init_s [
+    [^r<- - ^if] + (!bad1)
     [^if.^pk_set<- - ^r<-] + (!bad1)
   ]
 
   proc send_msg1 [
+    [^r<- - ^if] + (!bad1)
     [^if.^match#None.^bad1<- - ^c_smap<-] + (!bad1)
   ]
 
   proc send_msg2 [
+    [^r<- - ^match] + (!bad1)
     [^match#Some.^match#None.^bad1<- - ^r<-] + (!bad1)
+  ]
+
+  proc send_msg3 [
+    [^r<- - ^match] + (!bad1)
+  ]
+
+  proc c_rev_skey [
+    [^k<- - ^match] + (!bad1)
+  ]
+
+  proc s_rev_skey [
+    [^k<- - ^match] + (!bad1)
+  ]
+
+  proc rev_ltkey [
+    [^ltk<- - ^match] + (!bad1)
+  ]
+
+  proc c_rev_ephkey [
+    [^ek<- - ^match] + (!bad1)
+  ]
+
+  proc s_rev_ephkey [
+    [^ek<- - ^match] + (!bad1)
+  ]
+
+  proc c_test [
+    [^k<- - ^if] + (!bad1)
+  ]
+
+  proc s_test [
+    [^k<- - ^if] + (!bad1)
   ]
 }.
 
 print Game1.
 
 module Game2 = Game1 with {
+  proc h [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
   proc init_s [
-    ^if.^if ~ (!bad1 /\ !bad2)
+    ^if ~ (!bad1 /\ !bad2)
+    ^if.^if.^if ~ (!bad1 /\ !bad2)
   ]
 
   proc send_msg1 [
-    ^if.^match#None.^if ~ (!bad1 /\ !bad2)
+    ^if ~ (!bad1 /\ !bad2)
+    ^if.^if.^match#None.^if ~ (!bad1 /\ !bad2)
   ]
 
   proc send_msg2 [
-    ^match#Some.^match#None.^if ~ (!bad1 /\ !bad2)
+    ^if ~ (!bad1 /\ !bad2)
+    ^if.^match#Some.^match#None.^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc send_msg3 [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc c_rev_skey [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc s_rev_skey [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc rev_ltkey [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc c_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc s_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc c_test [
+    ^if ~ (!bad1 /\ !bad2)
+  ]
+
+  proc s_test [
+    ^if ~ (!bad1 /\ !bad2)
   ]
 }.
 
@@ -421,16 +501,17 @@ module Game3 = Game2 with {
   proc h [
     var t : tag
     var k : key
-    ^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
-    ^if -
-    1 + ^ {hq <- hq `|` fset1 x; badq <- badq \/ (tq <> None /\ oget tq \in hq);}
-  ] res ~ ((oget h1m.[x], oget h2m.[x]))
+    ^if.^tk<- ~ {tk <- ((oget h1m.[x], oget h2m.[x]));}
+    ^if.^tk<$ ~ {t <$ dtag; if (x \notin h1m) {h1m.[x] <- t;} k <$ dkey; if (x \notin h2m) {h2m.[x] <- k;} }
+    ^if.^if -
+    ^if.^tk<$ + ^ {hq <- hq `|` fset1 x; badq <- badq \/ (tq <> None /\ oget tq \in hq);}
+  ]
 
   proc send_msg2 [
     var ts : tag
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
+    ^if.^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
                                       ts <$ dtag;
                                       if (x \notin h1m) {h1m.[x] <- ts;} 
                                       t_B <- oget h1m.[x];
@@ -444,7 +525,7 @@ module Game3 = Game2 with {
     var ts : tag
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#Pending_mod.2 ~ { x <- (m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
+    ^if.^match#Some.^match#Pending_mod.2 ~ { x <- (m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
                                      ts <$ dtag;
                                      if (x \notin h1m) {h1m.[x] <- ts;} 
                                      t_A <- oget h1m.[x];
@@ -458,14 +539,14 @@ module Game3 = Game2 with {
 
   proc c_test [
     var x : pkey * pkey * pkey * pkey * pkey
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 
   proc s_test [
     var x : pkey * pkey * pkey * pkey * pkey
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2)); tq <- Some x; badq <- badq \/ (oget tq \in hq);}
   ]
 }.
 
@@ -480,21 +561,21 @@ module Game4 = Game3 with {
   ]
 
   proc send_msg2 [
-    ^match#Some.^match#None.^if.^ks<$ ~ {key <- witness;}
-    [^match#Some.^match#None.^if.^if{2} - ^key<-] -
+    ^if.^match#Some.^match#None.^if.^ks<$ ~ {key <- witness;}
+    [^if.^match#Some.^match#None.^if.^if{2} - ^key<-] -
   ]
 
   proc send_msg3 [
-    ^match#Some.^match#Pending_mod.^ks<$ ~ {key <- witness;}
-    ^match#Some.^match#Pending_mod.^if{2} ~ (pt.`2 \notin m1_set /\ pt.`2 \notin x_set)
-    ^match#Some.^match#Pending_mod.^if{2}.^x_set<- ~ {x_set <- x_set `|` fset1 pt.`2;}
-    [^match#Some.^match#Pending_mod.^if{2} - ^key<-] -
+    ^if.^match#Some.^match#Pending_mod.^ks<$ ~ {key <- witness;}
+    ^if.^match#Some.^match#Pending_mod.^if{2} ~ (pt.`2 \notin m1_set /\ pt.`2 \notin x_set)
+    ^if.^match#Some.^match#Pending_mod.^if{2}.^x_set<- ~ {x_set <- x_set `|` fset1 pt.`2;}
+    [^if.^match#Some.^match#Pending_mod.^if{2} - ^key<-] -
   ]
 
   proc c_rev_skey [
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); 
+    ^if.^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((oget t'.`2).`1 ^ st'.`2, st'.`1 ^ st'.`2, st'.`1, g ^ st'.`2, (oget t'.`2).`1); 
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}
@@ -503,7 +584,7 @@ module Game4 = Game3 with {
   proc s_rev_skey [
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2));
+    ^if.^match#Some.^match#Accepted_mod.^if.^k<- ~ {x <- ((t'.`1).`2 ^ (oget st'.`2), (t'.`1).`2 ^ st'.`1, g ^ st'.`1, (t'.`1).`2, g ^ (oget st'.`2));
                                             ks <$ dkey;
                                             if (x \notin h2m) {h2m.[x] <- ks;} 
                                             k <- h2m.[x];}
@@ -512,10 +593,10 @@ module Game4 = Game3 with {
   proc c_test [
     var ks2 : key
     var p : (pkey * int)
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
                                                     p <- pick (get_fresh_partners_c t' s_smap servers); 
                                                     test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];
                                                        p <- pick (get_fresh_partners_c t' s_smap servers); 
                                                        test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
 
@@ -523,8 +604,8 @@ module Game4 = Game3 with {
 
   proc s_test [
     var ks2 : key
-    ^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
-    ^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
   ]
 }.
 
