@@ -1320,7 +1320,7 @@ have ->: get_fresh_partners_c tr sm1l sm2 = get_fresh_partners_c tr sm1r sm2.
 + rewrite /get_fresh_partners_c; apply: fsetP=> x; rewrite !mem_fdom.
   rewrite !mem_filter !domE -eqsm.
   by case: (sm1l.[x])=> /> [] @/s_clear_k /#.
-have -> //: get_origins_c tr sm1l = get_origins_c tr sm1r.
+have -> //: get_partners_c tr sm1l = get_partners_c tr sm1r.
 rewrite /get_origins_c; apply: fsetP=> x; rewrite !mem_fdom.
 rewrite !mem_filter !domE -eqsm.
 by case: (sm1l.[x])=> /> [] @/s_clear_k /#.

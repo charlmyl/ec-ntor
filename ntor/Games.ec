@@ -247,7 +247,8 @@ module Game0 : GAKE_nodhs_i = {
                 => !(   (   get_ir_test (oget s_smap.[b, j])
                             (* This is always OK (get_trace always Some on server side *)
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
-                     /\ get_ir_eph (oget s_smap.[b,j]))) {
+                     /\ get_ir_eph (oget s_smap.[b,j]))
+                /\ !tested_pot_partner_c b c_smap s_smap) {
             ltk <- Some sk; 
             servers.[b] <- Corrupt_mod sk; 
           }
@@ -320,7 +321,8 @@ module Game0 : GAKE_nodhs_i = {
              and not all partner instances are unfresh can be tested *)
           if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
-                  \/ fresh_partner_c t' s_smap servers = Some false)) {
+                  \/ (fresh_partner_c t' s_smap servers = Some false)
+                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_sr_ltk (oget servers.[t'.`1.`1])))) {
               if (b0 = false) {
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
@@ -351,7 +353,7 @@ module Game0 : GAKE_nodhs_i = {
           if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget s_smap.[b, j]) 
                   \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
-                  \/ fresh_partner_s t' c_smap = Some false)) {
+                  \/ fresh_partner_s t' c_smap <> Some true)) {
               if (b0 = false) {
                 k <- Some k';
                 s_smap.[(b, j)] <- set_ir_test (Accepted_mod st' t' k' ir');
@@ -369,6 +371,7 @@ module Game0 : GAKE_nodhs_i = {
     return k;
   }
 }.
+
 
 print Game0.
 

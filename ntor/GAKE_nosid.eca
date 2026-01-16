@@ -87,7 +87,7 @@ with s_st = Dishonest_mod   => true.
 op get_sr_dh s_st : bool =
 with s_st = Honest_mod    _ => false
 with s_st = Corrupt_mod   _ => false
-with s_st = Dishonest_mod   => true.
+with s_st = Dishonest_mod   => true. 
 
 (* helping operators for getting a set of all partners (with some specific revealed status *)
 op get_partners_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
@@ -158,7 +158,7 @@ fdom (
 
 
 op get_fresh_partners_c (t: trace) (fmap1: (pkey * int, pr_st_server instance_state) fmap) (fmap2: (pkey, server_state) fmap) : (pkey * int) fset =
-fdom (
+fdom ( 
   filter
   (fun bj (val: pr_st_server instance_state) =>
        get_trace val = Some t                                               (* Partners share the same trace *)
@@ -183,6 +183,18 @@ fdom (
   fmap
 ).
 
+op get_tested_pot_partner_c (b: pkey) (fmap1: (int, pr_st_client instance_state) fmap) (fmap2: (pkey * int, pr_st_server instance_state) fmap) : int fset =
+fdom (
+  filter
+  (fun i (val: pr_st_client instance_state) =>
+        (exists m1o m2o, get_trace val = Some ((b, m1o), m2o))         (* Partners share the same server identifier *)
+    /\ get_ir_test val = true                                                    (* Partner is tested *)
+    /\ (forall j, (b,j) \in fmap2 => get_trace (oget fmap2.[(b,j)]) <> get_trace val) (* There is no full partner for this client *)
+  )
+  fmap1
+).
+    
+
 (* operators that return None if there is no partner, true if there is an untested/fresh partner or false if all partners are tested/unfresh *)
 op untested_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : bool option =
 if 1 <= card (get_origins_c t fmap) then Some (1 <= card (get_untested_origins_c t fmap)) else None.
@@ -191,13 +203,16 @@ op untested_partner_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state
 if 1 <= card (get_partners_c t fmap) then Some (1 <= card (get_untested_partners_c t fmap)) else None.
 
 op fresh_partner_c (t: trace) (fmap1: (pkey * int, pr_st_server instance_state) fmap) (fmap2: (pkey, server_state) fmap) : bool option =
-if 1 <= card (get_origins_c t fmap1) then Some (1 <= card (get_fresh_partners_c t fmap1 fmap2)) else None.
+if 1 <= card (get_partners_c t fmap1) then Some (1 <= card (get_fresh_partners_c t fmap1 fmap2)) else None.
 
 op untested_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
 if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_untested_partners_s t fmap)) else None.
 
 op fresh_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
 if 1 <= card (get_origins_s t fmap) then Some (1 <= card (get_fresh_partners_s t fmap)) else None.
+
+op tested_pot_partner_c (b: pkey) (fmap1: (int, pr_st_client instance_state) fmap) (fmap2: (pkey * int, pr_st_server instance_state) fmap) : bool = 
+1 <= card (get_tested_pot_partner_c b fmap1 fmap2).
 
 
 (* Rondom oracle *)
@@ -431,7 +446,8 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
                 => !(   (   get_ir_test (oget s_smap.[b, j])
                             (* This is always OK (get_trace always Some on server side *)
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
-                     /\ get_ir_eph (oget s_smap.[b,j]))) {
+                     /\ get_ir_eph (oget s_smap.[b,j]))
+                /\ !tested_pot_partner_c b c_smap s_smap) {
             ltk <- Some sk; 
             servers.[b] <- Corrupt_mod sk; 
           }
@@ -504,7 +520,8 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
              and not all partner instances are unfresh can be tested *)
           if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
-                  \/ fresh_partner_c t' s_smap servers = Some false)) {
+                  \/ (fresh_partner_c t' s_smap servers = Some false)
+                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_sr_ltk (oget servers.[t'.`1.`1])))) {
               if (b0 = false) {
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
@@ -535,7 +552,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
           if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget s_smap.[b, j]) 
                   \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
-                  \/ fresh_partner_s t' c_smap = Some false)) {
+                  \/ fresh_partner_s t' c_smap <> Some true)) {
               if (b0 = false) {
                 k <- Some k';
                 s_smap.[(b, j)] <- set_ir_test (Accepted_mod st' t' k' ir');

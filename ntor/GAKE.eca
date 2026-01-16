@@ -193,6 +193,18 @@ fdom (
   fmap
 ).
 
+op get_tested_pot_partner_c (b: s_id) (fmap1: (int, pr_st_client instance_state) fmap) (fmap2: (s_id * int, pr_st_server instance_state) fmap) : int fset =
+fdom (
+  filter
+  (fun i (val: pr_st_client instance_state) =>
+        (exists m1o m2o, get_trace val = Some ((b, m1o), m2o))         (* Partners share the same server identifier *)
+    /\ get_ir_test val = true                                                    (* Partner is tested *)
+    /\ (forall j, (b,j) \in fmap2 => get_trace (oget fmap2.[(b,j)]) <> get_trace val) (* There is no full partner for this client *)
+  )
+  fmap1
+).
+
+
 (* operators that return None if there is no partner, true if there is an untested/fresh partner or false if all partners are tested/unfresh *)
 op untested_origins_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
 if 1 <= card (get_origins_c t fmap) then Some (1 <= card (get_untested_origins_c t fmap)) else None.
@@ -201,13 +213,16 @@ op untested_partner_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state
 if 1 <= card (get_partners_c t fmap) then Some (1 <= card (get_untested_partners_c t fmap)) else None.
 
 op fresh_partner_c (t: trace) (fmap1: (s_id * int, pr_st_server instance_state) fmap) (fmap2: (s_id, server_state) fmap) : bool option =
-if 1 <= card (get_origins_c t fmap1) then Some (1 <= card (get_fresh_partners_c t fmap1 fmap2)) else None.
+if 1 <= card (get_partners_c t fmap1) then Some (1 <= card (get_fresh_partners_c t fmap1 fmap2)) else None.
 
 op untested_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
 if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_untested_partners_s t fmap)) else None.
 
 op fresh_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
 if 1 <= card (get_origins_s t fmap) then Some (1 <= card (get_fresh_partners_s t fmap)) else None.
+
+op tested_pot_partner_c (b: s_id) (fmap1: (int, pr_st_client instance_state) fmap) (fmap2: (s_id * int, pr_st_server instance_state) fmap) : bool = 
+1 <= card (get_tested_pot_partner_c b fmap1 fmap2).
 
 
 (* Rondom oracle *)
@@ -449,7 +464,8 @@ module GAKEb (S: Server) (C: Client) (H : RO) : GAKE = {
                 => !(   (   get_ir_test (oget s_smap.[b, j])
                             (* This is always OK (get_trace always Some on server side *)
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
-                     /\ get_ir_eph (oget s_smap.[b,j]))) {
+                     /\ get_ir_eph (oget s_smap.[b,j]))
+                /\ !tested_pot_partner_c b c_smap s_smap) {
             ltk <- Some kp.`2; 
             servers.[b] <- Corrupt kp; 
           }
@@ -523,6 +539,8 @@ module GAKEb (S: Server) (C: Client) (H : RO) : GAKE = {
           if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget GAKEb.c_smap.[i]) \/ get_ir_eph (oget GAKEb.c_smap.[i]) 
                   \/ fresh_partner_c t' GAKEb.s_smap GAKEb.servers = Some false
+                  \/ (fresh_partner_c t' s_smap servers = Some false)
+                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_sr_ltk (oget servers.[t'.`1.`1]))
                   \/ get_sr_dh (oget servers.[get_name st]))) {
               if (b0 = false) {
                 k <- Some k';
@@ -554,7 +572,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) : GAKE = {
           if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget GAKEb.s_smap.[b, j]) 
                   \/ (get_ir_eph (oget GAKEb.s_smap.[b, j]) /\ get_sr_ltk (oget GAKEb.servers.[b]))
-                  \/ fresh_partner_s t' GAKEb.c_smap = Some false)) {
+                  \/ fresh_partner_s t' GAKEb.c_smap <> Some false)) {
               if (b0 = false) {
                 k <- Some k';
                 GAKEb.s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
@@ -572,6 +590,8 @@ module GAKEb (S: Server) (C: Client) (H : RO) : GAKE = {
     return k;
   }
 }.
+
+
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Defining 2 honest versions of original game *)
