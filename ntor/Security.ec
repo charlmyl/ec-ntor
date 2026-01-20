@@ -5409,6 +5409,7 @@ by smt(get_setE).
       smt(get_setE mem_set expgK expM loggK).
     + auto => /> &1 &2 5? c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41 4? c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c1 c2 c3 c4 c5 c6 c7 c8 inv c9 inv2 c10 inv3 inv4 *. split. 
 
+(*
 have : (forall int, int \in Game4.c_smap{2} =>
        Game4.c_smap{2}.[int] = Some (Accepted_mod st t k ir) =>
           (exists (i j : int),
@@ -5418,18 +5419,12 @@ have : (forall int, int \in Game4.c_smap{2} =>
           x0.`2 = x0.`3 ^ oget St_CDH_O.x_map{1}.[i] /\
           (j \in St_CDH_O.y_map{1}) /\
           x0.`3 = g ^ oget St_CDH_O.y_map{1}.[j] /\
-          (i \notin St_CDH_O.cr1{1}) /\ (j \notin St_CDH_O.cr2{1})) => St_CDH_O.win{1}. admit.
-
-
-
-(* this branch I want to kill since I know that the values must be in h2m which I then can use for the invariant tried to sketch above. I should add that it is in h2m in the tq invariant... This will change proof to what I did in interestingbit step *)
-
-(* should I change invariant about winning contidition to what I have in last one? So if there exists all these things that make ifs true and this has been queried to h then I get a win? *)
+          (i \notin St_CDH_O.cr1{1}) /\ (j \notin St_CDH_O.cr2{1})) => St_CDH_O.win{1}. admit. *)
 
 
 
 admit. 
-move => *. do split; ~1,2,18,19,21: smt(get_setE mem_set in_fsetU1 loggK expgK expM pow_bij).
+move => *. do split; ~1,2,9,18,19,21,22: smt(get_setE mem_set in_fsetU1 loggK expgK expM pow_bij).
 clear inv inv2 inv3 inv4 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41.
 have->: (get_fresh_partners_c t'{1} Red_Ltk.Red_O.s_smap{1}
                      Red_Ltk.Red_O.servers{1}) = (get_fresh_partners_c t'{2} Game4.s_smap{2} Game4.servers{2}).
@@ -5469,6 +5464,9 @@ have->: st'{2}.`1 = t'{1}.`1.`1. smt().
 have->: g ^ st'{2}.`2 = t'{1}.`1.`2. smt().
 have->: st'{2}.`2 = loge t'{1}.`1.`2. smt(loggK expgK expM). smt(get_setE pow_bij loggK expgK expM).
 smt(get_setE mem_set loggK expgK expM).
+move => b0 x0 y0.
+have->: st'{2}.`2 = loge t'{1}.`1.`2. smt(loggK expgK expM). 
+smt(mem_set pow_bij loggK expgK expM).
     + move => i0 i'.
       case (i0 = i{2}) => ieq.
       + rewrite ieq get_set_sameE //=.
@@ -5495,12 +5493,20 @@ smt(get_setE mem_set loggK expgK expM).
       have->: g ^ st'{2}.`2 = t'{2}.`1.`2 by smt().
       smt(get_setE mem_set).
 
+have->: st'{2}.`2 = loge t'{1}.`1.`2. smt(loggK expgK expM). 
+smt(mem_set).
+
 exists (oget Red_Ltk.Red_O.i_inst{1}.[i{2}]) (oget Red_Ltk.Red_O.b_inst{1}.[st'{2}.`1]).
 do split; 1..7: smt().
 admit. (* connect with freshness condition as in corruption *)
+
+
+(* I want to kill this branch - I know that if x is in h2m then either this instance is tested or session key revealed or its partner is or it has been queried by the adverasry *)
+
+admit. (*
     auto => /> &1 &2 5? c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41 4? c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c1 c2 c3 c4 c5 c6 c7 c8 inv c9 inv2 c10 inv3 inv4 *. split. 
 admit. (* show that win has happened as above *)
-move => *. do split; ~1,6,7,9: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+move => *. do split; ~1,6,7,9,10: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 clear inv inv2 inv3 inv4 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41.
 have->: (get_fresh_partners_c t'{1} Red_Ltk.Red_O.s_smap{1}
                      Red_Ltk.Red_O.servers{1}) = (get_fresh_partners_c t'{2} Game4.s_smap{2} Game4.servers{2}).
@@ -5555,10 +5561,13 @@ rewrite /get_fresh_partners_c.
       have->: st'{2}.`1 = t'{2}.`1.`1 by smt().
       have->: g ^ st'{2}.`2 = t'{2}.`1.`2 by smt().
       smt(get_setE mem_set).
+have->: st'{2}.`2 = loge t'{1}.`1.`2. smt(loggK expgK expM). 
+smt(mem_set).
+
 
 exists (oget Red_Ltk.Red_O.i_inst{1}.[i{2}]) (oget Red_Ltk.Red_O.b_inst{1}.[st'{2}.`1]).
 do split; 1..7: smt().
-admit. (* connect with freshness condition *)
+admit. (* connect with freshness condition *)*)
 
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
@@ -5606,7 +5615,7 @@ admit. (* connect with freshness condition *)
       + rewrite fsetP.
         move => x.
         do rewrite mem_fdom mem_filter.
-        smt(get_setE mem_set).
+        admit. (* too much in context *)
       have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
                   (exists (m2o : (pkey * tag) option),
                      get_trace val = Some (t'{1}.`1, m2o)) /\
@@ -5620,7 +5629,7 @@ admit. (* connect with freshness condition *)
       + rewrite fsetP.
         move => x.
         do rewrite mem_fdom mem_filter.
-        smt(get_setE mem_set).
+        admit. (* too much in context *)
       smt().
     rcondf {1} ^if. auto => />.
     rcondf {2} ^if. auto => />.
@@ -5632,14 +5641,17 @@ admit. (* connect with freshness condition *)
       have->: t'{2}.`1.`1 = g ^ st'{2}.`1. smt(). split.
       smt(get_setE mem_set in_fsetU1 loggK expgK expM).
       have : g ^ st'{2}.`1 \in Red_Ltk.Red_O.servers{1}. smt().
-      have : t'{2}.`1.`2 \in Game4.m1_set{2}. admit. move => *.
+      have : t'{2}.`1.`2 \in Game4.m1_set{2}. admit. (* this needs to use freshness condition, since fresh_partner is Some true there is an honest client with this message *)
+      move => *.
       have : (exists (i : int),
         (i \in St_CDH_O.x_map{1}) /\
         t'{2}.`1.`2 = g ^ oget St_CDH_O.x_map{1}.[i] /\
         t'{2}.`1.`2 ^ oget st'{2}.`2 = g ^ oget st'{2}.`2 ^ oget St_CDH_O.x_map{1}.[i] /\
-        t'{2}.`1.`2 ^ st'{2}.`1 = g ^ st'{2}.`1 ^ oget St_CDH_O.x_map{1}.[i]). smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-      smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-    + auto => /> &1 &2 *. split. admit. move => *. do split; ~1,3,4,6: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        t'{2}.`1.`2 ^ st'{2}.`1 = g ^ st'{2}.`1 ^ oget St_CDH_O.x_map{1}.[i]). smt(get_setE mem_set pow_bij loggK expgK expM ComRing.mulrC).
+      smt(get_setE mem_set loggK expgK expM).
+    + auto => /> &1 &2 *. split. 
+     admit. 
+     move => *. do split; ~1,3,4,6,17..19,22: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 have->: (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) = (get_fresh_partners_s t'{2} Game4.c_smap{2}).
 rewrite /get_fresh_partners_s.
       have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
@@ -5679,7 +5691,13 @@ smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 move => x0.
 have : t'{2}.`1.`2 \in Game4.m1_set{2}. admit.
 smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-    auto => /> &1 &2 *. split. admit. move => *. do split; ~1: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+
+admit. admit. admit. admit.
+
+
+    auto => /> &1 &2 *. split. 
+admit. 
+move => *. do split; ~1,5..7,10: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 have->: (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) = (get_fresh_partners_s t'{2} Game4.c_smap{2}).
 rewrite /get_fresh_partners_s.
       have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
@@ -5698,6 +5716,9 @@ rewrite /get_fresh_partners_s.
         admit. (* too much in context *)
       smt().
 smt().
+
+admit. admit. admit. admit.
+
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
 - move => &2 bad; proc; inline. 
