@@ -164,7 +164,7 @@ fdom (
        get_trace val = Some t                                               (* Partners share the same trace *)
     /\ get_ir_test val = false                                              (* Partner is not tested *)
     /\ get_ir_sess val = false                                              (* Partner is not revealed *)
-    /\ (get_ir_eph val = false \/ get_sr_ltk (oget fmap2.[fst bj]) = false) (* Partner is not trivially broken *)
+    /\ (get_ir_eph val = false \/ get_sr_ltk (oget fmap2.[t.`1.`1]) = false) (* Partner is not trivially broken *)
   )
   fmap1
 ).

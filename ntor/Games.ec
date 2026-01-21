@@ -557,10 +557,11 @@ print Game3.
 
 (* Step3: Moving the sampling of keys *)
 module Game4 = Game3 with {
-  var test_ephrev_s : bool option
+  var test_ephrev_s : bool
+  var test_ltkrev : bool
 
   proc init_mem [
-    -1 + { test_ephrev_s <- None; }
+    -1 + { test_ephrev_s <- false; test_ltkrev <- false; }
   ]
 
   proc send_msg2 [
@@ -593,23 +594,94 @@ module Game4 = Game3 with {
                                             k <- h2m.[x];}
   ]
 
+  proc rev_ltkey [
+    ^if.^match#Some.^match#Honest_mod.^if.^ltk<- + ^ {if (exists (j : int), (b, j) \in s_smap => get_ir_test (oget s_smap.[b, j]) \/
+                                                             (untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)) {test_ltkrev <- test_ltkrev \/ true;}}
+
+  ]
+
+  proc s_rev_ephkey [
+    ^if.^match#Some.^match#Accepted_mod.^if.^ek<- + ^ {if (ir.`3 \/ untested_partner_s t c_smap = Some false) {test_ephrev_s <- test_ephrev_s \/ true;}}
+  ]
+
   proc c_test [
     var ks2 : key
     var p : (pkey * int)
-    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; 
-                                                    p <- pick (get_fresh_partners_c t' s_smap servers); 
-                                                    test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
-    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];
-                                                       p <- pick (get_fresh_partners_c t' s_smap servers); 
-                                                       test_ephrev_s <- Some (get_ir_eph (oget s_smap.[p]));}
-
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^x<- + ^ {p <- pick (get_fresh_partners_c t' s_smap servers); 
+                                                  test_ephrev_s <- (test_ephrev_s \/ get_ir_eph (oget s_smap.[p]));
+                                                    test_ltkrev <- (test_ltkrev \/ get_sr_ltk (oget servers.[t'.`1.`1]));}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^x<- + ^ {p <- pick (get_fresh_partners_c t' s_smap servers); 
+                                                  test_ephrev_s <- (test_ephrev_s \/ get_ir_eph (oget s_smap.[p]));
+                                                    test_ltkrev <- (test_ltkrev \/ get_sr_ltk (oget servers.[t'.`1.`1]));}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];}
   ]
 
   proc s_test [
     var ks2 : key
-    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
-    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x]; test_ephrev_s <- Some ir'.`1;}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^x<- + ^ {test_ephrev_s <- test_ephrev_s \/ ir'.`1; test_ltkrev <- (test_ltkrev \/ get_sr_ltk (oget servers.[b]));}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^x<- + ^ {test_ephrev_s <- test_ephrev_s \/ ir'.`1; test_ltkrev <- (test_ltkrev \/ get_sr_ltk (oget servers.[b]));}
+    ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];}
   ]
 }.
 
 print Game4.
+
+module Game4Ltk = Game4 with {
+  proc h [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc init_s [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc send_msg1 [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc send_msg2 [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc send_msg3 [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc c_rev_skey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc s_rev_skey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc rev_ltkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    [^if.^match#Some.^match#Honest_mod.^if.^if - ^servers<-] + (!test_ltkrev)
+  ]
+
+  proc c_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc s_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+  ]
+
+  proc c_test [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^c_smap<-] + (!test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^c_smap<-] + (!test_ltkrev)
+    
+  ]
+
+  proc s_test [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^s_smap<-] + (!test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^s_smap<-] + (!test_ltkrev)
+  ]
+}.
+
+print Game4Ltk.
