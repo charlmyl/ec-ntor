@@ -595,8 +595,8 @@ module Game4 = Game3 with {
   ]
 
   proc rev_ltkey [
-    ^if.^match#Some.^match#Honest_mod.^if.^ltk<- + ^ {if (exists (j : int), (b, j) \in s_smap => get_ir_test (oget s_smap.[b, j]) \/
-                                                             (untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)) {test_ltkrev <- test_ltkrev \/ true;}}
+    ^if.^match#Some.^match#Honest_mod.^if.^ltk<- + ^ {if (exists (j : int), (b, j) \in s_smap /\ (get_ir_test (oget s_smap.[b, j]) \/
+                                                             (untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false))) {test_ltkrev <- test_ltkrev \/ true;}}
 
   ]
 
