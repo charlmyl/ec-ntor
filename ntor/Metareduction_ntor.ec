@@ -203,12 +203,13 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
         if (st is Honest kp) {
-          if (forall j,
+          if ((forall j,
                 (b, j) \in s_smap (* just checking instances of b *)
                 => !(   (   get_ir_test (oget s_smap.[b, j])
                             (* This is always OK (get_trace always Some on server side *)
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
-                     /\ get_ir_eph (oget s_smap.[b,j]))) {
+                     /\ get_ir_eph (oget s_smap.[b,j])))
+                /\ !tested_pot_partner_c b c_smap s_smap) {
             ltk <- Some kp.`2; 
             servers.[b] <- Corrupt kp; 
           }
@@ -281,7 +282,9 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
              and not all partner instances are unfresh can be tested *)
           if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
-                  \/ fresh_partner_c t' s_smap servers = Some false)) {
+                  \/ (fresh_partner_c t' s_smap servers = Some false)
+                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_sr_ltk (oget servers.[t'.`1.`1]))
+                  \/ get_sr_dh (oget servers.[get_name st]))) {
               if (b0 = false) {
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted st' t' k' ir');
@@ -312,7 +315,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
           if (st is Accepted st' t' k' ir') {
             if (!(   get_ir_sess (oget s_smap.[b, j]) 
                   \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
-                  \/ fresh_partner_s t' c_smap = Some false)) {
+                  \/ fresh_partner_s t' c_smap <> Some true)) {
               if (b0 = false) {
                 k <- Some k';
                 s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
@@ -1142,8 +1145,7 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
         have : (forall b j t, (b, j) \in GAKEc.GAKEb_hon.s_smap{2} /\ t = (oget (get_trace (oget GAKEc.GAKEb_hon.s_smap{2}.[b, j])))
             => get_untested_partners_s t (GAKEb_hon.c_smap{2} + Hon_Red.O_GAKE.dhc_smap{2}) = get_untested_partners_s t GAKEc.GAKEb_hon.c_smap{2}
             /\ get_partners_s t (GAKEb_hon.c_smap{2} + Hon_Red.O_GAKE.dhc_smap{2}) = get_partners_s t GAKEc.GAKEb_hon.c_smap{2}).
-        + rewrite /untested_partner_s.
-          rewrite /get_partners_s /get_untested_partners_s.
+        + rewrite /get_partners_s /get_untested_partners_s.
           move => b1 j t [] bjin teq.
           have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false) (GAKEb_hon.c_smap{2} 
               + Hon_Red.O_GAKE.dhc_smap{2}))) = (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) 
@@ -1159,7 +1161,23 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
             do rewrite mem_fdom mem_filter.
             smt(joinE).
           smt().
-        smt(joinE).
+        have->: tested_pot_partner_c b{2} (GAKEb_hon.c_smap{2} + Hon_Red.O_GAKE.dhc_smap{2}) GAKEb_hon.s_smap{2} = 
+                  tested_pot_partner_c b{2} GAKEb_hon.c_smap{2} GAKEb_hon.s_smap{2}.
+          rewrite /tested_pot_partner_c.
+          rewrite /get_tested_pot_partner_c.
+          have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
+             (exists (m1o : pkey) (m2o : (pkey * tag) option), get_trace val = Some ((b{2}, m1o), m2o)) /\
+               get_ir_test val = true /\ forall (j0 : int), (b{2}, j0) \in GAKEb_hon.s_smap{2} => get_trace (oget GAKEb_hon.s_smap{2}.[b{2}, j0]) <> get_trace val)
+                (GAKEb_hon.c_smap{2} + Hon_Red.O_GAKE.dhc_smap{2}))) = (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
+             (exists (m1o : pkey) (m2o : (pkey * tag) option), get_trace val = Some ((b{2}, m1o), m2o)) /\
+                get_ir_test val = true /\ forall (j0 : int), (b{2}, j0) \in GAKEb_hon.s_smap{2} =>
+                  get_trace (oget GAKEb_hon.s_smap{2}.[b{2}, j0]) <> get_trace val) GAKEb_hon.c_smap{2})).
+          + rewrite fsetP.
+            move => x.
+            do rewrite mem_fdom mem_filter.
+            smt(joinE).
+          smt().
+        smt(joinE).        
       + auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
       auto => />.
     + auto => />.
@@ -1350,7 +1368,7 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
             rewrite rem_id. 
             rewrite mem_filter negb_and. smt().
             have := inv i1 st0 pt ir0 m3 iin ipen.
-            rewrite /get_partners_c. 
+            rewrite /get_partners_c.
             by smt(get_setE mem_set in_fsetU in_fset1).
           + move => i1 st0 pt ir0 iin ipen.
             rewrite /get_origins_c.
@@ -1378,6 +1396,8 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
 
 auto => />; smt(fmap_eqP joinE mem_empty emptyE).
 qed.
+
+print GAKEc.GAKEb_nodhs.
 
 lemma rem_dhs bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S, NTOR_C, GAKEc.HROc.RO), A).run(bit) @ &m : res] = 
   Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(A)).run(bit) @ &m : res].
@@ -1444,7 +1464,8 @@ wp; call (: ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.GAKEb_nodhs) /\ ={m}(
   match {1} => //.
   + match Some {2} ^match; 1: auto => /#.
     match Honest {2} ^match; 1: auto => /#.
-    auto => />. smt(get_setE mem_set).
+    if => //.
+    auto => />. smt(get_setE mem_set). 
   + match Some {2} ^match; 1: auto => /#.
     match Corrupt {2} ^match; 1: auto => /#.
     auto => />.
@@ -1477,10 +1498,10 @@ wp; call (: ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.GAKEb_nodhs) /\ ={m}(
     do rewrite negb_or.
     rewrite /fresh_partner_c.
     rewrite /get_fresh_partners_c.
-    have->: (fdom (filter (fun (bj : s_id * int) (val : GAKEc.pr_st_server GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false 
-                /\ get_ir_sess val = false /\ (get_ir_eph val = false \/ get_sr_ltk (oget GAKEb_hon.servers{1}.[bj.`1]) = false)) GAKEb_hon.s_smap{1})) 
-              = (fdom (filter (fun (bj : s_id * int) (val : GAKEc.pr_st_server GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false 
-                /\ get_ir_sess val = false /\ (get_ir_eph val = false \/ get_sr_ltk (oget GAKEc.GAKEb_nodhs.servers{2}.[bj.`1]) = false)) GAKEc.GAKEb_nodhs.s_smap{2})).
+    have->: (fdom (filter (fun (_ : s_id * int) (val : GAKEc.pr_st_server GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false 
+              /\ get_ir_sess val = false /\ (get_ir_eph val = false \/ get_sr_ltk (oget GAKEb_hon.servers{1}.[t.`1.`1]) = false)) GAKEb_hon.s_smap{1})) 
+          = (fdom (filter (fun (_ : s_id * int) (val : GAKEc.pr_st_server GAKEc.instance_state) => get_trace val = Some t /\ get_ir_test val = false 
+              /\ get_ir_sess val = false /\ (get_ir_eph val = false \/ get_sr_ltk (oget GAKEb_nodhs.servers{2}.[t.`1.`1]) = false)) GAKEb_nodhs.s_smap{2})).
     + rewrite fsetP. 
       move => x.
       do rewrite mem_fdom mem_filter. smt(get_setE mem_set).
@@ -2158,6 +2179,49 @@ smt().
       if => //.
       + auto => /> &1 &2 15? inv ? inv2*.
 split.
+have<-: tested_pot_partner_c b{2} GAKEb_st.c_smap{1} GAKEb_st.s_smap{1} = tested_pot_partner_c (oget Name_Red.O_GAKE.sid_pk{2}.[b{2}]) GAKE_mod.GAKEb_nodhs.c_smap{2} GAKE_mod.GAKEb_nodhs.s_smap{2}.
+rewrite /tested_pot_partner_c.
+rewrite /get_tested_pot_partner_c.
+have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
+           (exists (m1o : pkey) (m2o : (pkey * tag) option),
+              get_trace val = Some ((b{2}, m1o), m2o)) /\
+           get_ir_test val = true /\
+           forall (j : int),
+             (b{2}, j) \in GAKEb_st.s_smap{1} =>
+             get_trace (oget GAKEb_st.s_smap{1}.[b{2}, j]) <> get_trace val)
+        GAKEb_st.c_smap{1})) = (fdom (filter (fun (_ : int)
+           (val : GAKE_mod.pr_st_client GAKE_mod.instance_state) =>
+           (exists (m1o : pkey) (m2o : (pkey * tag) option),
+              get_trace val =
+              Some ((oget Name_Red.O_GAKE.sid_pk{2}.[b{2}], m1o), m2o)) /\
+           get_ir_test val = true /\
+           forall (j : int),
+             (oget Name_Red.O_GAKE.sid_pk{2}.[b{2}], j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} =>
+             get_trace (oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[oget Name_Red.O_GAKE.sid_pk{2}.[b{2}], j]) <>
+             get_trace val) GAKE_mod.GAKEb_nodhs.c_smap{2})).
+rewrite fsetP.
+move => x.
+rewrite !mem_fdom !mem_filter //=.
+
+split. 
+move => [#] H [m1o m2o] *.
+split. smt().
+split.
+exists m1o m2o. smt().
+split. smt().
+smt().
+move => [#] H [m1o m2o] trx tx *.
+split. smt().
+split.
+exists m1o m2o. smt().
+split. 
+have: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
+rewrite /rem_sid_c.
+smt().
+smt().
+smt().
+
+move => + -> //=.
 move => + j pkin - /(_ j).
 have : (b{2}, j) \in GAKEb_st.s_smap{1} by smt().
 move => bjin //=.
@@ -2215,6 +2279,48 @@ have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_sma
 rewrite /rem_sid_c.
 do split; smt().
 smt().
+have<-: tested_pot_partner_c b{2} GAKEb_st.c_smap{1} GAKEb_st.s_smap{1} = tested_pot_partner_c (oget Name_Red.O_GAKE.sid_pk{2}.[b{2}]) GAKE_mod.GAKEb_nodhs.c_smap{2} GAKE_mod.GAKEb_nodhs.s_smap{2}.
+rewrite /tested_pot_partner_c.
+rewrite /get_tested_pot_partner_c.
+have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
+           (exists (m1o : pkey) (m2o : (pkey * tag) option),
+              get_trace val = Some ((b{2}, m1o), m2o)) /\
+           get_ir_test val = true /\
+           forall (j : int),
+             (b{2}, j) \in GAKEb_st.s_smap{1} =>
+             get_trace (oget GAKEb_st.s_smap{1}.[b{2}, j]) <> get_trace val)
+        GAKEb_st.c_smap{1})) = (fdom (filter (fun (_ : int)
+           (val : GAKE_mod.pr_st_client GAKE_mod.instance_state) =>
+           (exists (m1o : pkey) (m2o : (pkey * tag) option),
+              get_trace val =
+              Some ((oget Name_Red.O_GAKE.sid_pk{2}.[b{2}], m1o), m2o)) /\
+           get_ir_test val = true /\
+           forall (j : int),
+             (oget Name_Red.O_GAKE.sid_pk{2}.[b{2}], j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} =>
+             get_trace (oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[oget Name_Red.O_GAKE.sid_pk{2}.[b{2}], j]) <>
+             get_trace val) GAKE_mod.GAKEb_nodhs.c_smap{2})).
+rewrite fsetP.
+move => x.
+rewrite !mem_fdom !mem_filter //=.
+
+split. 
+move => [#] H [m1o m2o] *.
+split. smt().
+split.
+exists m1o m2o. smt().
+split. smt().
+smt().
+move => [#] H [m1o m2o] trx tx *.
+split. smt().
+split.
+exists m1o m2o. smt().
+split. 
+have: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
+rewrite /rem_sid_c.
+smt().
+smt().
+smt().
+move => + -> //=.
 move => + j pkin - /(_ j).
 have : (b{2}, j) \in GAKEb_st.s_smap{1} by smt().
 move => bjin //=.
@@ -2609,8 +2715,8 @@ smt().
         if => //.
         + auto => /> &1 &2 25? inv inv2 *. 
 rewrite /fresh_partner_c.
-have<-: (card (get_origins_c t'{1} GAKEb_st.s_smap{1}) = card (get_origins_c t'{2} GAKE_mod.GAKEb_nodhs.s_smap{2})).
-rewrite /get_origins_c. 
+have<-: (card (get_partners_c t'{1} GAKEb_st.s_smap{1}) = card (get_partners_c t'{2} GAKE_mod.GAKEb_nodhs.s_smap{2})).
+rewrite /get_partners_c. 
 rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
 move => x y.
 rewrite !mem_fdom !mem_filter //=.
@@ -2623,22 +2729,21 @@ rewrite !mem_fdom !mem_filter //=.
 split. 
 move => [a] [].
 rewrite !mem_fdom !mem_filter //=.
-move => [] ain [m2o] tra xeq.
+move => [] ain tra xeq.
 split. smt(get_setE).
 have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
 have : (Accepted_mod st'{2} t'{2} k'{2} ir'{2}) = rem_sid_c (Accepted st'{1} t'{1} k'{1} ir'{1}). smt().
 rewrite /rem_sid_c //=.
 move => [#] steq teq keq ireq.
 rewrite teq.
-have v := inv a t'{1}.`1.`2 m2o ain.
-exists m2o.
+have v := inv a t'{1}.`1.`2 t'{1}.`2 ain.
 rewrite v; smt().
 
 have : (Accepted_mod st'{2} t'{2} k'{2} ir'{2}) = rem_sid_c (Accepted st'{1} t'{1} k'{1} ir'{1}). smt().
 rewrite /rem_sid_c //=.
 move => [#] steq teq keq ireq.
 rewrite teq.
-move => [] xin [m2o] tra. 
+move => [] xin tra. 
 
 exists (t'{1}.`1.`1, x.`2).
 rewrite mem_fdom mem_filter //=.
@@ -2647,7 +2752,7 @@ move => x1eq.
 split. split.
 have : t'{1}.`1.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
 smt(get_setE mem_set).
-have v := inv2 t'{1}.`1.`1 x.`2 st'{1}.`2 t'{1}.`1.`2 m2o.
+have v := inv2 t'{1}.`1.`1 x.`2 st'{1}.`2 t'{1}.`1.`2 t'{1}.`2.
 rewrite v; smt().
 smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
 
@@ -2672,7 +2777,9 @@ rewrite /rem_sid_c //=.
 move => [#] steq teq keq ireq.
 rewrite teq.
 have v := inv a t'{1}.`1.`2 t'{1}.`2 ain.
-rewrite v; smt().
+rewrite v. smt().
+do split; smt().
+
 
 have : (Accepted_mod st'{2} t'{2} k'{2} ir'{2}) = rem_sid_c (Accepted st'{1} t'{1} k'{1} ir'{1}). smt().
 rewrite /rem_sid_c //=.

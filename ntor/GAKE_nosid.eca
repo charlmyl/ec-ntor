@@ -441,12 +441,12 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
         if (st is Honest_mod sk) {
-          if (forall j,
+          if ((forall j,
                 (b, j) \in s_smap (* just checking instances of b *)
                 => !(   (   get_ir_test (oget s_smap.[b, j])
                             (* This is always OK (get_trace always Some on server side *)
                          \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
-                     /\ get_ir_eph (oget s_smap.[b,j]))
+                     /\ get_ir_eph (oget s_smap.[b,j])))
                 /\ !tested_pot_partner_c b c_smap s_smap) {
             ltk <- Some sk; 
             servers.[b] <- Corrupt_mod sk; 
