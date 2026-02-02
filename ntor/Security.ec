@@ -4030,7 +4030,7 @@ match s with
 | Pending_mod st pt ir => let (sk, esk) = st in Pending_mod (witness, esk) pt ir
 | Accepted_mod st t k ir => let (sk, esk) = st in Accepted_mod (witness, esk) t k ir
 | Aborted_mod st t ir => Aborted_mod (clear_opt_s st) t ir
-end. 
+end.
 
 print Game4. 
 
@@ -4051,6 +4051,9 @@ call (: Game4Ltk.test_ltkrev,
          /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
          /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
               => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}
        , ={test_ltkrev}(Game4, Game4Ltk) /\ Game4.tested{1} <> None /\ !Game4.test_ephrev_s{1}
          /\ (forall b j, (b, j) \in Game4.s_smap => b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
          /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
@@ -4064,7 +4067,7 @@ call (: Game4Ltk.test_ltkrev,
 
 auto => />.
 split. smt(emptyE).
-move => inv inv2 inv3 inv4 inv5 rl rr al bl b1l b2l bql csl h1ml h2ml hql m1l m2l pkl ssm sm tltkl tl tql xl yl ar br b1r b2r bqr csr h1mr h2mr hqr m1r m2r pkr ssr sr tephr tltkr tr tqr xr yr. 
+move => inv inv2 inv3 inv4 inv5 inv6 inv7 rl rr al bl b1l b2l bql csl h1ml h2ml hql m1l m2l pkl ssm sm tltkl tl tql xl yl ar br b1r b2r bqr csr h1mr h2mr hqr m1r m2r pkr ssr sr tephr tltkr tr tqr xr yr. 
 by case : (tltkr) => />.
 
 - exact A_ll.
@@ -4166,8 +4169,11 @@ by case : (tltkr) => />.
 - proc; inline.
   sp; if => //.
   sp; match = => // st.
-  match = => // s pt ir.  
-  auto => />. smt(get_setE mem_set in_fsetU1).
+  match = => // s pt ir.
+  sp; seq 1 1 : (#pre /\ ={ts}); 1: by auto => />.
+  if => //.
+  + auto => /> &2 *. do split; smt(get_setE mem_set in_fsetU1).
+  auto => /> &2 *. do split; smt(get_setE mem_set in_fsetU1).
 - move => &2 bad.
   proc; inline.
   sp; if => //.
@@ -4236,20 +4242,20 @@ by case : (tltkr) => />.
   match = => // sk.
   if => //; if => //.
   + sp 1 1; rcondf {2} ^if. auto => />.
-    auto => /> &1 14? fresh ntpp j bjin [tests|testp].
+    auto => /> &2 16? fresh ntpp j bjin [tests|testp].
     + have := fresh j bjin.
       rewrite negb_and negb_or tests //=.
       move => *.
-      split. smt(). split. smt().
-      split. smt(get_setE mem_set).
-      admit.
+      split; smt(get_setE mem_set).
     have := fresh j bjin.
     rewrite negb_and negb_or testp //=.
     move => *.
-    split. admit. (* Partner is tested means that tested is not none *)
-    split. admit. (* The partner is tested and not ephrev => not test_ephrev - not the last invariant *)
+    have : (exists i, i \in Game4Ltk.c_smap /\ get_ir_test (oget Game4Ltk.c_smap.[i]) /\ get_trace (oget Game4Ltk.c_smap.[i]) = get_trace (oget Game4Ltk.s_smap.[(b{2}, j)])){2}. admit. (* I need right lemmas to extract this from freshness condition *)
+    move => [i] tp.
+    split. smt().
+    split. admit. (* The partner is tested and server is not ephrev => not test_ephrev - might need an extra invariant *)
     split. smt(get_setE mem_set).
-    admit.
+    smt(get_setE).    
   auto => />. smt(get_setE mem_set).
 - move => &2 bad.
   proc; sp; if => //. 
@@ -4285,7 +4291,7 @@ by case : (tltkr) => />.
   sp; match = => // st.
   match = => // s t k ir.
   if => //; if => //.
-  + auto => /> &2 13?.
+  + auto => /> &2 15?.
     rewrite negb_and negb_or.
     have->: ir.`3 = get_ir_test (oget Game4Ltk.s_smap{2}.[b{2}, j{2}]). smt().
     move => [] [#]. smt().
@@ -4294,11 +4300,10 @@ by case : (tltkr) => />.
     case (1 <= card (get_partners_s t Game4Ltk.c_smap{2})); 2: by smt().
     case (1 <= card (get_untested_partners_s t Game4Ltk.c_smap{2})); 1: by smt().
     rewrite /get_untested_partners_s /get_partners_s //=.
-    move => nunt ge1.
-    have : (1 <= card (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                   get_trace val = Some t /\ get_ir_test val = true) Game4Ltk.c_smap{2}))). admit. (* not the last invariant *)
-    admit. (* not the last invariant *)
-  auto => /> &2 13?.
+    move => nuntp p.
+    have : (exists i, i \in Game4Ltk.c_smap /\ get_ir_test (oget Game4Ltk.c_smap.[i])){2}. admit. (* I need right lemmas to extract this from freshness condition *)
+    move => *. do split; smt(get_setE mem_set).
+  auto => /> &2 15?.
   rewrite negb_and !negb_or.
   have->: ir.`3 = get_ir_test (oget Game4Ltk.s_smap{2}.[b{2}, j{2}]). smt().
   move => [] [#]. move => *. do split; smt(mem_set get_setE).
@@ -4315,12 +4320,15 @@ by case : (tltkr) => />.
     case (get_ir_test (oget Game4.s_smap{hr}.[b{hr}, j{hr}])) => tests; 1: by smt().
     case (untested_partner_s t{hr} Game4.c_smap{hr} = Some false) => testp; 2: by smt().
     case (get_sr_ltk (oget Game4.servers{hr}.[b{hr}])) => sltkr; 1: by smt().
-    left; left; right; right; left; right; right; right; right; right; right; right.
+    simplify.
+    (*case (Game4.s_smap{hr}.[b{hr}, j{hr}] = Some st{hr}).
+    case (st{hr} = (Accepted_mod st0{hr} t{hr} k{hr} ir{hr})) => acc; 2: by smt().*)
+    right; right; left; right; right; right; right; right; right; right.
     rewrite negb_forall //=.
-    have := testp.
-    rewrite /untested_partner_s.
-    rewrite /get_partners_s /get_untested_partners_s.
-    admit. (* How can I connect the two? *)
+    exists b{hr}.
+    rewrite negb_forall //=.
+    exists j{hr}.
+    admit. (* I need that this is the state + again that there exists a tested i from the freshness condition *)
   auto => /> &hr *.
   smt(get_setE mem_set).
 - move => &1.
@@ -4342,7 +4350,7 @@ by case : (tltkr) => />.
     + sp 3 3; if {2} => //.
       + auto => /> &2 *. 
         split. move => *. do split; smt(mem_set get_setE). move => *. do split; smt(mem_set get_setE).
-      auto => /> &2 15?.
+      auto => /> &2 17?.
       rewrite !negb_or negb_and.
       move => [#] 2? + + H.
       rewrite H //=.
@@ -4361,7 +4369,7 @@ by case : (tltkr) => />.
     sp 3 3; if {2} => //.
     + auto => /> &2 *.
       split. move => *. do split; smt(mem_set get_setE). move => *. do split; smt(mem_set get_setE).
-    auto => /> &2 14?. 
+    auto => /> &2 16?. 
     rewrite !negb_or negb_and.
     move => ? [#] 2? + + ? H.
     rewrite H //=.
@@ -4400,18 +4408,18 @@ by case : (tltkr) => />.
     if => //.
     + sp 2 2; if {2} => //.
       + auto => /> &2 *. smt(get_setE mem_set).
-      auto => /> &2 15? + ? _ _. 
+      auto => /> &2 17? + ? _ _. 
       rewrite !negb_or negb_and.
       move => [#] ? [] ? ?. 
-      + do split; 1..3: smt(get_setE mem_set). admit.
-      do split; 1..3: smt(get_setE mem_set). admit.
+      + do split; smt(get_setE mem_set). 
+      do split; smt(get_setE mem_set).
     sp 2 2; if {2} => //.
     + auto => /> &2 *. split; smt(get_setE mem_set).
-    auto => /> &2 15? + ? ? _ _ _ _. 
+    auto => /> &2 17? + ? ? _ _ _ _. 
     rewrite !negb_or negb_and.
     move => [#] ? [] ? ?.
-    + do split; 1..3: smt(get_setE mem_set). admit.
-    do split; 1..3: smt(get_setE mem_set). admit.
+    + do split; smt(get_setE mem_set).
+    do split; smt(get_setE mem_set).
   auto => />.
 - move => &2 bad.
   proc; sp; if => //.
