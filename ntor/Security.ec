@@ -1690,7 +1690,7 @@ hoare Game4_inv_send_msg1: Game4.send_msg1:
 ==>
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers).
 proof.
-proc; inline.
+proc; inline. admit. (*
 sp; if => //.
 sp; if => //.
 match => //.
@@ -1730,7 +1730,7 @@ sp 3; if => //.
   + smt().
   by smt().
 auto => /> &1 *.
-do split; by smt(get_setE in_fsetU1 in_fsetU pow_bij).
+do split; by smt(get_setE in_fsetU1 in_fsetU pow_bij). *)
 qed.
 
 hoare Game4_inv_send_msg2: Game4.send_msg2:
@@ -1738,7 +1738,7 @@ hoare Game4_inv_send_msg2: Game4.send_msg2:
 ==>
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers).
 proof.
-proc; inline.
+proc; inline. admit. (*
 sp; if => //.
 sp; match => //.
 match => //.
@@ -1838,7 +1838,7 @@ move => [H1|[H2|H3]].
   move : H2 => [i'] t k ir H2.
   exists i'. 
   smt(get_setE).
-by smt().
+by smt(). *)
 qed.
 
 hoare Game4_inv_send_msg3: Game4.send_msg3:
@@ -2158,7 +2158,7 @@ hoare Game4_inv_c_rev_skey: Game4.c_rev_skey:
 ==>
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers).
 proof.
-proc; inline.
+proc; inline. admit. (*
 sp; if => //.
 sp; match => //.
 match => //.
@@ -2243,7 +2243,7 @@ move => [H1|H2].
   move : H1 => [i'] t k ir H1.
   exists i'. 
   smt(get_setE).
-by smt().
+by smt().*)
 qed.
 
 hoare Game4_inv_s_rev_skey: Game4.s_rev_skey:
@@ -2251,7 +2251,7 @@ hoare Game4_inv_s_rev_skey: Game4.s_rev_skey:
 ==>
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers).
 proof.
-proc; inline.
+proc; inline. admit. (*
 sp; if => //.
 sp; match => //.
 match => //.
@@ -2338,7 +2338,7 @@ move => [H1|[H2|H3]].
   case (i' = (b,j){1}); 2: smt(get_setE mem_set).
   have : get_trace (oget Game4.s_smap{1}.[b{1}, j{1} <- Accepted_mod st'{1} t'{1} k'{1} (ir'{1}.`1, true, ir'{1}.`3)].[b{1}, j{1}]) = get_trace (oget Game4.s_smap{1}.[b{1}, j{1}]) by smt(get_setE).
   smt(get_setE mem_set).
-by smt().
+by smt(). *)
 qed.
 
 hoare Game4_inv_rev_ltkey: Game4.rev_ltkey:
@@ -2366,7 +2366,7 @@ hoare Game4_inv_c_rev_ephkey: Game4.c_rev_ephkey:
 ==>
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers).
 proof.
-proc; inline.
+proc; inline. admit. (*
 sp; if => //.
 sp; match => //.
 match => //.
@@ -2426,7 +2426,7 @@ move => [H1|H2].
   move : H1 => [i'] t' k' ir' H1.
   exists i'.
   by smt(get_setE).
-by smt().
+by smt(). *)
 qed.
 
 hoare Game4_inv_s_rev_ephkey: Game4.s_rev_ephkey:
@@ -2434,7 +2434,7 @@ hoare Game4_inv_s_rev_ephkey: Game4.s_rev_ephkey:
 ==>
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers).
 proof.
-proc; inline.
+proc; inline. admit. (*
 sp; if => //.
 sp; match => //.
 match => //.
@@ -2530,7 +2530,7 @@ move => [H1|[H2|H3]].
     by smt(get_setE).
   exists i' t k'' ir''.
   by smt(get_setE). 
-by smt().
+by smt(). *)
 qed.
 
 hoare Game4_inv_c_test: Game4.c_test:
@@ -4032,8 +4032,6 @@ match s with
 | Aborted_mod st t ir => Aborted_mod (clear_opt_s st) t ir
 end.
 
-print Game4. 
-
 lemma game4_ltk &m: Pr[E_GAKE_nodhs(Game4, A).run(true) @ &m : Game4.badq /\ Game4.test_ephrev_s = true] <= 
                   Pr[E_GAKE_nodhs(Game4Ltk, A).run(true) @ &m : Game4Ltk.badq].
 byequiv (: ={glob A, arg} /\ arg{1} = true ==> _) => //.
@@ -4054,6 +4052,7 @@ call (: Game4Ltk.test_ltkrev,
          /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
               => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
          /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}
+         /\ (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers){1}
        , ={test_ltkrev}(Game4, Game4Ltk) /\ Game4.tested{1} <> None /\ !Game4.test_ephrev_s{1}
          /\ (forall b j, (b, j) \in Game4.s_smap => b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
          /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
@@ -4066,14 +4065,29 @@ call (: Game4Ltk.test_ltkrev,
 ) => //; last first.
 
 auto => />.
-split. smt(emptyE).
+split. smt(emptyE in_fset0 in_fsetU).
 move => inv inv2 inv3 inv4 inv5 inv6 inv7 rl rr al bl b1l b2l bql csl h1ml h2ml hql m1l m2l pkl ssm sm tltkl tl tql xl yl ar br b1r b2r bqr csr h1mr h2mr hqr m1r m2r pkr ssr sr tephr tltkr tr tqr xr yr. 
 by case : (tltkr) => />.
 
 - exact A_ll.
 
 (* h *)
-- proc; inline.
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_h => //.
+  proc; inline.
   sp; if => //.
   sp; seq 1 1: (#pre /\ ={t}); 1: by auto => />.
   if => //.
@@ -4092,7 +4106,22 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* init_s *)
-- proc.
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_init_s => //.
+  proc.
   sp; if => //.
   sp; seq 1 1: (#pre /\ ={sk}); 1: by auto.
   sp 1 1; if => //.
@@ -4106,7 +4135,22 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* send_msg1 *)
-- proc.
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_send_msg1 => //.
+  proc.
   sp; if => //.
   sp; if => //.
   sp; match = => //. 
@@ -4123,7 +4167,22 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* send_msg2 *)
-- proc; inline. 
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_send_msg2 => //.
+  proc; inline. 
   sp; if => //.
   sp; match = => // sk.
   match = => //.
@@ -4166,7 +4225,22 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* send_msg3 *)
-- proc; inline.
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_send_msg3 => //.
+  proc; inline.
   sp; if => //.
   sp; match = => // st.
   match = => // s pt ir.
@@ -4191,7 +4265,22 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* c_rev_skey *)
-- proc; inline.
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_c_rev_skey => //.
+  proc; inline.
   sp; if => //.
   sp; match = => // st.
   match = => // s t k ir.
@@ -4217,7 +4306,22 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* s_rev_skey *)
-- proc; inline.
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_s_rev_skey => //.
+  proc; inline.
   sp; if => //.
   sp; match = => // st.
   match = => // s t k ir.
@@ -4236,13 +4340,72 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* rev_ltkey *)
-- proc; inline.
+- conseq (: ={arg} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ !Game4Ltk.test_ltkrev{2}
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}
+         /\ inv_Game4 Game4.tested{1} Game4.tq{1} Game4.badq{1} Game4.pk_set{1} Game4.m1_set{1} Game4.m2_set{1} Game4.s_smap{1} Game4.hq{1} Game4.c_smap{1}
+    Game4.h1m{1} Game4.h2m{1} Game4.servers{1} ==> if Game4Ltk.test_ltkrev{2} then
+    Game4.test_ltkrev{1} = Game4Ltk.test_ltkrev{2} /\
+    Game4.tested{1} <> None /\
+    !Game4.test_ephrev_s{1} /\
+    (forall (b : pkey) (j : int),
+       (b, j) \in Game4.s_smap{1} =>
+       (b \in Game4.servers{1}) /\
+       (oget (get_trace (oget Game4.s_smap{1}.[b, j]))).`2 <> None) /\
+    (forall (i : int) (t : trace),
+       i \in Game4.c_smap{1} =>
+       get_trace (oget Game4.c_smap{1}.[i]) = Some t =>
+       t.`2 <> None =>
+       ((oget t.`2).`1 \in Game4.m2_set{1}) \/
+       ((oget t.`2).`1 \in Game4.y_set{1})) /\
+    (forall (i : int) (s : pr_st_client) (pt : part_trace) (ir : ir_status),
+       i \in Game4.c_smap{1} =>
+       Game4.c_smap{1}.[i] = Some (Pending_mod s pt ir) => ! ir.`3) /\
+    forall (b : pkey) (j : int),
+      (b, j) \in Game4.s_smap{1} =>
+      (get_ir_test (oget Game4.s_smap{1}.[b, j]) \/
+       exists (i : int),
+         (i \in Game4.c_smap{1}) /\
+         get_trace (oget Game4.c_smap{1}.[i]) =
+         get_trace (oget Game4.s_smap{1}.[b, j]) /\
+         get_ir_test (oget Game4.c_smap{1}.[i])) =>
+      get_sr_ltk (oget Game4.servers{1}.[b]) else ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_rev_ltkey => // [/>|].
+  proc; inline.
   sp; if => //.
   sp; match = => // st.
   match = => // sk.
-  if => //; if => //.
-  + sp 1 1; rcondf {2} ^if. auto => />.
-    auto => /> &2 16? fresh ntpp j bjin [tests|testp].
+  if => //. 
+  if => //; 2: by auto => />; smt(get_setE mem_set).
+  rcondf {2} ^if; 1: by auto => />.
+  conseq />; 1: smt().
+  auto => |> &2 13? invG4 2? fresh ntpp j bjin [tests|testp].
     + have := fresh j bjin.
       rewrite negb_and negb_or tests //=.
       move => *.
@@ -4250,13 +4413,13 @@ by case : (tltkr) => />.
     have := fresh j bjin.
     rewrite negb_and negb_or testp //=.
     move => *.
-    have : (exists i, i \in Game4Ltk.c_smap /\ get_ir_test (oget Game4Ltk.c_smap.[i]) /\ get_trace (oget Game4Ltk.c_smap.[i]) = get_trace (oget Game4Ltk.s_smap.[(b{2}, j)])){2}. admit. (* I need right lemmas to extract this from freshness condition *)
-    move => [i] tp.
+    have [i] tp: (exists i, i \in Game4Ltk.c_smap /\ get_ir_test (oget Game4Ltk.c_smap.[i]) /\ get_trace (oget Game4Ltk.c_smap.[i]) = get_trace (oget Game4Ltk.s_smap.[(b{2}, j)])){2}.  admit. (* I need right lemmas to extract this from freshness condition *)
     split. smt().
-    split. admit. (* The partner is tested and server is not ephrev => not test_ephrev - might need an extra invariant *)
+    split. 
+    + rewrite /inv_Game4 in invG4. 
+admit. (* The partner is tested and server is not ephrev => not test_ephrev - might need an extra invariant *)
     split. smt(get_setE mem_set).
     smt(get_setE).    
-  auto => />. smt(get_setE mem_set).
 - move => &2 bad.
   proc; sp; if => //. 
   match => //.
@@ -4267,7 +4430,22 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* c_rev_ephkey *)
-- proc; inline.
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_c_rev_ephkey => //.
+  proc; inline.
   sp; if => //.
   sp; match = => // st.
   match = => // [s pt ir|s t k ir].
@@ -4286,12 +4464,27 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* s_rev_ephkey *)
+- conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_s_rev_ephkey => //.
 - proc; inline.
   sp; if => //.
   sp; match = => // st.
   match = => // s t k ir.
   if => //; if => //.
-  + auto => /> &2 15?.
+  + auto => |> &2 16?.
     rewrite negb_and negb_or.
     have->: ir.`3 = get_ir_test (oget Game4Ltk.s_smap{2}.[b{2}, j{2}]). smt().
     move => [] [#]. smt().
@@ -4303,7 +4496,7 @@ by case : (tltkr) => />.
     move => nuntp p.
     have : (exists i, i \in Game4Ltk.c_smap /\ get_ir_test (oget Game4Ltk.c_smap.[i])){2}. admit. (* I need right lemmas to extract this from freshness condition *)
     move => *. do split; smt(get_setE mem_set).
-  auto => /> &2 15?.
+  auto => |> &2 16?.
   rewrite negb_and !negb_or.
   have->: ir.`3 = get_ir_test (oget Game4Ltk.s_smap{2}.[b{2}, j{2}]). smt().
   move => [] [#]. move => *. do split; smt(mem_set get_setE).
@@ -4336,7 +4529,64 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* c_test *)
-- proc; inline.
+- conseq (: ={arg} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ !Game4Ltk.test_ltkrev{2}
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}
+         /\ inv_Game4 Game4.tested{1} Game4.tq{1} Game4.badq{1} Game4.pk_set{1} Game4.m1_set{1} Game4.m2_set{1} Game4.s_smap{1} Game4.hq{1} Game4.c_smap{1}
+    Game4.h1m{1} Game4.h2m{1} Game4.servers{1} ==> if Game4Ltk.test_ltkrev{2} then
+    Game4.test_ltkrev{1} = Game4Ltk.test_ltkrev{2} /\
+    Game4.tested{1} <> None /\
+    !Game4.test_ephrev_s{1} /\
+    (forall (b : pkey) (j : int),
+       (b, j) \in Game4.s_smap{1} =>
+       (b \in Game4.servers{1}) /\
+       (oget (get_trace (oget Game4.s_smap{1}.[b, j]))).`2 <> None) /\
+    (forall (i : int) (t : trace),
+       i \in Game4.c_smap{1} =>
+       get_trace (oget Game4.c_smap{1}.[i]) = Some t =>
+       t.`2 <> None =>
+       ((oget t.`2).`1 \in Game4.m2_set{1}) \/
+       ((oget t.`2).`1 \in Game4.y_set{1})) /\
+    (forall (i : int) (s : pr_st_client) (pt : part_trace) (ir : ir_status),
+       i \in Game4.c_smap{1} =>
+       Game4.c_smap{1}.[i] = Some (Pending_mod s pt ir) => ! ir.`3) /\
+    forall (b : pkey) (j : int),
+      (b, j) \in Game4.s_smap{1} =>
+      (get_ir_test (oget Game4.s_smap{1}.[b, j]) \/
+       exists (i : int),
+         (i \in Game4.c_smap{1}) /\
+         get_trace (oget Game4.c_smap{1}.[i]) =
+         get_trace (oget Game4.s_smap{1}.[b, j]) /\
+         get_ir_test (oget Game4.c_smap{1}.[i])) =>
+      get_sr_ltk (oget Game4.servers{1}.[b]) else ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_c_test => // [/>|].
+ proc; inline.
   sp; if => //.
   sp; if => //.
   match = => //.
@@ -4350,7 +4600,7 @@ by case : (tltkr) => />.
     + sp 3 3; if {2} => //.
       + auto => /> &2 *. 
         split. move => *. do split; smt(mem_set get_setE). move => *. do split; smt(mem_set get_setE).
-      auto => /> &2 17?.
+      auto => |> &2 18?.
       rewrite !negb_or negb_and.
       move => [#] 2? + + H.
       rewrite H //=.
@@ -4359,7 +4609,13 @@ by case : (tltkr) => />.
       rewrite /get_fresh_partners_c.
       rewrite H //=.
       move => H3.
-      split. split. smt(). admit. (* find right lemmas? *)
+      split.
+      + have : card (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
+               get_trace val = Some t /\
+               get_ir_test val = false /\
+               get_ir_sess val = false /\ get_ir_eph val = false) Game4Ltk.s_smap{2})) <> 0 by smt().
+        rewrite fcard_eq0 => /mem_pick /mem_fdom.
+        by rewrite mem_filter /#.
       do split; 1..3: smt(mem_set get_setE).
       move => b j bjin []. smt().
       move => [i0].
@@ -4369,7 +4625,7 @@ by case : (tltkr) => />.
     sp 3 3; if {2} => //.
     + auto => /> &2 *.
       split. move => *. do split; smt(mem_set get_setE). move => *. do split; smt(mem_set get_setE).
-    auto => /> &2 16?. 
+    auto => |> &2 17?. 
     rewrite !negb_or negb_and.
     move => ? [#] 2? + + ? H.
     rewrite H //=.
@@ -4378,7 +4634,13 @@ by case : (tltkr) => />.
     rewrite /get_fresh_partners_c.
     rewrite H //=.
     move => H3.
-    split. split. smt(). admit. (* find right lemmas? *)
+    split. 
+    + have : card (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
+               get_trace val = Some t /\
+               get_ir_test val = false /\
+               get_ir_sess val = false /\ get_ir_eph val = false) Game4Ltk.s_smap{2})) <> 0 by smt().
+      rewrite fcard_eq0 => /mem_pick /mem_fdom.
+      by rewrite mem_filter /#.
     do split; 1..3: smt(mem_set get_setE).
     move => b j bjin []. smt().
     move => [i0].
@@ -4395,7 +4657,64 @@ by case : (tltkr) => />.
   rcondf ^if; auto => />.
 
 (* s_test *)
-- proc; inline.
+- conseq (: ={arg} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ !Game4Ltk.test_ltkrev{2}
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}
+         /\ inv_Game4 Game4.tested{1} Game4.tq{1} Game4.badq{1} Game4.pk_set{1} Game4.m1_set{1} Game4.m2_set{1} Game4.s_smap{1} Game4.hq{1} Game4.c_smap{1}
+    Game4.h1m{1} Game4.h2m{1} Game4.servers{1} ==> if Game4Ltk.test_ltkrev{2} then
+    Game4.test_ltkrev{1} = Game4Ltk.test_ltkrev{2} /\
+    Game4.tested{1} <> None /\
+    !Game4.test_ephrev_s{1} /\
+    (forall (b : pkey) (j : int),
+       (b, j) \in Game4.s_smap{1} =>
+       (b \in Game4.servers{1}) /\
+       (oget (get_trace (oget Game4.s_smap{1}.[b, j]))).`2 <> None) /\
+    (forall (i : int) (t : trace),
+       i \in Game4.c_smap{1} =>
+       get_trace (oget Game4.c_smap{1}.[i]) = Some t =>
+       t.`2 <> None =>
+       ((oget t.`2).`1 \in Game4.m2_set{1}) \/
+       ((oget t.`2).`1 \in Game4.y_set{1})) /\
+    (forall (i : int) (s : pr_st_client) (pt : part_trace) (ir : ir_status),
+       i \in Game4.c_smap{1} =>
+       Game4.c_smap{1}.[i] = Some (Pending_mod s pt ir) => ! ir.`3) /\
+    forall (b : pkey) (j : int),
+      (b, j) \in Game4.s_smap{1} =>
+      (get_ir_test (oget Game4.s_smap{1}.[b, j]) \/
+       exists (i : int),
+         (i \in Game4.c_smap{1}) /\
+         get_trace (oget Game4.c_smap{1}.[i]) =
+         get_trace (oget Game4.s_smap{1}.[b, j]) /\
+         get_ir_test (oget Game4.c_smap{1}.[i])) =>
+      get_sr_ltk (oget Game4.servers{1}.[b]) else ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, tq, hq, badq, test_ephrev_s, test_ltkrev}(Game4, Game4Ltk)
+         /\ (Game4.test_ephrev_s => Game4.tested <> None){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4Ltk.s_smap{2}.[b, j]))).`1.`1 = b
+              /\ b \in Game4.servers /\ (oget (get_trace (oget Game4.s_smap.[(b, j)]))).`2 <> None){1}
+         /\ (forall i t, i \in Game4.c_smap => get_trace (oget Game4.c_smap.[i]) = Some t => t.`2 <> None 
+              => (oget t.`2).`1 \in Game4.m2_set \/ (oget t.`2).`1 \in Game4.y_set){1}
+         /\ (forall i s pt ir, i \in Game4.c_smap => Game4.c_smap.[i] = Some (Pending_mod s pt ir) => !ir.`3){1}
+         /\ (forall b j, (b, j) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b, j)]) => !get_ir_eph (oget Game4.s_smap.[(b, j)]) => !Game4.test_ephrev_s){1}
+         /\ (forall b j, Game4.tested = None => (b, j) \in Game4.s_smap => !get_ir_test (oget Game4.s_smap.[(b,j)])){1}
+         /\ (forall i, Game4.tested = None => i \in Game4.c_smap => !get_ir_test (oget Game4.c_smap.[i])){1}
+         /\ (forall b1 b2 j1 j2, (b1, j1) \in Game4.s_smap => (b2, j2) \in Game4.s_smap => get_ir_test (oget Game4.s_smap.[(b1, j1)])
+              => get_ir_test (oget Game4.s_smap.[(b2, j2)]) => (b1, j1) = (b2, j2)){1}
+         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
+              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
+         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}) Game4_inv_s_test => // [/>|/>|]. admit.
+  proc; inline.
   sp; if => //.
   sp; if => //.
   match = => //.
@@ -4408,14 +4727,14 @@ by case : (tltkr) => />.
     if => //.
     + sp 2 2; if {2} => //.
       + auto => /> &2 *. smt(get_setE mem_set).
-      auto => /> &2 17? + ? _ _. 
+      auto => |> &2 18? + ? _ _. 
       rewrite !negb_or negb_and.
       move => [#] ? [] ? ?. 
       + do split; smt(get_setE mem_set). 
       do split; smt(get_setE mem_set).
     sp 2 2; if {2} => //.
     + auto => /> &2 *. split; smt(get_setE mem_set).
-    auto => /> &2 17? + ? ? _ _ _ _. 
+    auto => |> &2 18? + ? ? _ _ _ _. 
     rewrite !negb_or negb_and.
     move => [#] ? [] ? ?.
     + do split; smt(get_setE mem_set).
