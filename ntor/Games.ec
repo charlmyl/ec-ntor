@@ -685,3 +685,61 @@ module Game4Ltk = Game4 with {
 }.
 
 print Game4Ltk.
+
+module Game4Eph = Game4 with {
+  proc h [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc init_s [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc send_msg1 [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc send_msg2 [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc send_msg3 [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc c_rev_skey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc s_rev_skey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc rev_ltkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc c_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+  ]
+
+  proc s_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    [^if.^match#Some.^match#Accepted_mod.^if.^if - ^s_smap<-] + (!test_ephrev_s)
+  ]
+
+  proc c_test [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^c_smap<-] + (!test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^c_smap<-] + (!test_ephrev_s)
+    
+  ]
+
+  proc s_test [
+    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^s_smap<-] + (!test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^s_smap<-] + (!test_ephrev_s)
+  ]
+}.
+
+print Game4Eph.
