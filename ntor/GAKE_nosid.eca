@@ -146,12 +146,12 @@ fdom (
   fmap
 ).
 
-op get_untested_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
+op get_tested_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
        (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
-    /\ get_ir_test val = false                         (* Partner is not tested *)
+    /\ get_ir_test val = true                          (* Partner is tested *)
   )
   fmap
 ).
@@ -196,8 +196,8 @@ fdom (
     
 
 (* operators that return None if there is no partner, true if there is an untested/fresh partner or false if all partners are tested/unfresh *)
-op untested_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : bool option =
-if 1 <= card (get_origins_c t fmap) then Some (1 <= card (get_untested_origins_c t fmap)) else None.
+op tested_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : bool option =
+if 1 <= card (get_origins_c t fmap) then Some (1 <= card (get_tested_origins_c t fmap)) else None.
 
 op untested_partner_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : bool option =
 if 1 <= card (get_partners_c t fmap) then Some (1 <= card (get_untested_partners_c t fmap)) else None.
@@ -467,7 +467,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
           (* client instances can be ephkey revealed when pending if there isn't 
              a tested origin partner (agreeing on first message *)
         | Pending_mod st pk_e ir => {
-            if (untested_origins_c (pk_e, None) s_smap <> Some false) {
+            if (tested_origins_c (pk_e, None) s_smap <> Some true) {
               ek <- Some (st.`2);
               c_smap.[i] <- set_ir_eph (Pending_mod st pk_e ir);
             }

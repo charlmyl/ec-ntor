@@ -156,12 +156,12 @@ fdom (
   fmap
 ).
 
-op get_untested_origins_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
+op get_tested_origins_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : (s_id * int) fset =
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
        (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
-    /\ get_ir_test val = false                         (* Partner is not tested *)
+    /\ get_ir_test val = true                          (* Partner is tested *)
   )
   fmap
 ).
@@ -171,9 +171,9 @@ op get_fresh_partners_c (t: trace) (fmap1: (s_id * int, pr_st_server instance_st
 fdom (
   filter
   (fun bj (val: pr_st_server instance_state) =>
-       get_trace val = Some t                                               (* Partners share the same trace *)
-    /\ get_ir_test val = false                                              (* Partner is not tested *)
-    /\ get_ir_sess val = false                                              (* Partner is not revealed *)
+       get_trace val = Some t                                                (* Partners share the same trace *)
+    /\ get_ir_test val = false                                               (* Partner is not tested *)
+    /\ get_ir_sess val = false                                               (* Partner is not revealed *)
     /\ (get_ir_eph val = false \/ get_sr_ltk (oget fmap2.[t.`1.`1]) = false) (* Partner is not trivially broken *)
   )
   fmap1
@@ -206,8 +206,8 @@ fdom (
 
 
 (* operators that return None if there is no partner, true if there is an untested/fresh partner or false if all partners are tested/unfresh *)
-op untested_origins_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
-if 1 <= card (get_origins_c t fmap) then Some (1 <= card (get_untested_origins_c t fmap)) else None.
+op tested_origins_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
+if 1 <= card (get_origins_c t fmap) then Some (1 <= card (get_tested_origins_c t fmap)) else None.
 
 op untested_partner_c (t: trace) (fmap: (s_id * int, pr_st_server instance_state) fmap) : bool option =
 if 1 <= card (get_partners_c t fmap) then Some (1 <= card (get_untested_partners_c t fmap)) else None.
@@ -485,7 +485,7 @@ module GAKEb (S: Server) (C: Client) (H : RO) : GAKE = {
           (* client instances can be ephkey revealed when pending if there isn't 
              a tested origin partner (agreeing on first message *)
         | Pending st pk_e ir => {
-            if (untested_origins_c (pk_e, None) s_smap <> Some false) {
+            if (tested_origins_c (pk_e, None) s_smap <> Some true) {
               ek <- Some (st.`3);
               c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
             }
@@ -783,7 +783,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
           (* client instances can be ephkey revealed when pending if there isn't 
              a tested origin partner (agreeing on first message *)
         | Pending st pk_e ir => {
-            if (untested_origins_c (pk_e, None) s_smap <> Some false) {
+            if (tested_origins_c (pk_e, None) s_smap <> Some true) {
               ek <- Some (st.`3);
               c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
             }
