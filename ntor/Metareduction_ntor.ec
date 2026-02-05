@@ -229,7 +229,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
           (* client instances can be ephkey revealed when pending if there isn't 
              a tested origin partner (agreeing on first message *)
         | Pending st pk_e ir => {
-            if (untested_origins_c (pk_e, None) s_smap <> Some false) {
+            if (tested_origins_c (pk_e, None) s_smap <> Some true) {
               ek <- Some (st.`3);
               c_smap.[i] <- set_ir_eph (Pending st pk_e ir);
             }
