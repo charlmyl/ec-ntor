@@ -237,7 +237,7 @@ module GAKEb_st (S: Server) (C: Client) (H : GAKEc.HROc.RO) : GAKEc.GAKE_nodhs_i
           (* accepted client instamces can only be ephkey revealed when not tested and 
              if not all partners are tested *)
         | Accepted st t k ir => {
-            if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t s_smap = Some false)) {
+            if (!(get_ir_test (oget c_smap.[i]) \/ tested_origins_c t s_smap = Some true)) {
               ek <- Some (st.`3);
               c_smap.[i] <- set_ir_eph (Accepted st t k ir);
             }

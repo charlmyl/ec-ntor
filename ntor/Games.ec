@@ -276,7 +276,7 @@ module Game0 : GAKE_nodhs_i = {
           (* accepted client instamces can only be ephkey revealed when not tested and 
              if not all partners are tested *)
         | Accepted_mod st t k ir => {
-            if (!(get_ir_test (oget c_smap.[i]) \/ untested_partner_c t s_smap = Some false)) {
+            if (!(get_ir_test (oget c_smap.[i]) \/ tested_origins_c t s_smap = Some true)) {
               ek <- Some (st.`2);
               c_smap.[i] <- set_ir_eph (Accepted_mod st t k ir);
             }
