@@ -5095,9 +5095,9 @@ call (: Game4Ltk.badq,
          /\ (forall x, x \in Red_Ltk.Red_O.h1m_opt{1} => x.`5 \in Red_Ltk.Red_O.m2_set{1} \/ x.`5 \in Red_Ltk.Red_O.y_set{1})
          /\ (forall x, x \in Red_Ltk.Red_O.h2m_opt{1} => x.`5 \in Red_Ltk.Red_O.m2_set{1} \/ x.`5 \in Red_Ltk.Red_O.y_set{1})
          /\ (forall b, b \in Game4Ltk.servers{2} => (b \in Game4Ltk.pk_set{2} /\ (exists j, j \in St_CDH_O.y_map{1} /\ b = g ^ oget St_CDH_O.y_map{1}.[j])))
-         /\ (forall b, b \in Game4Ltk.servers{2} => b \in Red_Ltk.Red_O.b_inst{1} /\ (oget Red_Ltk.Red_O.b_inst{1}.[b]) \in St_CDH_O.y_map{1} 
-                      /\ b = g ^ (oget St_CDH_O.y_map{1}.[(oget Red_Ltk.Red_O.b_inst{1}.[b])]) 
-                      /\ (get_sr_ltk (oget Game4Ltk.servers{2}.[b]) => (oget Red_Ltk.Red_O.b_inst{1}.[b]) \in St_CDH_O.cr2{1}))
+         /\ (forall b, b \in Game4Ltk.servers{2} => b \in Red_Ltk.Red_O.b_inst{1} => (oget Red_Ltk.Red_O.b_inst{1}.[b]) \in St_CDH_O.y_map{1} 
+                      => b = g ^ (oget St_CDH_O.y_map{1}.[(oget Red_Ltk.Red_O.b_inst{1}.[b])]) 
+                      => ((get_sr_ltk (oget Game4Ltk.servers{2}.[b]) <=> (oget Red_Ltk.Red_O.b_inst{1}.[b]) \in St_CDH_O.cr2{1})))
 
          /\ (Red_Ltk.Red_O.b0{1})
 
@@ -6915,7 +6915,7 @@ smt(get_setE mem_set).
   by auto => />.
 
 (* rev_ltkey *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -7227,7 +7227,7 @@ smt().
   + match Corrupt_mod {2} ^match. auto => /#.
     auto => />.
   match Dishonest_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />.*)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; match => //. 
@@ -7240,7 +7240,7 @@ smt().
   by auto => />.
 
 (* c_rev_ephkey *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -7567,7 +7567,7 @@ move => [i2] itr.
 exists i2.
 smt(get_setE mem_set).
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline.
   sp; if => //. 
   sp; match => //. 
@@ -7735,7 +7735,7 @@ smt(get_setE mem_set).
   sp; match => //. 
   by match; auto => />.
 
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; if => //.
   match {1} => //.
@@ -7800,10 +7800,8 @@ smt(get_setE mem_set).
         smt(get_setE mem_set loggK expgK expM).
       + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
         auto => /> &1 &2 9? c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41 c42 
-                   3? inv5 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c1 c2 c3 c4 c5 c6 c7 c8 inv c9 inv2 c10 inv3 inv4 9? nltk *. split.
-have := inv5 i{2} st'{2} t'{2} k'{2} ir'{2}.
-smt().
-move => *. do split; ~1..3,9,10,19,20,23: smt(get_setE mem_set in_fsetU1 loggK expgK expM pow_bij).
+                   3? inv5 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c1 c2 c3 c4 c5 c6 c7 c8 inv c9 inv2 c10 inv3 inv4 9? nltk *. split. smt().
+ move => *. do split; ~1..3,9,10,19,20,23: smt(get_setE mem_set in_fsetU1 loggK expgK expM pow_bij).
 clear inv inv2 inv3 inv4 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41 c42.
 have->: (get_fresh_partners_c t'{1} Red_Ltk.Red_O.s_smap{1}
                      Red_Ltk.Red_O.servers{1}) = (get_fresh_partners_c t'{2} Game4Ltk.s_smap{2} Game4Ltk.servers{2}).
@@ -7847,6 +7845,8 @@ move => [].
   have->: st'{2}.`1 = t'{1}.`1.`1. smt().
   have->: g ^ st'{2}.`2 = t'{1}.`1.`2. smt().
   have->: st'{2}.`2 = loge t'{1}.`1.`2. smt(loggK expgK expM). 
+  case (x0 = ((oget t'{2}.`2).`1 ^ loge t'{1}.`1.`2, t'{1}.`1.`1 ^ loge t'{1}.`1.`2, t'{1}.`1.`1, t'{1}.`1.`2, (oget t'{2}.`2).`1)); 2: smt(get_setE pow_bij loggK expgK expM).
+  move => />.
   smt(get_setE pow_bij loggK expgK expM).
 move => -> //=.
 smt(get_setE mem_set loggK expgK expM).
@@ -7854,8 +7854,11 @@ move => x0.
 rewrite mem_set //=.
 move => []; smt(get_setE mem_set loggK expgK expM).
 move => b0 x0 y0.
-have->: st'{2}.`2 = loge t'{1}.`1.`2. smt(loggK expgK expM). 
-smt(mem_set pow_bij loggK expgK expM).
+have->: st'{2}.`2 = loge t'{1}.`1.`2. smt(loggK expgK expM).
+rewrite mem_set.
+move => []; 1: smt(mem_set pow_bij loggK expgK expM).
+move => />.
+smt(get_setE mem_set pow_bij loggK expgK expM).
     + move => i0 i'.
       case (i0 = i{2}) => ieq.
       + rewrite ieq get_set_sameE //=.
@@ -7886,8 +7889,7 @@ exists (oget Red_Ltk.Red_O.i_inst{1}.[i{2}]) (oget Red_Ltk.Red_O.b_inst{1}.[st'{
 smt().
 
     auto => /> &1 &2 7? c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41 4? 
-                 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c1 c2 c3 c4 c5 c6 c7 c8 inv c9 inv2 c10 inv3 inv4 *. split. 
-admit. (* show that win has happened as above *)
+                 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c1 c2 c3 c4 c5 c6 c7 c8 inv c9 inv2 c10 inv3 inv4 *. split. smt().
 move => *. do split; ~1,7,8,11: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 clear inv inv2 inv3 inv4 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23 c24 c25 c26 c27 c28 c29 c30 c31 c32 c33 c34 c35 c36 c37 c38 c39 c40 c41.
 have->: (get_fresh_partners_c t'{1} Red_Ltk.Red_O.s_smap{1}
@@ -7991,7 +7993,7 @@ smt().
 auto => />.
 
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; if => //; match => //. 
@@ -8096,9 +8098,10 @@ auto => />.
           t'{2}.`1.`2 ^ oget st'{2}.`2 = g ^ oget st'{2}.`2 ^ oget St_CDH_O.x_map{1}.[i] /\
           t'{2}.`1.`2 ^ st'{2}.`1 = g ^ st'{2}.`1 ^ oget St_CDH_O.x_map{1}.[i]). smt(get_setE mem_set pow_bij loggK expgK expM ComRing.mulrC).
         smt(get_setE mem_set loggK expgK expM).
-    + auto => /> &1 &2 28? inv4 ? inv7 20? inv ? inv2 inv3 ? inv6 ? inv5 6? fresh nltk *. split. 
-     admit. (* needs the win invariant *)
-     move => *. do split; ~1,3,5,19,20,23,25: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+
+
+    + auto => /> &1 &2 28? inv4 ? inv7 4? inv8 14? inv9 inv ? inv2 inv3 ? inv6 ? inv5 6? fresh nltk *. split. smt().
+     move => *. do split; ~1,3..5,19,20,23,25: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 have->: (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) = (get_fresh_partners_s t'{2} Game4Ltk.c_smap{2}).
 rewrite /get_fresh_partners_s.
       have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
@@ -8120,8 +8123,22 @@ smt().
 move : inv4 nltk. clear. smt().
 move => x0.
 case (x0 = (t'{2}.`1.`2 ^ oget st'{2}.`2, t'{2}.`1.`2 ^ st'{2}.`1, g ^ st'{2}.`1, t'{2}.`1.`2, g ^ oget st'{2}.`2)).
-+ move => -> //= *. 
++ move => -> //= *.
   have : t'{2}.`1.`2 \in Game4Ltk.m1_set{2}.
+  + move : fresh.
+    rewrite !negb_or negb_and nltk //=.
+  have->: t'{1} = t'{2}. smt().
+  have<-: st'{1}.`2 = st'{2}.`2. smt().
+  have->: t'{2}.`1.`1 = g ^ st'{2}.`1. smt().
+  smt(get_setE mem_set).
+move => />.
+have->: t'{1} = t'{2}. smt().
+have<-: st'{1}.`2 = st'{2}.`2. smt().
+have->: t'{2}.`1.`1 = g ^ st'{2}.`1. smt().
+smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+move => x0.
+case (x0 = (t'{2}.`1.`2 ^ oget st'{2}.`2, t'{2}.`1.`2 ^ st'{2}.`1, g ^ st'{2}.`1, t'{2}.`1.`2, g ^ oget st'{2}.`2)).
++ have : t'{2}.`1.`2 \in Game4Ltk.m1_set{2}.
   + move : fresh.
     rewrite !negb_or negb_and nltk //= => [#] nses.
     rewrite /fresh_partner_s => fp.
@@ -8187,7 +8204,7 @@ smt(get_setE mem_set in_fsetU1 loggK expgK expM).
       rewrite i'eq get_set_sameE //=.
       rewrite get_set_neqE //=.
       move => m1 m2 tag m1' tag'.
-      have := inv2 (b,j){2} i0 m1 m2 tag m1' tag'.
+      have := inv2 i0 (b,j){2} m1 m2 tag m1' tag'.
       smt(). 
       move => x0 y0 b0 x1eq x2eq x3eq x4eq x5eq.
       right.
@@ -8201,20 +8218,84 @@ smt(get_setE mem_set in_fsetU1 loggK expgK expM).
       have->: g ^ oget st'{2}.`2 = (oget t'{2}.`2).`1 by smt().
       smt(get_setE mem_set).
 
-admit. (* I need to get the index from my partner first
-exists (oget Red_Ltk.Red_O.i_inst{1}.[]) (oget Red_Ltk.Red_O.b_inst{1}.[(b, j){2}]).
-do split; 1..7: smt().
-admit. (* connect with freshness condition as in corruption *)*)
+have : t'{1}.`1.`2 \in Game4Ltk.m1_set{2}.
+        + move : fresh.
+          rewrite !negb_or negb_and nltk //= => [#] nses.
+          rewrite /fresh_partner_s => fp.
+          have : card (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) <> 0 by smt().
+          rewrite /get_fresh_partners_s fcard_eq0 => /mem_pick /mem_fdom.
+          rewrite mem_filter /=.
+          move => [H1 [#] [m] H2 H3 H4 H5].
+          have := inv9 (pick (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
+               (exists (m2o : (pkey * tag) option),
+                  get_trace val = Some (t'{1}.`1, m2o)) /\
+               get_ir_test val = false /\
+               get_ir_sess val = false /\ get_ir_eph val = false) Red_Ltk.Red_O.c_smap{1}))) t'{1}.`1 m.
+          have->: Game4Ltk.c_smap{2}.[pick
+              (fdom
+                 (filter
+                    (fun (_ : int) (val : pr_st_client instance_state) =>
+                       (exists (m2o : (pkey * tag) option),
+                          get_trace val = Some (t'{1}.`1, m2o)) /\
+                       get_ir_test val = false /\
+                       get_ir_sess val = false /\ get_ir_eph val = false)
+                    Red_Ltk.Red_O.c_smap{1}))] <> None by smt().
+          have->:  get_trace
+   (oget
+      Game4Ltk.c_smap{2}.[pick
+                   (fdom
+                      (filter
+                         (fun (_ : int)
+                            (val : pr_st_client instance_state) =>
+                            (exists (m2o : (pkey * tag) option),
+                               get_trace val = Some (t'{1}.`1, m2o)) /\
+                            get_ir_test val = false /\
+                            get_ir_sess val = false /\ get_ir_eph val = false)
+                         Red_Ltk.Red_O.c_smap{1}))]) = get_trace
+      (oget
+         Red_Ltk.Red_O.c_smap{1}.[pick
+                      (fdom
+                         (filter
+                            (fun (_ : int)
+                               (val : pr_st_client instance_state) =>
+                               (exists (m2o : (pkey * tag) option),
+                                  get_trace val = Some (t'{1}.`1, m2o)) /\
+                               get_ir_test val = false /\
+                               get_ir_sess val = false /\
+                               get_ir_eph val = false) Red_Ltk.Red_O.c_smap{1}))]).
+          + move : inv7. clear. smt().
+          smt().
+move => m1in.
+have := inv8 t'{1}.`1.`2.
+rewrite m1in //=.
+move => [i] [#] iin ieq.
+exists i (oget Red_Ltk.Red_O.b_inst{1}.[b{2}]).
+do split; 1..6: smt(loggK expgK expM).
+admit. admit.
 
 move => b0 j0.
 case ((b0, j0) = (b, j){2}) => bjeq; 2: by smt(get_setE mem_set).
 rewrite mem_set get_setE bjeq //=.
-admit. (* I also need to extract partner instance here *)
+move : fresh.
+rewrite !negb_or negb_and //=.
+move => [#] 2?.
+rewrite /fresh_partner_s => p.
+have : (card (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) <> 0) by smt().
+rewrite fcard_eq0 => /mem_pick /mem_fdom.
+rewrite mem_filter /=.
+move => [H1 [#] [m] H2 H3 H4 H5].
+exists (pick (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1})).
+split; 1: smt().
+have<-: get_trace
+      (oget
+         Red_Ltk.Red_O.c_smap{1}.[pick (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1})]) = get_trace
+      (oget
+         Game4Ltk.c_smap{2}.[pick (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1})]).
++ move : inv7. clear. smt().
+smt().
 
-
-    auto => /> &1 &2 49? inv ? inv2 inv3 *. split. 
-admit. 
-move => *. do split; ~1,5..7,10: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+    auto => /> &1 &2 28? inv4 ? inv7 4? inv8 8? inv10 5? inv9 inv ? inv2 inv3 ? inv6 ? inv5 6? fresh nltk *. split. smt().
+move => *. do split; ~1,3,7,8,11,13: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
 have->: (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) = (get_fresh_partners_s t'{2} Game4Ltk.c_smap{2}).
 rewrite /get_fresh_partners_s.
       have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
@@ -8233,7 +8314,7 @@ rewrite /get_fresh_partners_s.
         admit. (* too much in context *)
       smt().
 smt().
-smt(get_setE).
+move : inv4 nltk. clear. smt().
 + move => // i0 i'.
         case (i0 = (b, j){2}) => ieq.
         + rewrite ieq get_set_sameE //=.
@@ -8246,7 +8327,7 @@ smt(get_setE).
       rewrite i'eq get_set_sameE //=.
       rewrite get_set_neqE //=.
       move => m1 m2 tag m1' tag'.
-      have := inv2 (b,j){2} i0 m1 m2 tag m1' tag'.
+      have := inv2 i0 (b,j){2} m1 m2 tag m1' tag'.
       smt(). 
       move => x0 y0 b0 x1eq x2eq x3eq x4eq x5eq.
       right.
@@ -8260,10 +8341,88 @@ smt(get_setE).
       have->: g ^ oget st'{2}.`2 = (oget t'{2}.`2).`1 by smt().
       smt(get_setE mem_set).
 
-admit. (* I need to get the index from my partner first
-exists (oget Red_Ltk.Red_O.i_inst{1}.[]) (oget Red_Ltk.Red_O.b_inst{1}.[(b, j){2}]).
-do split; 1..7: smt().
-admit. (* connect with freshness condition as in corruption *)*)
+
+move : fresh.
+rewrite !negb_or negb_and nltk //= => [#] nses.
+rewrite /fresh_partner_s => fp.
+have : card (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) <> 0 by smt().
+move => ps.
+have : card (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) = 1.
++ 
+
+
+rewrite fcard_eq1.
+
+move => [a] aeq.
+have : a \in get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1} by smt(in_fset1).
+rewrite /get_fresh_partners_s mem_fdom mem_filter //=.
+move => [#] H1 [m] H2 H3 H4 H5.
+have : t'{1}.`1.`2 \in Game4Ltk.m1_set{2}.
+        + have := inv9 a t'{1}.`1 m.
+          have->: Game4Ltk.c_smap{2}.[a] <> None by smt().
+          have->:  get_trace (oget Game4Ltk.c_smap{2}.[a]) = get_trace (oget Red_Ltk.Red_O.c_smap{1}.[a]).
+          + move : inv7. clear. smt().
+          smt().
+move => m1in.
+have := inv8 t'{1}.`1.`2.
+rewrite m1in //=.
+move => [i] [#] iin ieq.
+exists i (oget Red_Ltk.Red_O.b_inst{1}.[b{2}]).
+do split; 1..6: smt(loggK expgK expM).
+admit. 
+have := inv10 b{2}. 
+have->: b{2} \in Game4Ltk.servers{2} by smt().
+have->: b{2} \in Red_Ltk.Red_O.b_inst{1} by smt().
+have->: oget Red_Ltk.Red_O.b_inst{1}.[b{2}] \in St_CDH_O.y_map{1} by smt().
+have<-: b{2} = g ^ oget St_CDH_O.y_map{1}.[oget Red_Ltk.Red_O.b_inst{1}.[b{2}]] by smt().
+have->: get_sr_ltk (oget Game4Ltk.servers{2}.[b{2}]) = get_sr_ltk (oget Red_Ltk.Red_O.servers{1}.[b{2}]).
++ move : inv4. clear. smt().
+smt().
+
+
+move => b0 j0.
+case ((b0, j0) = (b, j){2}) => bjeq; 2: by smt(get_setE mem_set).
+rewrite mem_set get_setE bjeq //=.
+move : fresh.
+rewrite !negb_or negb_and //=.
+move => [#] 2?.
+rewrite /fresh_partner_s => p.
+have : (card (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) <> 0) by smt().
+rewrite fcard_eq0 => /mem_pick /mem_fdom.
+rewrite mem_filter /=.
+move => [H1 [#] [m] H2 H3 H4 H5].
+exists (pick (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1})).
+split; 1: smt().
+have<-: get_trace
+      (oget
+         Red_Ltk.Red_O.c_smap{1}.[pick (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1})]) = get_trace
+      (oget
+         Game4Ltk.c_smap{2}.[pick (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1})]).
++ move : inv7. clear. smt().
+smt().
+
+auto => /> &1 &2 27? inv 36? ltk *. split.
+have->: (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) = (get_fresh_partners_s t'{2} Game4Ltk.c_smap{2}).
+rewrite /get_fresh_partners_s. 
+      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
+                  (exists (m2o : (pkey * tag) option),
+                     get_trace val = Some (t'{1}.`1, m2o)) /\
+                  get_ir_test val = false /\
+                  get_ir_sess val = false /\ get_ir_eph val = false) Red_Ltk.Red_O.c_smap{1})) = (fdom
+            (filter (fun (_ : int) (val : pr_st_client instance_state) =>
+                  (exists (m2o : (pkey * tag) option),
+                     get_trace val = Some (t'{2}.`1, m2o)) /\
+                  get_ir_test val = false /\
+                  get_ir_sess val = false /\ get_ir_eph val = false) Game4Ltk.c_smap{2})). 
+      + rewrite fsetP.
+        move => x.
+        do rewrite mem_fdom mem_filter.
+        admit. (* too much in context *)
+      smt().
+smt().
+smt().
+
+auto => />.
 
   match Aborted_mod {2} ^match. auto => /#.
   auto => />.
@@ -8272,18 +8431,28 @@ admit. (* connect with freshness condition as in corruption *)*)
   sp; if => //; match => //. 
   match => //.
   if => //; if => //.
-  + auto => />. by rewrite dkey_ll.
-  sp; seq 1 : (#pre); try by auto.
-  + auto => />. by rewrite dkey_ll.
-  + auto => />. by rewrite dkey_ll.
-  hoare. 
-  by auto => />.
+  + sp; if => //.
+    + auto => />. by rewrite dkey_ll.
+    auto => />.
+  sp; if => //. 
+  + sp 1; seq 1 : (#pre); try by auto => />.
+    + auto => />. by rewrite dkey_ll.
+    + auto => />. by rewrite dkey_ll.
+    hoare. 
+    by auto => />.
+  auto => />.
 - move => &1; proc; inline.
   sp; if => //.
   sp; if => //.
   sp; match => //. 
   match; auto => />.
-  by if => //; if => //; auto => />; rewrite dkey_ll.
+  if => //; if => //. 
+  + sp; if => //. 
+    + by auto => />; rewrite dkey_ll.
+    auto => //.
+  sp; if => //.
+  + by auto => />; rewrite dkey_ll.
+  auto => //.
 qed.
 
 
