@@ -6915,7 +6915,7 @@ smt(get_setE mem_set).
   by auto => />.
 
 (* rev_ltkey *)
-+ proc; inline. admit. (*
++ proc; inline.
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -7130,10 +7130,10 @@ smt().
   + move : testp.
     have->: get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]) = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]))) by smt(some_oget).
     apply (testp_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[(b{2}, j0)]))) Red_Ltk.Red_O.c_smap{1}).
-  admit.
+  smt().
 if => //.
 rcondt {1} ^if. auto => /#.
-    auto => /> &1 &2 50? inv inv2 9? fresh npp nltkt *. do split; ~1,25: smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
+    auto => /> &1 &2 26? inv4 21? inv3 ? inv inv2 inv5 8? fresh npp nltkt *. do split; ~1,25: smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
 have : b{2} = g ^ sk{2}. smt(loggK expgK expM).
 smt(pow_bij).
 move => x xeq.
@@ -7172,7 +7172,47 @@ have := nltkt j1.
 rewrite bjin negb_and //=.
 right.
 rewrite /untested_partner_s.
-admit.
+have->: (1 <= card (get_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})). 
++ have : (i2 \in (get_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})).
+  + rewrite /get_partners_s.
+    rewrite mem_fdom mem_filter.
+    split. smt().
+    simplify.
+    rewrite treq.
+    smt(some_oget).
+  smt(@FSet).
+case (1 <= card (get_untested_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})); 2: smt().
+have->: (card (get_untested_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1}) = 0); 2: by done. 
+rewrite fcard_eq0 in_eq_fset0 //=.
+move => x0.
+rewrite mem_fdom mem_filter !negb_and.
+case (x0 \in Red_Ltk.Red_O.c_smap{1}) => xin; 2: by smt().
+case (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]) = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1])))); 2: by smt().
+have->: Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) = (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1])).
++ rewrite -some_oget //=.
+  smt().
+move => tr2eq.
+simplify.
+have := inv3 i2 x0 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`1 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`1.`1
+          (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`2 
+          (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`2.
+move : inv4 inv5 i2in i2test xin treq tr2eq.
+clear. move => 3? tested 3?.
+have->: (Game4Ltk.c_smap{2}.[i2] <> None /\
+ get_trace (oget Game4Ltk.c_smap{2}.[i2]) =
+ Some
+   (((oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`1,
+     (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2),
+    (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`2)) by smt(some_oget).
+have->: Game4Ltk.c_smap{2}.[x0] <> None /\
+ get_trace (oget Game4Ltk.c_smap{2}.[x0]) =
+ Some
+   (((oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`1.`1,
+     (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2),
+    (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`2) by smt(some_oget).
+simplify.
+move => />.
+smt().
 
 have : x.`3 = i2.`1 by smt().
 case : (b{2} = i2.`1).
@@ -7187,7 +7227,7 @@ smt().
   + match Corrupt_mod {2} ^match. auto => /#.
     auto => />.
   match Dishonest_mod {2} ^match. auto => /#.
-  auto => />. *)
+  auto => />.
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; match => //. 
