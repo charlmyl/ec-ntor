@@ -864,7 +864,8 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
               /\ (forall i st pt ir, i \in Hon_Red.O_GAKE.dhc_smap{2} => Hon_Red.O_GAKE.dhc_smap{2}.[i{2}] = Some (Pending st pt ir)
                    => (1 <= card (get_origins_c (pt, None) GAKEc.GAKEb_hon.s_smap{2}) = false))
               /\ (forall i st t k ir, i \in Hon_Red.O_GAKE.dhc_smap{2} => Hon_Red.O_GAKE.dhc_smap{2}.[i] = Some (Accepted st t k ir)
-                   => (1 <= card (get_partners_c t GAKEc.GAKEb_hon.s_smap{2})) = false)).
+                   => (1 <= card (get_origins_c t GAKEc.GAKEb_hon.s_smap{2}) = false)
+                          /\ (1 <= card (get_partners_c t GAKEc.GAKEb_hon.s_smap{2})) = false)).
 
 + sim />.
 
@@ -974,12 +975,13 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
       by smt(get_setE mem_set in_fsetU in_fset1).   
     move => i1 st0 t k0 ir0 iin ipen.
     rewrite get_setE //=.
-    rewrite /get_partners_c.
-    rewrite filter_set.
-    rewrite rem_id. 
-    rewrite mem_filter negb_and. smt().
+    rewrite /get_partners_c /get_origins_c.
+    rewrite !filter_set.
+    rewrite !rem_id. 
+    + rewrite !mem_filter !negb_and. smt().
+    + rewrite !mem_filter !negb_and. smt().
     have := inv3 i1 st0 t k0 ir0 iin ipen.
-    rewrite /get_partners_c. 
+    rewrite /get_partners_c /get_origins_c. 
     by smt(get_setE mem_set in_fsetU in_fset1).
   auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 1..4: smt(get_setE mem_set in_fsetU in_fset1).
   + move => i1 st0 pt ir0 m3 iin ipen.
@@ -999,12 +1001,13 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
     rewrite /get_origins_c. 
     by smt(get_setE mem_set in_fsetU in_fset1). 
   move => i1 st0 t k0 ir0 iin ipen.
-  rewrite /get_partners_c.
-  rewrite filter_set.
-  rewrite rem_id. 
-  rewrite mem_filter negb_and. smt().
+  rewrite /get_partners_c /get_origins_c.
+  rewrite !filter_set.
+  rewrite !rem_id. 
+  + rewrite !mem_filter !negb_and. smt().
+  + rewrite !mem_filter !negb_and. smt().
   have := inv3 i1 st0 t k0 ir0 iin ipen.
-  rewrite /get_partners_c. 
+  rewrite /get_partners_c /get_origins_c. 
   by smt(get_setE mem_set in_fsetU in_fset1).
 
 + proc; inline.
@@ -1017,16 +1020,16 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
       sp; seq 1 1 : (#pre /\ r1{1} = r3{2}). auto => />.
       if. auto => />.
       + sp 2 2; if => //. auto => /#.
-        + auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
+        + auto => /> &1 &2 *. do split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
           rewrite -fmap_eqP. have->: sk{1} = sk{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
-        auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
+        auto => /> &1 &2 *. do split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
         rewrite -fmap_eqP. smt(joinE get_setE).
       sp 1 1; if => //. auto => /#.
-      + auto => /> &1 &2 rol ror *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
+      + auto => /> &1 &2 rol ror *. do split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
         rewrite -fmap_eqP. 
         have->: sk{1} = sk{2}. have : (t_A0{2}, sk{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
         by smt(joinE get_setE).
-      auto => /> &1 &2 *. do !split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
+      auto => /> &1 &2 *. do split; 2..4: smt(get_setE mem_set in_fsetU in_fset1).  
       rewrite -fmap_eqP. smt(joinE get_setE).
     + move => s t k ir.
       auto => />.
@@ -1040,16 +1043,25 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
   if => //.
   + sp 2 2; if => //. auto => /#.
     + match Some {1} ^match. auto => /#.
-      auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
-      rewrite -fmap_eqP. have->: sk{1} = k{2}. smt(get_setE mem_set in_fsetU in_fset1). smt(joinE get_setE).
-    auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1). 
+      auto => /> &1 &2 5? stc 11? inv ? iin *. do split; 2..8: smt(get_setE mem_set in_fsetU1).  
+      + rewrite -fmap_eqP. have->: sk{1} = k{2}. smt(get_setE mem_set in_fsetU1). smt(joinE get_setE).
+      move => i1 st0 t k1 ir0.
+      case (i1 = i{2}) => ieq; 2: by smt(get_setE mem_set).
+      rewrite get_setE mem_set ieq //=.
+      rewrite /get_partners_c /get_origins_c.
+      move => />.
+      have := inv i{2} (b{2}, pk_b{2}, sk_ce{2}) pt ir0 iin stc.
+      rewrite /get_origins_c //= => [#] H.
+      split. by rewrite H. admit. 
+    auto => /> &1 &2 *. do split; 2..9: smt(get_setE mem_set in_fsetU1). 
     rewrite -fmap_eqP. smt(joinE get_setE).
   sp 1 1; if => //. auto => /#.
   + match Some {1} ^match. auto => /#.
-    auto => /> &1 &2 rol ror *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
+    auto => /> &1 &2 rol ror *. do split; 2..8: smt(get_setE mem_set in_fsetU in_fset1).  
     rewrite -fmap_eqP. 
     have->: sk{1} = k{2}. have : (t_A{2}, k{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
     by smt(joinE get_setE).
+    admit.
   auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
   rewrite -fmap_eqP. smt(joinE get_setE).
 
@@ -1090,7 +1102,8 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
       + auto => /> &1 &2 *. 
         rewrite /untested_partner_s.
         rewrite /get_partners_s /get_untested_partners_s.
-        have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => get_trace val = Some t) (GAKEb_hon.c_smap{1} + Hon_Red.O_GAKE.dhc_smap{1}))) 
+        have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) 
+                 => get_trace val = Some t) (GAKEb_hon.c_smap{1} + Hon_Red.O_GAKE.dhc_smap{1}))) 
             = (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => get_trace val = Some t) GAKEb_hon.c_smap{1})).
         + rewrite fsetP.
           move => x.
@@ -1122,12 +1135,13 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
           rewrite /get_origins_c. 
           by smt(get_setE mem_set in_fsetU in_fset1).
         move => i1 st0 t0 k0 ir0 iin ipen.
-        rewrite /get_partners_c.
-        rewrite filter_set.
-        rewrite rem_id. 
-        rewrite mem_filter negb_and. smt().
+        rewrite /get_partners_c /get_origins_c.
+        rewrite !filter_set.
+        rewrite !rem_id. 
+        + rewrite !mem_filter !negb_and. smt().
+        + rewrite !mem_filter !negb_and. smt().
         have := inv3 i1 st0 t0 k0 ir0 iin ipen.
-        rewrite /get_partners_c. 
+        rewrite /get_partners_c /get_origins_c. 
         by smt(get_setE mem_set in_fsetU in_fset1).
       auto => />.
     auto => />.
@@ -1210,7 +1224,9 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
   move => s t k ir.
   if => //.
   + auto => /> &1 &2 *.
-    have->: untested_partner_c t GAKEb_hon.s_smap{1} = None by rewrite /untested_partner_c; smt().
+    split; 2: smt(joinE).
+    have->: tested_origins_c t GAKEb_hon.s_smap{1} = None.
+    + rewrite /tested_origins_c. smt(joinE).
     by smt().
   auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
   rewrite -fmap_eqP. smt(joinE get_setE). 
@@ -1227,7 +1243,8 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
       + auto => /> &1 &2 *. 
         rewrite /untested_partner_s.
         rewrite /get_partners_s /get_untested_partners_s.
-        have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => get_trace val = Some t) (GAKEb_hon.c_smap{1} + Hon_Red.O_GAKE.dhc_smap{1}))) 
+        have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) 
+                   => get_trace val = Some t) (GAKEb_hon.c_smap{1} + Hon_Red.O_GAKE.dhc_smap{1}))) 
           = (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => get_trace val = Some t) GAKEb_hon.c_smap{1})).
         + rewrite fsetP.
           move => x.
@@ -1259,12 +1276,13 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
           rewrite /get_origins_c. 
           by smt(get_setE mem_set in_fsetU in_fset1).
         move => i1 st0 t0 k0 ir0 iin ipen.
-        rewrite /get_partners_c.
-        rewrite filter_set.
-        rewrite rem_id. 
-        rewrite mem_filter negb_and. smt().
+        rewrite /get_partners_c /get_origins_c.
+        rewrite !filter_set.
+        rewrite !rem_id. 
+        + rewrite !mem_filter !negb_and. smt().
+        + rewrite !mem_filter !negb_and. smt().
         have := inv3 i1 st0 t0 k0 ir0 iin ipen.
-        rewrite /get_partners_c. 
+        rewrite /get_partners_c /get_origins_c. 
         by smt(get_setE mem_set in_fsetU in_fset1).
       auto => />.
     auto => />.
@@ -1310,16 +1328,17 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
           rewrite /get_origins_s /get_fresh_partners_s.
           have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
                exists (m2o : (pkey * tag) option), get_trace val = Some (t.`1, m2o)) (GAKEb_hon.c_smap{1} + Hon_Red.O_GAKE.dhc_smap{1}))) = (fdom
-               (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => exists (m2o : (pkey * tag) option), get_trace val = Some (t.`1, m2o)) GAKEb_hon.c_smap{1})).
+               (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => exists (m2o : (pkey * tag) option), get_trace val 
+               = Some (t.`1, m2o)) GAKEb_hon.c_smap{1})).
           + rewrite fsetP.
             move => x.
             do rewrite mem_fdom mem_filter.
             by smt(joinE).
           have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
-                  (exists (m2o : (pkey * tag) option), get_trace val = Some (t.`1, m2o)) /\ get_ir_test val = false /\ get_ir_sess val = false /\ get_ir_eph val = false)
+                  (exists (m2o : (pkey * tag) option), get_trace val = Some (t.`1, m2o)) /\ get_ir_test val = false /\ get_ir_sess val 
+                    = false /\ get_ir_eph val = false)
                (GAKEb_hon.c_smap{1} + Hon_Red.O_GAKE.dhc_smap{1}))) = (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
-                  (exists (m2o : (pkey * tag) option), get_trace val = Some (t.`1, m2o)) /\ get_ir_test val = false /\ get_ir_sess val = false /\ get_ir_eph val = false)
-               GAKEb_hon.c_smap{1})). 
+                  (exists (m2o : (pkey * tag) option), get_trace val = Some (t.`1, m2o)) /\ get_ir_test val = false /\ get_ir_sess val                                             = false /\ get_ir_eph val = false) GAKEb_hon.c_smap{1})). 
           + rewrite fsetP.
             move => x.
             do rewrite mem_fdom mem_filter.
@@ -1349,12 +1368,13 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
               rewrite /get_origins_c. 
               by smt(get_setE mem_set in_fsetU in_fset1).
             move => i1 st0 t0 k0 ir0 iin ipen.
-            rewrite /get_partners_c.
-            rewrite filter_set.
-            rewrite rem_id. 
-            rewrite mem_filter negb_and. smt().
+            rewrite /get_partners_c /get_origins_c.
+            rewrite !filter_set.
+            rewrite !rem_id. 
+            + rewrite !mem_filter !negb_and. smt().
+            + rewrite !mem_filter !negb_and. smt().
             have := inv3 i1 st0 t0 k0 ir0 iin ipen.
-            rewrite /get_partners_c. 
+            rewrite /get_partners_c /get_origins_c. 
             by smt(get_setE mem_set in_fsetU in_fset1).
           auto => /> &1 &2 ? ? ? ? ? ? ? ? ? ? ? inv inv2 inv3 *. do !split; 2..5: smt(get_setE mem_set in_fsetU in_fset1).
           + congr. rewrite /get_fresh_partners_s.
@@ -1379,13 +1399,14 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
             rewrite /get_origins_c. 
             by smt(get_setE mem_set in_fsetU in_fset1).
           move => i1 st0 t0 k0 ir0 iin ipen.
-          rewrite /get_partners_c.
-          rewrite filter_set.
-          rewrite rem_id. 
-          rewrite mem_filter negb_and. smt().
-          have := inv3 i1 st0 t0 k0 ir0 iin ipen.
-          rewrite /get_partners_c. 
-          by smt(get_setE mem_set in_fsetU in_fset1).
+          rewrite /get_partners_c /get_origins_c.
+        rewrite !filter_set.
+        rewrite !rem_id. 
+        + rewrite !mem_filter !negb_and. smt().
+        + rewrite !mem_filter !negb_and. smt().
+        have := inv3 i1 st0 t0 k0 ir0 iin ipen.
+        rewrite /get_partners_c /get_origins_c. 
+        by smt(get_setE mem_set in_fsetU in_fset1).
         auto => />.
       move => pr t ir.
       auto => />.
@@ -2399,185 +2420,172 @@ smt().
     match {1} => //.
     + match Pending_mod {2} ^match. auto => /#.
       if => //.
-      + auto => /> &1 &2 25? inv inv2 *. rewrite /untested_origins_c. 
-have<-: (card (get_origins_c (pk_e{1}, None) GAKEb_st.s_smap{1}) = card (get_origins_c (pk_e{2}, None) GAKE_mod.GAKEb_nodhs.s_smap{2})).
-rewrite /get_origins_c. 
-rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
-move => x y.
-rewrite !mem_fdom !mem_filter //=.
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-congr.
-rewrite fsetP.
-move => x.
-rewrite imageP //=.
-rewrite !mem_fdom !mem_filter //=.
-split. 
-move => [a] [].
-rewrite !mem_fdom !mem_filter //=.
-move => [] ain [m2o] tra xeq.
-split. smt(get_setE).
-have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
-have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq pteq ireq.
-rewrite pteq.
-have v := inv a pk_e{1}.`2 m2o ain.
-exists m2o.
-rewrite v; smt().
-
-have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq pteq ireq.
-rewrite pteq.
-move => [] xin [m2o] tra. 
-
-exists (pk_e{1}.`1, x.`2).
-rewrite mem_fdom mem_filter //=.
-have : st{1}.`2 = x.`1. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-move => x1eq.
-split. split.
-have : pk_e{1}.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
-smt(get_setE mem_set).
-have v := inv2 pk_e{1}.`1 x.`2 st{1}.`2 pk_e{1}.`2 m2o.
-rewrite v; smt().
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-
-have<-: (card (get_untested_origins_c (pk_e{1}, None) GAKEb_st.s_smap{1}) = card (get_untested_origins_c (pk_e{2}, None) GAKE_mod.GAKEb_nodhs.s_smap{2})).
-rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
-move => x y.
-rewrite !mem_fdom !mem_filter //=.
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-congr.
-rewrite fsetP.
-move => x.
-rewrite imageP //=.
-rewrite !mem_fdom !mem_filter //=.
-split. 
-move => [a] [].
-rewrite !mem_fdom !mem_filter //=.
-move => [] ain [] [m2o] tra ant xeq.
-split. smt(get_setE).
-have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
-have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq pteq ireq.
-rewrite pteq.
-have v := inv a pk_e{1}.`2 m2o ain.
-split; 2: by smt().
-exists m2o.
-rewrite v; smt().
-
-have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq pteq ireq.
-rewrite pteq.
-move => [] xin [] [m2o] trx xnt. 
-
-exists (pk_e{1}.`1, x.`2).
-rewrite mem_fdom mem_filter //=.
-have : st{1}.`2 = x.`1. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-move => x1eq.
-split. split.
-have : pk_e{1}.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
-smt(get_setE mem_set).
-have v := inv2 pk_e{1}.`1 x.`2 st{1}.`2 pk_e{1}.`2 m2o.
-rewrite v; smt().
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-smt().
+      + auto => /> &1 &2 25? inv inv2 *. 
+        rewrite /tested_origins_c.
+        have<-: (card (get_origins_c (pk_e{1}, None) GAKEb_st.s_smap{1}) = card (get_origins_c (pk_e{2}, None) GAKE_mod.GAKEb_nodhs.s_smap{2})).
+        + rewrite /get_origins_c. 
+          rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
+          + move => x y.
+            rewrite !mem_fdom !mem_filter //=.
+            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          congr.
+          rewrite fsetP.
+          move => x.
+          rewrite imageP //=.
+          rewrite !mem_fdom !mem_filter //=.
+          split. 
+          + move => [a] [].
+            rewrite !mem_fdom !mem_filter //=.
+            move => [] ain [m2o] tra xeq.
+            split. smt(get_setE).
+            have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
+            have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
+            rewrite /rem_sid_c //=.
+            move => [#] steq pteq ireq.
+            rewrite pteq.
+            have v := inv a pk_e{1}.`2 m2o ain.
+            exists m2o.
+            rewrite v; smt().          
+          have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
+          rewrite /rem_sid_c //=.
+          move => [#] steq pteq ireq.
+          rewrite pteq.
+          move => [] xin [m2o] tra.
+          exists (pk_e{1}.`1, x.`2).
+          rewrite mem_fdom mem_filter //=.
+          have : st{1}.`2 = x.`1. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          move => x1eq.
+          split. split.
+          + have : pk_e{1}.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
+          + smt(get_setE mem_set).
+          + have v := inv2 pk_e{1}.`1 x.`2 st{1}.`2 pk_e{1}.`2 m2o.
+            rewrite v; smt().
+          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+        have<-: (card (get_tested_origins_c (pk_e{1}, None) GAKEb_st.s_smap{1}) = card (get_tested_origins_c (pk_e{2}, None) GAKE_mod.GAKEb_nodhs.s_smap{2})).
+        + rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
+          + move => x y.
+            rewrite !mem_fdom !mem_filter //=.
+            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          congr.
+          rewrite fsetP.
+          move => x.
+          rewrite imageP //=.
+          rewrite !mem_fdom !mem_filter //=.
+          split. 
+          + move => [a] [].
+            rewrite !mem_fdom !mem_filter //=.
+            move => [] ain [] [m2o] tra ant xeq.
+            split. smt(get_setE).
+            have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
+            have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
+            rewrite /rem_sid_c //=.
+            move => [#] steq pteq ireq.
+            rewrite pteq.
+            have v := inv a pk_e{1}.`2 m2o ain.
+            split; 2: by smt().
+            exists m2o.
+            rewrite v; smt().          
+          have : (Pending_mod st{2} pk_e{2} ir{2}) = rem_sid_c (Pending st{1} pk_e{1} ir{1}). smt().
+          rewrite /rem_sid_c //=.
+          move => [#] steq pteq ireq.
+          rewrite pteq.
+          move => [] xin [] [m2o] trx xnt. 
+          exists (pk_e{1}.`1, x.`2).
+          rewrite mem_fdom mem_filter //=.
+          have : st{1}.`2 = x.`1. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          move => x1eq.
+          split. split.
+          + have : pk_e{1}.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
+          + smt(get_setE mem_set).
+          + have v := inv2 pk_e{1}.`1 x.`2 st{1}.`2 pk_e{1}.`2 m2o.
+            rewrite v; smt().
+          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+        smt().
       + auto => /> &1 &2 *. smt(get_setE mem_set).
       auto => />.
     + match Accepted_mod {2} ^match. auto => /#.
       if => //.
-      + auto => /> &1 &2 25? inv inv2 *. rewrite /untested_partner_c. 
-have<-: (card (get_partners_c t{1} GAKEb_st.s_smap{1}) = card (get_partners_c t{2} GAKE_mod.GAKEb_nodhs.s_smap{2})).
-rewrite /get_partners_c.
-rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
-move => x y.
-rewrite !mem_fdom !mem_filter //=.
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-congr.
-rewrite fsetP.
-move => x.
-print imageP.
-rewrite imageP //=.
-rewrite !mem_fdom !mem_filter //=.
-split. 
-move => [a] [].
-rewrite !mem_fdom !mem_filter //=.
-move => [] ain tra ax.
-split.
-smt(get_setE mem_set).
-have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
-have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq teq keq ireq.
-rewrite teq.
-have v := inv a t{1}.`1.`2 t{1}.`2 ain.
-rewrite v.
-rewrite tra.
-smt().
-smt().
-
-have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq teq keq ireq.
-rewrite teq.
-move => [] xin trx.
-exists (t{1}.`1.`1, x.`2).
-rewrite mem_fdom mem_filter //=.
-have : st{1}.`2 = x.`1. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-move => x1eq.
-split. split.
-have : t{1}.`1.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
-smt(get_setE mem_set).
-have v := inv2 t{1}.`1.`1 x.`2 st{1}.`2 t{1}.`1.`2 t{1}.`2.
-rewrite v; smt().
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-
-have<-: (card (get_untested_partners_c t{1} GAKEb_st.s_smap{1}) = card (get_untested_partners_c t{2} GAKE_mod.GAKEb_nodhs.s_smap{2})).
-rewrite /get_untested_partners_c.
-rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
-move => x y.
-rewrite !mem_fdom !mem_filter //=.
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-congr.
-rewrite fsetP.
-move => x.
-print imageP.
-rewrite imageP //=.
-rewrite !mem_fdom !mem_filter //=.
-split. 
-move => [a] [].
-rewrite !mem_fdom !mem_filter //=.
-move => [] ain tra ax.
-split.
-smt(get_setE mem_set).
-have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
-have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq teq keq ireq.
-rewrite teq.
-have v := inv a t{1}.`1.`2 t{1}.`2 ain.
-rewrite v.
-rewrite tra.
-smt().
-smt().
-
-have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}). smt().
-rewrite /rem_sid_c //=.
-move => [#] steq teq keq ireq.
-rewrite teq.
-move => [] xin trx.
-exists (t{1}.`1.`1, x.`2).
-rewrite mem_fdom mem_filter //=.
-split. split.
-have : t{1}.`1.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
-smt(get_setE mem_set).
-have v := inv2 t{1}.`1.`1 x.`2 st{1}.`2 t{1}.`1.`2 t{1}.`2.
-rewrite v; smt().
-smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-smt().
-
+      + auto => /> &1 &2 25? inv inv2 *. 
+        rewrite /tested_origins_c.
+        have<-: (card (get_origins_c t{1} GAKEb_st.s_smap{1}) = card (get_origins_c t{2} GAKE_mod.GAKEb_nodhs.s_smap{2})).
+        + rewrite /get_origins_c.
+          rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
+          + move => x y.
+            rewrite !mem_fdom !mem_filter //=.
+            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          congr.
+          rewrite fsetP.
+          move => x.
+          print imageP.
+          rewrite imageP //=.
+          rewrite !mem_fdom !mem_filter //=.
+          split.
+          + move => [a] [].
+            rewrite !mem_fdom !mem_filter //=.
+            move => [] ain [m2o] tra xeq.
+            split; 1: smt(get_setE mem_set).
+            have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]) by smt().
+            have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}) by smt().
+            rewrite /rem_sid_c //=.
+            move => [#] steq teq keq ireq.
+            rewrite teq.
+            have v := inv a t{1}.`1.`2 m2o ain.
+            exists m2o.
+            rewrite v; smt().
+          have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}) by smt().
+          rewrite /rem_sid_c //=.
+          move => [#] steq teq keq ireq.
+          rewrite teq.
+          move => [] xin [m2o] tra.
+          exists (t{1}.`1.`1, x.`2).
+          rewrite mem_fdom mem_filter //=.
+          have : st{1}.`2 = x.`1; 1: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          move => x1eq.
+          split. split.
+          + have : t{1}.`1.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
+          + smt(get_setE mem_set).
+          + have v := inv2 t{1}.`1.`1 x.`2 st{1}.`2 t{1}.`1.`2 m2o.
+            rewrite v; smt().
+          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+        have<-: (card (get_tested_origins_c t{1} GAKEb_st.s_smap{1}) = card (get_tested_origins_c t{2} GAKE_mod.GAKEb_nodhs.s_smap{2})).
+        + rewrite /get_tested_origins_c.
+          rewrite -(inj_fcard_image_pw (fun (bj : s_id * int) => (oget Name_Red.O_GAKE.sid_pk{2}.[bj.`1], bj.`2))).
+          + move => x y.
+            rewrite !mem_fdom !mem_filter //=.
+            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          congr.
+          rewrite fsetP.
+          move => x.
+          rewrite imageP //=.
+          rewrite !mem_fdom !mem_filter //=.
+          split. 
+          + move => [a] [].
+            rewrite !mem_fdom !mem_filter //=.
+            move => [] ain [] [m2o] tra ant xeq.
+            split; 1: smt(get_setE mem_set).
+            have->: oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[x] = rem_sid_s (oget GAKEb_st.s_smap{1}.[a]). smt().
+            have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}). smt().
+            rewrite /rem_sid_c //=.
+            move => [#] steq teq keq ireq.
+            rewrite teq.
+            have v := inv a t{1}.`1.`2 m2o ain.
+            split; 2: by smt().
+            exists m2o.
+            rewrite v; smt().     
+          have : (Accepted_mod st{2} t{2} k{2} ir{2}) = rem_sid_c (Accepted st{1} t{1} k{1} ir{1}). smt().
+          rewrite /rem_sid_c //=.
+          move => [#] steq teq keq ireq.
+          rewrite teq.
+          move => [] xin [] [m2o] trx xnt. 
+          exists (t{1}.`1.`1, x.`2).
+          rewrite mem_fdom mem_filter //=.
+          split. split.
+          + have : t{1}.`1.`1 \in Name_Red.O_GAKE.sid_pk{2}. smt().
+          + smt(get_setE mem_set).
+          + have v := inv2 t{1}.`1.`1 x.`2 st{1}.`2 t{1}.`1.`2 m2o.
+            rewrite v; smt().
+          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+        smt().
       + auto => /> &1 &2 *. smt(get_setE mem_set).
       auto => />.
     match Aborted_mod {2} ^match. auto => /#.
