@@ -834,6 +834,12 @@ declare axiom A_ll (G <: GAKEc.GAKE{-A}):
   islossless G.s_test => 
   islossless A(G).run. 
  
+
+local lemma fset0_nin (s : 'a fset) x : s = fset0 => x \notin s.
+proof.
+move => ->.
+by rewrite in_fset0.
+qed.
  
 lemma gake_hon bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S, NTOR_C, GAKEc.HROc.RO), A).run(bit) @ &m : res] = Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_Red(A)).run(bit) @ &m : res].
 proof.
@@ -1052,16 +1058,72 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
       move => />.
       have := inv i{2} (b{2}, pk_b{2}, sk_ce{2}) pt ir0 iin stc.
       rewrite /get_origins_c //= => [#] H.
-      split. by rewrite H. admit. 
+      split. by rewrite H.
+      case (1 <=
+card
+  (fdom
+     (filter
+        (fun (_ : s_id * int)
+           (val : GAKEc.pr_st_server GAKEc.instance_state) =>
+           get_trace val = Some (pt, Some m3{2})) GAKEb_hon.s_smap{2}))) => p //=. 
+      have : card
+     (fdom
+        (filter
+           (fun (_ : s_id * int)
+              (val : GAKEc.pr_st_server GAKEc.instance_state) =>
+              get_trace val = Some (pt, Some m3{2})) GAKEb_hon.s_smap{2})) <> 0 by smt().
+      rewrite fcard_eq0 => /mem_pick /mem_fdom.
+      rewrite mem_filter.
+      have : card
+     (fdom
+        (filter
+           (fun (_ : s_id * int)
+              (val : GAKEc.pr_st_server GAKEc.instance_state) =>
+              exists (m2o : (pkey * tag) option),
+                get_trace val = Some (pt, m2o)) GAKEb_hon.s_smap{2})) = 0 by smt(fcard_ge0).
+      rewrite fcard_eq0 => /fset0_nin.
+      smt().
     auto => /> &1 &2 *. do split; 2..9: smt(get_setE mem_set in_fsetU1). 
     rewrite -fmap_eqP. smt(joinE get_setE).
   sp 1 1; if => //. auto => /#.
   + match Some {1} ^match. auto => /#.
-    auto => /> &1 &2 rol ror *. do split; 2..8: smt(get_setE mem_set in_fsetU in_fset1).  
+    auto => /> &1 &2 rol ror ? stc 11? inv ? iin *. do split; 2..8: smt(get_setE mem_set in_fsetU in_fset1).  
     rewrite -fmap_eqP. 
     have->: sk{1} = k{2}. have : (t_A{2}, k{2}) = (m3{2}.`2, sk{1}). rewrite ror rol. smt(). smt().
     by smt(joinE get_setE).
-    admit.
+
+      move => i1 st0 t k1 ir0.
+      case (i1 = i{2}) => ieq; 2: by smt(get_setE mem_set).
+      rewrite get_setE mem_set ieq //=.
+      rewrite /get_partners_c /get_origins_c.
+      move => />.
+      have := inv i{2} (b{2}, pk_b{2}, sk_ce{2}) pt ir0 iin stc.
+      rewrite /get_origins_c //= => [#] H.
+      split. by rewrite H.
+      case (1 <=
+card
+  (fdom
+     (filter
+        (fun (_ : s_id * int)
+           (val : GAKEc.pr_st_server GAKEc.instance_state) =>
+           get_trace val = Some (pt, Some m3{2})) GAKEb_hon.s_smap{2}))) => p //=. 
+      have : card
+     (fdom
+        (filter
+           (fun (_ : s_id * int)
+              (val : GAKEc.pr_st_server GAKEc.instance_state) =>
+              get_trace val = Some (pt, Some m3{2})) GAKEb_hon.s_smap{2})) <> 0 by smt().
+      rewrite fcard_eq0 => /mem_pick /mem_fdom.
+      rewrite mem_filter.
+      have : card
+     (fdom
+        (filter
+           (fun (_ : s_id * int)
+              (val : GAKEc.pr_st_server GAKEc.instance_state) =>
+              exists (m2o : (pkey * tag) option),
+                get_trace val = Some (pt, m2o)) GAKEb_hon.s_smap{2})) = 0 by smt(fcard_ge0).
+      rewrite fcard_eq0 => /fset0_nin.
+      smt().
   auto => /> &1 &2 *. do !split; 2..9: smt(get_setE mem_set in_fsetU in_fset1).  
   rewrite -fmap_eqP. smt(joinE get_setE).
 
