@@ -1,5 +1,5 @@
-require import AllCore FSet FMap Distr DProd List SplitRO.
- require (*  *) Birthday SplitRO StdBigop StdOrder Games.
+require import AllCore FSet FMap Distr DProd List SplitRO FelTactic Xreal.
+require (*  *) Birthday SplitRO StdBigop StdOrder Games Mu_mem.
 
 (*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder.
 
@@ -15,6 +15,7 @@ import NTOR_nosid_c NTORc GAKE_mod HRO_mod_c DH.G DH.GP DH.FD DH.GP.ZModE.
 op q_is : { int | 0 <= q_is } as ge0_q_is.
 op q_m1 : { int | 0 <= q_m1 } as ge0_q_m1.
 op q_m2 : { int | 0 <= q_m2 } as ge0_q_m2.
+op q_h  : { int | 0 <= q_h } as ge0_q_h.
 
 clone Birthday as BB with
   type T  <- skey,
@@ -23,13 +24,14 @@ clone Birthday as BB with
   proof *.
 realize ge0_q by smt(ge0_q_is ge0_q_m1 ge0_q_m2).
 
-module Counter (G : GAKE_nodhs) : GAKE_nodhs_i = {
-  var cis, cm1, cm2 : int
+module Counter (G : GAKE_nodhs_i) : GAKE_nodhs_i = {
+  var ch, cis, cm1, cm2 : int
 
-  include G[h, send_msg3, c_rev_skey, s_rev_skey, rev_ltkey, c_rev_ephkey, s_rev_ephkey, c_test, s_test]
+  include G[c_rev_skey, s_rev_skey, rev_ltkey, c_rev_ephkey, s_rev_ephkey, c_test, s_test]
 
   proc init_mem(b: bool) = {
-    (cis, cm1, cm2) <- (0, 0, 0);
+    (ch, cis, cm1, cm2) <- (0, 0, 0, 0);
+    G.init_mem(b);
   }
   
   proc init_s() = {
@@ -47,8 +49,21 @@ module Counter (G : GAKE_nodhs) : GAKE_nodhs_i = {
   proc send_msg2(x) = {
     var m;
     cm2 <- cm2 + 1;
+    ch <- ch + 1;
     m <@ G.send_msg2(x);
     return m;
+  }
+  proc send_msg3(x) = {
+    var m;
+    ch <- ch + 1;
+    m <@ G.send_msg3(x);
+    return m;
+  }
+  proc h(x) = {
+    var y;
+    ch <- ch + 1;
+    y <@ G.h(x);
+    return y;
   }
 }.
 
@@ -70,7 +85,6 @@ module (Red_Coll_real (A : A_GAKE_nodhs) : BB.Adv) (S : BB.ASampler) = {
   proc a() = {
     var b';
 
-    Red_Coll_O_AKE(S).init_mem(false);
     Counter(Red_Coll_O_AKE(S)).init_mem(false);
     b' <@ A(Counter(Red_Coll_O_AKE(S))).run();
   }
@@ -80,7 +94,6 @@ module (Red_Coll_ideal (A : A_GAKE_nodhs) : BB.Adv) (S : BB.ASampler) = {
   proc a() = {
     var b';
 
-    Red_Coll_O_AKE(S).init_mem(true);
     Counter(Red_Coll_O_AKE(S)).init_mem(true);
     b' <@ A(Counter(Red_Coll_O_AKE(S))).run();
   }
@@ -120,6 +133,7 @@ clone ROc.SplitCodom as ROSc with
   op sampleto1 _ <- dtag,
   op sampleto2 _ <- dkey
   proof *.
+realize ofpairK by rewrite /topair /ofpair.
 realize topairK by rewrite /topair /ofpair.
 realize sample_spec by rewrite /ofpair dprodC dmap_comp //=.
 
@@ -699,7 +713,8 @@ declare axiom A_ll (G <: GAKE_nodhs{-A}):
   islossless G.s_test =>
   islossless A(G).run.
 
-declare axiom A_bounded_qs: forall (G <: GAKE_nodhs{-A}), hoare[A(Counter(G)).run: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis <= q_is /\ Counter.cm1 <= q_m1 /\ Counter.cm2 <= q_m2].
+declare axiom A_bounded_qs: forall (G <: GAKE_nodhs_i{-A}), hoare[A(Counter(G)).run: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.ch = 0
+                                                                  ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h].
 
 
 
@@ -1257,7 +1272,216 @@ move => rl rr al bl b1l b2l csl hml kpl m1l m2l ssl sl tl xl yl ar br b1r b2r cs
 by case : (!b2r) => />. *)
 qed.
 
+(* Step2b: Bound the bad event *)
+lemma game2_bound b &m:
+        Pr[E_GAKE_nodhs(Game1, A).run(b) @ &m : Game1.bad2]
+        <= ((q_h + q_is + q_m1 + q_m2) * (q_h + q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r.
+proof.
+have ->: Pr[E_GAKE_nodhs(Game1, A).run(b) @ &m : Game1.bad2]
+       = Pr[E_GAKE_nodhs(Counter(Game1), A).run(b) @ &m : Game1.bad2].
++ byequiv => //.
+  proc.
+  call (: ={glob Game1}); ~13: proc; inline; sim />.
+  + by auto => />. 
+  + by auto => />. 
+  by auto => />. 
+have ->: Pr[E_GAKE_nodhs(Counter(Game1), A).run(b) @ &m : Game1.bad2]
+       = Pr[E_GAKE_nodhs(Counter(Game1), A).run(b) @ &m : Game1.bad2
+            /\ Counter.cis < q_is /\ Counter.cm1 < q_m1 
+            /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h].
++ byequiv => //.
+  proc.
+  conseq (: _ ==> ={bad2}(Game1, Game1)) _ (: _ ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h) => //.
+  + call (A_bounded_qs (Game1)).
+    by inline; auto.
+  by sim. 
+fel
+  1
+  (Counter.cm1 + Counter.cm2 + Counter.cis + Counter.ch)
+  (fun x => x%r / order%r)
+  (q_h + q_m1 + q_m2 + q_is)
+  Game1.bad2
+  [ Counter(Game1).h : false;
+    Counter(Game1).init_s : (!Game1.bad1);
+    Counter(Game1).send_msg1 : (!Game1.bad1 /\ arg.`2 \in Game1.servers /\ arg.`1 \notin Game1.c_smap);
+    Counter(Game1).send_msg2 : (!Game1.bad1 /\ (arg.`1, arg.`2) \notin Game1.s_smap
+                                /\ exists v, obind get_skey Game1.servers.[arg.`1] = Some v);
+    Counter(Game1).send_msg3 : false
+  ]
+  (card Game1.b_set <= Counter.ch /\ card Game1.x_set <= Counter.ch /\ card Game1.y_set <= Counter.ch
+   /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2 /\ 0 <= Counter.cis /\ 0 <= Counter.ch)
+.
++ rewrite -mulr_suml StdBigop.Bigreal.sumidE.
+  + smt(ge0_q_m1 ge0_q_m2 ge0_q_is ge0_q_h).
+  smt().
++ smt().
++ inline; auto.
+  smt(fcards0).
 
++ by exfalso.
++ move => c.
+  conseq />.
+  proc; inline.
+  auto.
++ move => b' c0.
+  proc; inline.
+  sp; if.
+  + auto => />.
+    smt(fcardU1).
+  auto.
+  smt(fcardU1).
+
++ proc; inline.
+  rcondt ^if; 1: by auto.
+  swap ^ <$ @ 1.
+  seq 1 : (g^sk \notin Game1.servers /\ g^sk \in Game1.b_set)
+    (mu dt (fun x => g^x \notin Game1.servers /\ g^x \in Game1.b_set))
+    1%r
+     _ 0%r
+    (!Game1.bad2).
+  + auto.
+  + rnd (fun x => g^x \notin Game1.servers /\ g^x \in Game1.b_set).
+    by auto => />.
+  + auto => />.
+  + hoare.
+    auto => />.
+    smt().
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem Game1.b_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \notin Game1.servers{hr} /\ y \in Game1.b_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  rcondt ^if; 1: by auto => />.
+  auto => />.
+  smt().
++ move => b' c.
+  proc; inline.
+  rcondf ^if; 1: by auto => />.
+  auto => />.
+  smt().
+
++ proc; inline.
+  rcondt ^if; 1: by auto.
+  rcondt ^if; 1: by auto.
+  match None ^match.
+  + auto => /#.
+  wp.
+  rnd (fun x => g ^ x \in Game1.x_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem Game1.x_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game1.x_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
+ 
++ move => c.
+  proc; inline.
+  rcondt ^if; 1: by auto.
+  rcondt ^if; 1: by auto.
+  match None ^match.
+  + auto => /#.
+  auto => />.
+  smt().
++ move => b' c.
+  proc; inline.
+  sp; if; last by auto => /#.
+  sp; if; last by auto => /#.
+  match Some ^match; 1: by auto => /> /#.
+  by auto => /#.
+
++ proc; inline.
+  rcondt ^if; 1: by auto.
+  match Some ^match.
+  + auto => /#.
+  match None ^match.
+  + auto => /#.
+  swap ^ <$ @ 1.
+  seq 1 : (g^sk \in Game1.y_set)
+    (mu dt (fun x => g^x \in Game1.y_set))
+    1%r
+     _ 0%r
+    (!Game1.bad2).
+  + auto => />.
+  + rnd (fun x => g ^ x \in Game1.y_set).
+    auto => />.
+  + auto => />.
+  + hoare.
+    sp.
+    if; last by auto => />.
+    sp; if; last by auto => />.
+    auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem Game1.y_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game1.y_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  rcondt ^if; 1: by auto.
+  match Some ^match; 1: by auto => /> /#.
+  match None ^match.
+  + auto => /#.
+  swap ^ <$ @ 1.
+  seq 1 : #pre.
+  + auto => /#.
+  sp; if; last by auto => /> /#.
+  sp; if; last by auto => /> /#.
+  auto => />.
+  smt(fcardU1).
++ move => b' c.
+  proc; inline.
+  sp; if; last by auto => /#.
+  sp; match; 1: by auto => /#.
+  match Some ^match; 1: by auto => /> /#.
+  auto => /#.
+
++ exfalso.
++ move => c.
+  proc; inline.
+  by auto.
++ move => b' c.
+  proc; inline.
+  sp; if; last by auto => /#.
+  case (Game1.c_smap.[i] = None).
+  + match None ^match; 1: by auto.
+    by auto => /#.
+  match Some ^match; 1: by auto => /#.
+  match; ~1: by auto => /#.
+  sp; if; last by auto => /#.
+  auto => />.
+  smt(fcardU1).
+qed.
+  
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 3: Splitting the random oracle. *)
