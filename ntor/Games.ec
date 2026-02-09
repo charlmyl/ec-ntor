@@ -105,10 +105,10 @@ module Game0 : GAKE_nodhs_i = {
 
     sk <$ dt;
     pk <- g ^ sk;
+    bad2 <- bad2 \/ pk \in b_set;
+    bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
+    pk_set <- pk_set `|` fset1 pk;
     if (pk \notin servers) {
-      bad2 <- bad2 \/ pk \in b_set;
-      bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
-      pk_set <- pk_set `|` fset1 pk;
       servers.[pk] <- Honest_mod sk;
       r <- Some pk;
     }
@@ -386,7 +386,7 @@ module Game1 = Game0 with {
 
   proc init_s [
     [^r<- - ^if] + (!bad1)
-    [^if.^pk_set<- - ^r<-] + (!bad1)
+    [^pk_set<- - ^if] + (!bad1)
   ]
 
   proc send_msg1 [
@@ -441,7 +441,7 @@ module Game2 = Game1 with {
 
   proc init_s [
     ^if ~ (!bad1 /\ !bad2)
-    ^if.^if.^if ~ (!bad1 /\ !bad2)
+    ^if.^if ~ (!bad1 /\ !bad2)
   ]
 
   proc send_msg1 [
