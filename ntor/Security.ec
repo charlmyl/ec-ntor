@@ -133,7 +133,6 @@ clone ROc.SplitCodom as ROSc with
   op sampleto1 _ <- dtag,
   op sampleto2 _ <- dkey
   proof *.
-realize ofpairK by rewrite /topair /ofpair.
 realize topairK by rewrite /topair /ofpair.
 realize sample_spec by rewrite /ofpair dprodC dmap_comp //=.
 
@@ -1333,22 +1332,21 @@ fel
 + proc; inline.
   rcondt ^if; 1: by auto.
   swap ^ <$ @ 1.
-  seq 1 : (g^sk \notin Game1.servers /\ g^sk \in Game1.b_set)
-    (mu dt (fun x => g^x \notin Game1.servers /\ g^x \in Game1.b_set))
+  seq 1 : (g^sk \in Game1.b_set)
+    (mu dt (fun x => g^x \in Game1.b_set))
     1%r
      _ 0%r
     (!Game1.bad2).
   + auto.
-  + rnd (fun x => g^x \notin Game1.servers /\ g^x \in Game1.b_set).
+  + rnd (fun x => g^x \in Game1.b_set).
     by auto => />.
   + auto => />.
   + hoare.
-    auto => />.
-    smt().
+    by auto => />.
   auto => />.
   move => &hr *.
   apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem Game1.b_set{hr}))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \notin Game1.servers{hr} /\ y \in Game1.b_set{hr})).
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game1.b_set{hr})).
     exact mu_le.
   rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
   + move => x xin.
