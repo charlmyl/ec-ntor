@@ -396,7 +396,7 @@ module Game1 = Game0 with {
 
   proc send_msg2 [
     [^r<- - ^match] + (!bad1)
-    [^match#Some.^match#None.^bad1<- - ^r<-] + (!bad1)
+    [^match#Some.^match#None.^m2_set<- - ^r<-] + (!bad1)
   ]
 
   proc send_msg3 [
@@ -514,7 +514,7 @@ module Game3 = Game2 with {
     var ts : tag
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
-    ^if.^match#Some.^match#None.^if.2 ~ { x <- (m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
+    ^if.^match#Some.^match#None.^if.1 ~ { x <- (m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
                                       ts <$ dtag;
                                       if (x \notin h1m) {h1m.[x] <- ts;} 
                                       t_B <- oget h1m.[x];
@@ -684,7 +684,7 @@ module Game4Ltk = Game4 with {
   ]
 }.
 
-print Game4Ltk.
+print Game4.
 
 module Game4Eph = Game4 with {
   proc h [
