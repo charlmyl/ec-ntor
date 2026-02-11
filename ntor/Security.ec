@@ -8119,21 +8119,19 @@ admit. (* I need to get the index of the partner first look s_test in LtkReducti
                            (oget Red_Eph.Red_O.i_inst{1}.[i{2}]) (oget Red_Eph.Red_O.b_inst{1}.[st'{2}.`1]). 
             smt(). same here *)
           move => *. do split; ~1,5,11,14: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-          + have<-: (get_fresh_partners_c t'{1} Red_Eph.Red_O.s_smap{1} Red_Eph.Red_O.servers{1}) = (get_fresh_partners_c t'{2} Game4Eph.s_smap{2} Game4Eph.servers{2}).
+          + have<-: (get_fresh_partners_c t'{1} Red_Eph.Red_O.s_smap{1} Game4Eph.servers{2}) = (get_fresh_partners_c t'{2} Game4Eph.s_smap{2} Game4Eph.servers{2}).
             + rewrite /get_fresh_partners_c.
               have->: (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{2} /\
                   get_ir_test val = false /\  get_ir_sess val = false /\ (get_ir_eph val = false \/ get_sr_ltk (oget Game4Eph.servers{2}.[t'{2}.`1.`1]) = false))
                Game4Eph.s_smap{2})) = (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
                   get_trace val = Some t'{1} /\ get_ir_test val = false /\  get_ir_sess val = false /\ (get_ir_eph val = false \/
-                   get_sr_ltk (oget Red_Eph.Red_O.servers{1}.[t'{1}.`1.`1]) = false)) Red_Eph.Red_O.s_smap{1})). 
+                   get_sr_ltk (oget Game4Eph.servers{2}.[t'{1}.`1.`1]) = false)) Red_Eph.Red_O.s_smap{1})). 
               + rewrite fsetP.
                 move => x.
                 do rewrite mem_fdom mem_filter.
                 have->: t'{1} = t'{2} by smt().
-                have->: Game4Eph.servers{2}.[t'{2}.`1.`1] = Red_Eph.Red_O.servers{1}.[t'{2}.`1.`1] by admit. (* Where did euivalence of server maps go???? *)
                 by split; move : c1 c2; clear; smt().
               smt().
-            have<-: Game4Eph.servers{2} = Red_Eph.Red_O.servers{1} by admit. (* Where did euivalence of server maps go???? *)
             move : c1 c2 neph. clear.
             move => *.
             smt(get_setE mem_set).
@@ -8163,23 +8161,20 @@ admit. (* I need to get the index of the partner first look s_test in LtkReducti
             smt(get_setE mem_set).
           admit. (* again partner instance needed *)
         auto => /> &1 &2 34? inv2 inv 28? ek *. split.
-        + have<-: (get_fresh_partners_c t'{1} Red_Eph.Red_O.s_smap{1}
-                     Red_Eph.Red_O.servers{1}) = (get_fresh_partners_c t'{2} Game4Eph.s_smap{2} Game4Eph.servers{2}).
+        + have<-: (get_fresh_partners_c t'{1} Red_Eph.Red_O.s_smap{1} Game4Eph.servers{2}) = (get_fresh_partners_c t'{2} Game4Eph.s_smap{2} Game4Eph.servers{2}).
           + rewrite /get_fresh_partners_c. 
             have->: (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
                   get_trace val = Some t'{2} /\ get_ir_test val = false /\ get_ir_sess val = false /\
                   (get_ir_eph val = false \/ get_sr_ltk (oget Game4Eph.servers{2}.[t'{2}.`1.`1]) = false))
                Game4Eph.s_smap{2})) = (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
                   get_trace val = Some t'{1} /\ get_ir_test val = false /\ get_ir_sess val = false /\ (get_ir_eph val = false \/
-                   get_sr_ltk (oget Red_Eph.Red_O.servers{1}.[t'{1}.`1.`1]) = false)) Red_Eph.Red_O.s_smap{1})). 
+                   get_sr_ltk (oget Game4Eph.servers{2}.[t'{1}.`1.`1]) = false)) Red_Eph.Red_O.s_smap{1})). 
             + rewrite fsetP.
               move => x.
               do rewrite mem_fdom mem_filter.
               have->: t'{1} = t'{2} by smt().
-              have->: Game4Eph.servers{2}.[t'{2}.`1.`1] = Red_Eph.Red_O.servers{1}.[t'{2}.`1.`1] by admit. (* Where did euivalence of server maps go???? *)
               by split; move : inv inv2; clear; smt().
             smt().
-          have<-: Game4Eph.servers{2} = Red_Eph.Red_O.servers{1} by admit. (* Where did euivalence of server maps go???? *)
           move : inv2 ek. clear.
           smt().
         have->: t'{1}.`1.`1 = t'{2}.`1.`1 by smt().
