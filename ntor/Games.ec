@@ -608,11 +608,11 @@ module Game4 = Game3 with {
     var ks2 : key
     var p : (pkey * int)
     ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^x<- + ^ {p <- pick (get_fresh_partners_c t' s_smap servers); 
-                                                  test_ephrev_s <- (test_ephrev_s \/ get_ir_eph (oget s_smap.[p]));
+                                                  test_ephrev_s <- (test_ephrev_s \/ get_ir_eph (oget s_smap.[p])) \/ (card (get_fresh_partners_c t' s_smap servers) = 0);
                                                     test_ltkrev <- (test_ltkrev \/ get_sr_ltk (oget servers.[t'.`1.`1]));}
     ^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^k<- ~ {ks <$ dkey; if (x \notin h2m) {h2m.[x] <- ks;} k <- h2m.[x];}
     ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^x<- + ^ {p <- pick (get_fresh_partners_c t' s_smap servers); 
-                                                  test_ephrev_s <- (test_ephrev_s \/ get_ir_eph (oget s_smap.[p]));
+                                                  test_ephrev_s <- (test_ephrev_s \/ get_ir_eph (oget s_smap.[p])) \/ (card (get_fresh_partners_c t' s_smap servers) = 0);
                                                     test_ltkrev <- (test_ltkrev \/ get_sr_ltk (oget servers.[t'.`1.`1]));}
     ^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^ks<$ + ^ {ks2 <$ dkey; if (x \notin h2m) {h2m.[x] <- ks2;} k <- h2m.[x];}
   ]
