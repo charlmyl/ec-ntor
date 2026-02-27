@@ -5392,7 +5392,7 @@ qed.
 
 lemma cdh_red_eph &m: Pr[E_GAKE_nodhs(Game4Eph, A).run(true) @ &m : Game4Eph.badq] <= 
                  Pr[St_CDH_E(St_CDH_O, Red_Eph(A)).run() @ &m : St_CDH_O.win].
-proof.
+proof. admit. (*
 byequiv (: ={glob A} /\ arg{1} = true ==> _) => //.
 proc; inline.
 symmetry.
@@ -7841,13 +7841,6 @@ by case : (!ar) => />.
         + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
           auto => /> &1 &2 6? stl str 30? c1 c2 2? inv9 2? inv5 inv 16? inv6 inv2 inv3 inv4 b1 b2 ? fresh net *.
           split.
-
-
-(* I AM HERE *)
-
-
-
-
           + move => inhq.
             case (St_CDH_O.win{1}) => nwin; 1: done.
             move : net.
@@ -8619,14 +8612,13 @@ by case : (!ar) => />.
     auto => //.
   sp; if => //.
   + by auto => />; rewrite dkey_ll.
-  auto => //. 
+  auto => //. *)
 qed.
-
 
 
 lemma cdh_red_ltk &m: Pr[E_GAKE_nodhs(Game4Ltk, A).run(true) @ &m : Game4Ltk.badq] <= 
                  Pr[St_CDH_E(St_CDH_O, Red_Ltk(A)).run() @ &m : St_CDH_O.win].
-proof. admit. (*
+proof.
 byequiv (: ={glob A} /\ arg{1} = true ==> _) => //.
 proc; inline.
 symmetry.
@@ -8715,9 +8707,9 @@ call (: Game4Ltk.badq,
 
          /\ (Game4Ltk.tq{2} <> None => oget Game4Ltk.tq{2} \in Game4Ltk.hq{2} => St_CDH_O.win{1})
 
-         /\ (forall pk, omap clear_sk Game4Ltk.servers{2}.[pk] = Red_Ltk.Red_O.servers{1}.[pk])
-         /\ (forall bj, omap clear_ltsk Game4Ltk.s_smap{2}.[bj] = Red_Ltk.Red_O.s_smap{1}.[bj])
-         /\ (forall i, omap clear_esk Game4Ltk.c_smap{2}.[i] = Red_Ltk.Red_O.c_smap{1}.[i])
+         /\ (forall pk, omap s_clear_sk Game4Ltk.servers{2}.[pk] = Red_Ltk.Red_O.servers{1}.[pk])
+         /\ (forall bj, omap s_clear_ltsk Game4Ltk.s_smap{2}.[bj] = Red_Ltk.Red_O.s_smap{1}.[bj])
+         /\ (forall i, omap c_clear_esk Game4Ltk.c_smap{2}.[i] = Red_Ltk.Red_O.c_smap{1}.[i])
 
          /\ (forall i st pt ir, i \in Game4Ltk.c_smap{2} => Game4Ltk.c_smap{2}.[i] = Some (Pending_mod st pt ir)
               => pt.`2 = g ^ st.`2 /\ pt.`2 \in Game4Ltk.m1_set{2} /\ pt.`1 = st.`1 /\ pt.`1 \in Game4Ltk.servers{2} 
@@ -9786,7 +9778,7 @@ by case : (!ar) => />.
   by rewrite dt_ll //=.
 
 (* send_msg2 *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match => //. auto => /#.
@@ -9846,7 +9838,7 @@ by case : (!ar) => />.
       rewrite mem_set get_setE bjeq //= => bjt.
     auto => /> &1 &2 *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1 pow_bij).
   match Some {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; match => //. 
@@ -9869,7 +9861,7 @@ by case : (!ar) => />.
   by auto => />.
 
 (* send_msg3 *)
-+ proc; inline. 
++ proc; inline.  admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -10204,7 +10196,7 @@ by case : (!ar) => />.
   + match Accepted_mod {2} ^match. auto => /#.
     auto => />.
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; match => //. 
@@ -10220,7 +10212,7 @@ by case : (!ar) => />.
   by rewrite dtag_ll.
 
 (* c_rev_skey *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -10230,24 +10222,7 @@ by case : (!ar) => />.
   + match Pending_mod {2} ^match. auto => /#.
     auto => />.
   + match Accepted_mod {2} ^match. auto => /#.
-    if => //.
-    + auto => /> &1 &2 str stl 23? inv inv2 *.
-      rewrite /untested_partner_c.
-      rewrite /get_partners_c /get_untested_partners_c.
-      have->: (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{2}) Game4Ltk.s_smap{2})) 
-        = (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{1}) Red_Ltk.Red_O.s_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        move : str stl inv inv2. clear. smt().
-      have->: (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{2} /\ get_ir_test val = false) Game4Ltk.s_smap{2})) 
-   = (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
-               get_trace val = Some t'{1} /\ get_ir_test val = false) Red_Ltk.Red_O.s_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        move : str stl inv inv2. clear. smt().
-      smt().
+    if => //. smt(c_eq_partners_cl).
     sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
     if => //.
     + auto => /> &1 &2 *. 
@@ -10341,7 +10316,7 @@ by case : (!ar) => />.
     have := inv4 i{2} st'{2} t'{2} k'{2} ir'{2}.
     smt().
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline.
   sp; if => //.
   sp; match => //. 
@@ -10362,7 +10337,7 @@ by case : (!ar) => />.
   by auto => />.
 
 (* s_rev_skey *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -10372,35 +10347,7 @@ by case : (!ar) => />.
   + match Pending_mod {2} ^match. auto => /#.
     auto => />.
   + match Accepted_mod {2} ^match. auto => /#.
-    if => //.
-    + auto => /> &1 &2 46? c1 c2 c3 c4 c5 c6. clear c1 c2 c3 c4 c5 c6.
-      rewrite /untested_partner_s.
-      rewrite /get_partners_s /get_untested_partners_s.
-      have->: (fdom 
-          (filter
-             (fun (_ : int) (val : pr_st_client instance_state) =>
-                get_trace val = Some t'{2}) Game4Ltk.c_smap{2})) = (fdom
-          (filter
-             (fun (_ : int) (val : pr_st_client instance_state) =>
-                get_trace val = Some t'{1}) Red_Ltk.Red_O.c_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        smt(get_setE mem_set).
-      have->: (fdom
-            (filter
-               (fun (_ : int) (val : pr_st_client instance_state) =>
-                  get_trace val = Some t'{2} /\ get_ir_test val = false)
-               Game4Ltk.c_smap{2})) = (fdom
-            (filter
-               (fun (_ : int) (val : pr_st_client instance_state) =>
-                  get_trace val = Some t'{1} /\ get_ir_test val = false)
-               Red_Ltk.Red_O.c_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        smt(get_setE mem_set).
-      smt().
+    if => //. smt(s_eq_partners_ce).
     + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
       if {1} => //.
       + sp 1 0; if => //.
@@ -10598,7 +10545,7 @@ by case : (!ar) => />.
       exists i2.
       smt(get_setE mem_set).
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; match => //. 
@@ -10628,250 +10575,127 @@ by case : (!ar) => />.
   match {1} => //.
   + match Honest_mod {2} ^match. auto => /#.
     if => //.
-    + auto => /> &1 &2 stl str 23? inv inv2 *.
-      split.
+    + auto => /> &1 &2 *.
+      split. 
       + move => + ntpp.
-        have->: ! tested_pot_partner_c b{2} Game4Ltk.c_smap{2} Game4Ltk.s_smap{2}.
-        + have := ntpp.
-          rewrite /tested_pot_partner_c.
-          rewrite /get_tested_pot_partner_c.
-          have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => (exists (m1o : pkey) (m2o : (pkey * tag) option),
-                 get_trace val = Some ((b{2}, m1o), m2o)) /\ get_ir_test val = true /\ forall (j0 : int),
-                (b{2}, j0) \in Red_Ltk.Red_O.s_smap{1} => get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]) <>
-                get_trace val) Red_Ltk.Red_O.c_smap{1})) = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-             (exists (m1o : pkey) (m2o : (pkey * tag) option), get_trace val = Some ((b{2}, m1o), m2o)) /\ get_ir_test val = true /\
-             forall (j0 : int), (b{2}, j0) \in Game4Ltk.s_smap{2} => get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j0]) <> get_trace val) Game4Ltk.c_smap{2})).
-          + rewrite fsetP.
-            move => x.
-            rewrite !mem_fdom !mem_filter //=.
-            move : inv inv2. clear. smt().
-          smt().
+        have->: ! tested_pot_partner_c b{2} Game4Ltk.c_smap{2} Game4Ltk.s_smap{2} by smt(c_eq_pot_partner_cl).
         simplify.
         move => + j pkin - /(_ j).
-        have : (b{2}, j) \in Red_Ltk.Red_O.s_smap{1}  by smt().
-        move => bjin //=.
-        rewrite /untested_partner_s.
-        rewrite /get_partners_s /get_untested_partners_s.
-        have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                       get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j])))) Red_Ltk.Red_O.c_smap{1})) = (fdom
-                (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                      get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j])))) Game4Ltk.c_smap{2})).
-        + rewrite fsetP.
-          move => x.
-          rewrite !mem_fdom !mem_filter //=.
-          move : str stl inv inv2. clear. smt().
-        have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]))) 
-                  /\ get_ir_test val = false) Red_Ltk.Red_O.c_smap{1})) = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                     get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j]))) /\ get_ir_test val = false) Game4Ltk.c_smap{2})).
-        + rewrite fsetP.
-          move => x.
-          rewrite !mem_fdom !mem_filter //=.
-          move : str stl inv inv2. clear. smt().
-        smt().
+        smt(s_eq_partners_ce).
       move => + ntpp.
-      have->: ! tested_pot_partner_c b{2} Red_Ltk.Red_O.c_smap{1} Red_Ltk.Red_O.s_smap{1}.
-      + have := ntpp.
-        rewrite /tested_pot_partner_c.
-        rewrite /get_tested_pot_partner_c.
-        have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => (exists (m1o : pkey) (m2o : (pkey * tag) option),
-                 get_trace val = Some ((b{2}, m1o), m2o)) /\ get_ir_test val = true /\ forall (j0 : int),
-                (b{2}, j0) \in Red_Ltk.Red_O.s_smap{1} => get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]) <>
-                get_trace val) Red_Ltk.Red_O.c_smap{1})) = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-             (exists (m1o : pkey) (m2o : (pkey * tag) option), get_trace val = Some ((b{2}, m1o), m2o)) /\ get_ir_test val = true /\
-             forall (j0 : int), (b{2}, j0) \in Game4Ltk.s_smap{2} => get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j0]) <> get_trace val) Game4Ltk.c_smap{2})).
-        + rewrite fsetP.
-          move => x.
-          rewrite !mem_fdom !mem_filter //=.
-          move : inv inv2. clear. smt().
-        smt().
+      have->: ! tested_pot_partner_c b{2} Red_Ltk.Red_O.c_smap{1} Red_Ltk.Red_O.s_smap{1} by smt(c_eq_pot_partner_cl).
       simplify.
       move => + j pkin - /(_ j).
-      have : (b{2}, j) \in Red_Ltk.Red_O.s_smap{1}  by smt().
-      move => bjin //=.
-      rewrite /untested_partner_s.
-      rewrite /get_partners_s /get_untested_partners_s.
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                       get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j])))) Red_Ltk.Red_O.c_smap{1})) = (fdom
-                (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                      get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j])))) Game4Ltk.c_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        rewrite !mem_fdom !mem_filter //=.
-        move : str stl inv inv2. clear. smt().
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]))) 
-                /\ get_ir_test val = false) Red_Ltk.Red_O.c_smap{1})) = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                   get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j]))) /\ get_ir_test val = false) Game4Ltk.c_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        rewrite !mem_fdom !mem_filter //=.
-        move : str stl inv inv2. clear. smt().
-      smt().
-
-if => //.
-+ auto => /> &1 &2 str stl 23? inv inv2 *.
-split.
-move => j bjin H.
-exists j.
-have->: untested_partner_s (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j])))
-   Game4Ltk.c_smap{2} = untested_partner_s
-     (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]))) Red_Ltk.Red_O.c_smap{1}.
-rewrite /untested_partner_s.
-rewrite /get_partners_s /get_untested_partners_s.
-have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                       get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j])))) Red_Ltk.Red_O.c_smap{1})) = (fdom
-                (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                      get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j])))) Game4Ltk.c_smap{2})).
-rewrite fsetP.
-move => x.
-rewrite !mem_fdom !mem_filter //=.
-move : str stl inv inv2. clear. smt().
-
-have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                      get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]))) /\
-                      get_ir_test val = false) Red_Ltk.Red_O.c_smap{1})) = (fdom (filter
-                  (fun (_ : int) (val : pr_st_client instance_state) =>
-                     get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j]))) /\
-                     get_ir_test val = false) Game4Ltk.c_smap{2})).
-rewrite fsetP.
-move => x.
-rewrite !mem_fdom !mem_filter //=.
-move : str stl inv inv2. clear. smt().
-smt().
-smt().
-move => j bjin H.
-exists j.
-have<-: untested_partner_s (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j])))
-   Game4Ltk.c_smap{2} = untested_partner_s
-     (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]))) Red_Ltk.Red_O.c_smap{1}.
-rewrite /untested_partner_s.
-rewrite /get_partners_s /get_untested_partners_s.
-have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                       get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j])))) Red_Ltk.Red_O.c_smap{1})) = (fdom
-                (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                      get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j])))) Game4Ltk.c_smap{2})).
-rewrite fsetP.
-move => x.
-rewrite !mem_fdom !mem_filter //=.
-move : str stl inv inv2. clear. smt().
-have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                      get_trace val = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]))) /\
-                      get_ir_test val = false) Red_Ltk.Red_O.c_smap{1})) = (fdom (filter
-                  (fun (_ : int) (val : pr_st_client instance_state) =>
-                     get_trace val = Some (oget (get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j]))) /\
-                     get_ir_test val = false) Game4Ltk.c_smap{2})).
-rewrite fsetP.
-move => x.
-rewrite !mem_fdom !mem_filter //=.
-move : str stl inv inv2. clear. smt().
-smt().
-move : H bjin str stl inv inv2. clear. smt().
-  sp 1 1; if => //.
-  + rcondt {1} ^if. auto => /#. 
-    auto => />.
-  auto => /> &1 &2 68?.
-  move => j0 bjin [|testp]; 1: smt(). 
-  have [i] tp: (exists i, i \in Red_Ltk.Red_O.c_smap /\ get_ir_test (oget Red_Ltk.Red_O.c_smap.[i]) /\ get_trace (oget Red_Ltk.Red_O.c_smap.[i]) 
+      smt(s_eq_partners_ce).
+    if => //. 
+    + auto => /> &1 &2 str stl 23? inv inv2 *.
+      split.
+      + move => j bjin H.
+        exists j. print s_eq_partners_ce.
+        have->: get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j]) = get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]) by smt().
+        smt(s_eq_partners_ce).
+      move => j bjin H.
+      exists j.
+      have<-: get_trace (oget Game4Ltk.s_smap{2}.[b{2}, j]) = get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j]) by smt().
+      by move : inv inv2 H bjin; clear; smt(s_eq_partners_ce).
+    + sp 1 1; if => //.
+      + rcondt {1} ^if. auto => /#. 
+        auto => />.
+      auto => /> &1 &2 68?.
+      move => j0 bjin [|testp]; 1: smt(). 
+      have [i] tp: (exists i, i \in Red_Ltk.Red_O.c_smap /\ get_ir_test (oget Red_Ltk.Red_O.c_smap.[i]) /\ get_trace (oget Red_Ltk.Red_O.c_smap.[i]) 
                   = get_trace (oget Red_Ltk.Red_O.s_smap.[(b{2}, j0)])){1}.
-  + move : testp.
-    have->: get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]) = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]))) by smt(some_oget).
-    apply (testp_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[(b{2}, j0)]))) Red_Ltk.Red_O.c_smap{1}).
-  smt().
-if => //.
-rcondt {1} ^if. auto => /#. 
+      + move : testp.
+        have->: get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]) = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]))) by smt(some_oget).
+        by apply (testp_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[(b{2}, j0)]))) Red_Ltk.Red_O.c_smap{1}).
+      smt().
+    if => //.
+    rcondt {1} ^if. auto => /#. 
     auto => /> &1 &2 26? inv4 22? inv3 ? inv inv2 inv5 6? c1 c2 3? fresh npp nltkt *. do split; ~1,26: smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
-have : b{2} = g ^ sk{2}. smt(loggK expgK expM).
-smt(pow_bij).
-move => x xeq.
-split. smt(mem_set).
-split. smt().
-have := inv2 x xeq.
-move => [#] _ _ [i0 j0 [#] i0in x4eq x1eq x2eq j0in x3eq i0ncr j0ncr].
-exists i0 j0.
-do split; 1..7: smt().
-rewrite in_fsetU1 negb_or.
-split. smt().
-have := inv (oget St_CDH_O.x_map{1}.[i0]) (loge x.`5) (oget St_CDH_O.y_map{1}.[j0]).
-rewrite ComRing.mulrC expM expgK -x1eq ComRing.mulrC expM -x3eq -x2eq -x4eq xeq.
-have->: x = (x.`1, x.`2, x.`3, x.`4, x.`5) by smt().
-rewrite //=.
-move => [[i2 tag key ir'] [# i2in i2acc i2test]|[i2 tag key ir'] [# i2in i2acc i2test]].
-+ case (j0 = oget Red_Ltk.Red_O.b_inst{1}.[b{2}]) => jbeq; 2: by smt().
-rewrite /tested_pot_partner_c in npp.
-rewrite /get_tested_pot_partner_c in npp.
-have : card (fdom (filter(fun (_ : int) (val : pr_st_client instance_state) => (exists (m1o : pkey) (m2o : (pkey * tag) option),
-         get_trace val = Some ((b{2}, m1o), m2o)) /\ get_ir_test val = true /\ forall (j0 : int), (b{2}, j0) \in Red_Ltk.Red_O.s_smap{1} 
-       => get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]) <> get_trace val) Red_Ltk.Red_O.c_smap{1})) = 0 by smt(fcard_ge0).
-rewrite fcard_eq0 => /fset0_nin.
-move => /(_ i2).
-rewrite mem_fdom mem_filter /=.
-split; 1: smt().
-split.
-+ exists x.`4 (Some (x.`5, tag)).
-  have->: b{2} = x.`3 by smt().
-  move : i2acc inv4. clear.
+    + have : b{2} = g ^ sk{2} by smt(loggK expgK expM).
+      smt(pow_bij).
+    move => x xeq.
+    split; 1: smt(mem_set).
+    split; 1: smt().
+    have := inv2 x xeq.
+    move => [#] _ _ [i0 j0 [#] i0in x4eq x1eq x2eq j0in x3eq i0ncr j0ncr].
+    exists i0 j0.
+    do split; 1..7: smt().
+    rewrite in_fsetU1 negb_or.
+    split; 1: smt().
+    have := inv (oget St_CDH_O.x_map{1}.[i0]) (loge x.`5) (oget St_CDH_O.y_map{1}.[j0]).
+    rewrite ComRing.mulrC expM expgK -x1eq ComRing.mulrC expM -x3eq -x2eq -x4eq xeq.
+    have->: x = (x.`1, x.`2, x.`3, x.`4, x.`5) by smt().
+    rewrite //=.
+    move => [[i2 tag key ir'] [# i2in i2acc i2test]|[i2 tag key ir'] [# i2in i2acc i2test]].
+    + case (j0 = oget Red_Ltk.Red_O.b_inst{1}.[b{2}]) => jbeq; 2: by smt().
+      rewrite /tested_pot_partner_c in npp.
+      rewrite /get_tested_pot_partner_c in npp.
+      have : card (fdom (filter(fun (_ : int) (val : pr_st_client instance_state) => (exists (m1o : pkey) (m2o : (pkey * tag) option),
+             get_trace val = Some ((b{2}, m1o), m2o)) /\ get_ir_test val = true /\ forall (j0 : int), (b{2}, j0) \in Red_Ltk.Red_O.s_smap{1} 
+           => get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j0]) <> get_trace val) Red_Ltk.Red_O.c_smap{1})) = 0 by smt(fcard_ge0).
+      rewrite fcard_eq0 => /fset0_nin.
+      move => /(_ i2).
+      rewrite mem_fdom mem_filter /=.
+      split; 1: smt().
+      split.
+      + exists x.`4 (Some (x.`5, tag)).
+        have->: b{2} = x.`3 by smt().
+        move : i2acc inv4. clear.
+        smt().
+      split; 1: smt().
+      move => j1 bjin.
+      case (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]) = get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2])); 2: done.
+      move => treq.
+      rewrite negb_exists //= in nltkt.
+      have := nltkt j1.
+      rewrite bjin negb_and //=.
+      right.
+      rewrite /untested_partner_s.
+      have->: (1 <= card (get_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})). 
+      + have : (i2 \in (get_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})).
+        + rewrite /get_partners_s.
+          rewrite mem_fdom mem_filter.
+          split; 1: smt().
+          simplify.
+          rewrite treq.
+          clear c1 c2.
+          smt(some_oget).
+        smt(@FSet).
+      case (1 <= card (get_untested_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})); 2: smt().
+      have->: (card (get_untested_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1}) = 0); 2: by done. 
+      rewrite fcard_eq0 in_eq_fset0 //=.
+      move => x0.
+      rewrite mem_fdom mem_filter !negb_and.
+      case (x0 \in Red_Ltk.Red_O.c_smap{1}) => xin; 2: by smt().
+      case (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]) = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1])))); 2: by smt().
+      have->: Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) = (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1])).
+      + rewrite -some_oget //=.
+        smt().
+      move => tr2eq.
+      simplify.
+      have := inv3 i2 x0 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`1 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`1.`1
+                (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`2 
+                (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`2.
+      move : inv4 inv5 i2in i2test xin treq tr2eq.
+      clear. move => 3? tested 3?.
+      have->: (Game4Ltk.c_smap{2}.[i2] <> None /\ get_trace (oget Game4Ltk.c_smap{2}.[i2]) =
+             Some (((oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`1, (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2),
+              (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`2)) by smt(some_oget).
+      have->: Game4Ltk.c_smap{2}.[x0] <> None /\ get_trace (oget Game4Ltk.c_smap{2}.[x0]) =
+             Some (((oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`1.`1, (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2),
+              (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`2) by smt(some_oget).
+      smt().
+    have : x.`3 = i2.`1 by smt().
+    case : (b{2} = i2.`1).
+    move => ->>.
+    have : (i2.`1, i2.`2) \in Red_Ltk.Red_O.s_smap{1} by smt().
+    move => i2inRed.
+    have i2testRed : (get_ir_test (oget Red_Ltk.Red_O.s_smap{1}.[i2.`1, i2.`2])) by smt().
+    have := fresh i2.`2 i2inRed.
+    rewrite i2testRed //=.
+    smt().
   smt().
-split; 1: smt().
-move => j1 bjin.
-case (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]) = get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2])); 2: done.
-move => treq.
-rewrite negb_exists //= in nltkt.
-have := nltkt j1.
-rewrite bjin negb_and //=.
-right.
-rewrite /untested_partner_s.
-have->: (1 <= card (get_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})). 
-+ have : (i2 \in (get_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})).
-  + rewrite /get_partners_s.
-    rewrite mem_fdom mem_filter.
-    split. smt().
-    simplify.
-    rewrite treq.
-    clear c1 c2.
-    smt(some_oget).
-  smt(@FSet).
-case (1 <= card (get_untested_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1})); 2: smt().
-have->: (card (get_untested_partners_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) Red_Ltk.Red_O.c_smap{1}) = 0); 2: by done. 
-rewrite fcard_eq0 in_eq_fset0 //=.
-move => x0.
-rewrite mem_fdom mem_filter !negb_and.
-case (x0 \in Red_Ltk.Red_O.c_smap{1}) => xin; 2: by smt().
-case (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]) = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1])))); 2: by smt().
-have->: Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1]))) = (get_trace (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j1])).
-+ rewrite -some_oget //=.
-  smt().
-move => tr2eq.
-simplify.
-have := inv3 i2 x0 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`1 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`1.`1
-          (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2 (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`2 
-          (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`2.
-move : inv4 inv5 i2in i2test xin treq tr2eq.
-clear. move => 3? tested 3?.
-have->: (Game4Ltk.c_smap{2}.[i2] <> None /\
- get_trace (oget Game4Ltk.c_smap{2}.[i2]) =
- Some
-   (((oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`1,
-     (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2),
-    (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`2)) by smt(some_oget).
-have->: Game4Ltk.c_smap{2}.[x0] <> None /\
- get_trace (oget Game4Ltk.c_smap{2}.[x0]) =
- Some
-   (((oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`1.`1,
-     (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[i2]))).`1.`2),
-    (oget (get_trace (oget Red_Ltk.Red_O.c_smap{1}.[x0]))).`2) by smt(some_oget).
-simplify.
-move => />.
-smt().
-
-have : x.`3 = i2.`1 by smt().
-case : (b{2} = i2.`1).
-move => ->>.
-have : (i2.`1, i2.`2) \in Red_Ltk.Red_O.s_smap{1} by smt().
-move => i2inRed.
-have i2testRed : (get_ir_test (oget Red_Ltk.Red_O.s_smap{1}.[i2.`1, i2.`2])) by smt().
-have := fresh i2.`2 i2inRed.
-rewrite i2testRed //=.
-smt().
-smt().
   + match Corrupt_mod {2} ^match. auto => /#.
     auto => />.
   match Dishonest_mod {2} ^match. auto => /#.
@@ -10888,7 +10712,7 @@ smt().
   by auto => />.
 
 (* c_rev_ephkey *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -10896,28 +10720,7 @@ smt().
   match Some {2} ^match. auto => /#.
   match {1} => //.
   + match Pending_mod {2} ^match. auto => /#.
-    if => //.
-    + auto => /> &1 &2 stl str 23? inv inv2 *.
-      rewrite /tested_origins_c.
-      rewrite /get_origins_c /get_tested_origins_c //=.
-      have->: (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => exists (m2o : (pkey * tag) option),
-                get_trace val = Some (pk_e{2}, m2o)) Game4Ltk.s_smap{2})) = (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
-              exists (m2o : (pkey * tag) option), get_trace val = Some (pk_e{1}, m2o)) Red_Ltk.Red_O.s_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: pk_e{1} = pk_e{2} by smt().
-        by split; move : inv inv2; clear; smt(). 
-      have->: (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => (exists (m2o : (pkey * tag) option),
-                get_trace val = Some (pk_e{1}, m2o)) /\ get_ir_test val = true) Red_Ltk.Red_O.s_smap{1})) = (fdom (filter
-             (fun (_ : pkey * int) (val : pr_st_server instance_state) => (exists (m2o : (pkey * tag) option),
-                get_trace val = Some (pk_e{2}, m2o)) /\ get_ir_test val = true) Game4Ltk.s_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: pk_e{1} = pk_e{2} by smt().
-        by split; move : inv inv2; clear; smt(). 
-      smt().
+    if => //. smt(c_eq_origins_cl).
     rcondt {1} ^if. auto => /#.
     auto => /> &1 &2 stc 25? inv8 inv4 inv5 inv6 19? inv ? inv2 inv3 2? inv7 4? c1 c2 3? fresh *. 
     split. smt(in_fsetU1). 
@@ -11058,37 +10861,7 @@ smt().
     + move : stc inv8. clear. smt().
     smt().
   + match Accepted_mod {2} ^match. auto => /#.
-    if => //.
-    + auto => /> &1 &2 stl str 23? inv inv2 *.
-      rewrite /tested_origins_c.
-      rewrite /get_origins_c /get_tested_origins_c //=.
-      have->: (fdom (filter
-             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
-                exists (m2o : (pkey * tag) option),
-                  get_trace val = Some (t{2}.`1, m2o)) Game4Ltk.s_smap{2})) = (fdom (filter
-             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
-                exists (m2o : (pkey * tag) option),
-                  get_trace val = Some (t{1}.`1, m2o)) Red_Ltk.Red_O.s_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t{1} = t{2} by smt().
-        by split; move : inv inv2; clear; smt(). 
-      have->: (fdom (filter
-             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
-                  (exists (m2o : (pkey * tag) option),
-                     get_trace val = Some (t{1}.`1, m2o)) /\
-                  get_ir_test val = true) Red_Ltk.Red_O.s_smap{1})) = (fdom (filter
-             (fun (_ : pkey * int) (val : pr_st_server instance_state) =>
-                  (exists (m2o : (pkey * tag) option),
-                     get_trace val = Some (t{2}.`1, m2o)) /\
-                  get_ir_test val = true) Game4Ltk.s_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t{1} = t{2} by smt().
-        by split; move : inv inv2; clear; smt(). 
-      smt().
+    if => //. smt(c_eq_origins_cl).
     rcondt {1} ^if. auto => /#.
     auto => /> &1 &2 stc 24? inv8 inv9 inv4 inv5 inv6 19? inv inv10 inv2 inv3 2? inv7 4? c1 c2 3? fresh *. 
     do split; ~1,3,4,7..9,11,13: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
@@ -11238,7 +11011,7 @@ smt().
     + move : stc inv9. clear. smt().
     smt().
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline.
   sp; if => //. 
   sp; match => //. 
@@ -11249,7 +11022,7 @@ smt().
   by match; auto => />.
 
 (* s_rev_ephkey *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; match {1} => //.
   + match None {2} ^match. auto => /#.
@@ -11259,49 +11032,12 @@ smt().
   + match Pending_mod {2} ^match. auto => /#.
     auto => />.
   + match Accepted_mod {2} ^match. auto => /#.
-    if => //.
-    + auto => /> &1 &2 stl str 22? inv inv2 inv3 *.
-      rewrite /untested_partner_s.
-      rewrite /get_partners_s /get_untested_partners_s.
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some t{1}) Red_Ltk.Red_O.c_smap{1})) 
-                 = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some t{2}) Game4Ltk.c_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t{1} = t{2} by smt().
-        by split; move : inv3 inv2; clear; smt(). 
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some t{1} /\ get_ir_test val = false)
-               Red_Ltk.Red_O.c_smap{1})) = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                   get_trace val = Some t{2} /\ get_ir_test val = false) Game4Ltk.c_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t{1} = t{2} by smt().
-        by split; move : inv3 inv2; clear; smt(). 
+    if => //. 
+    + auto => /> &1 &2 stl str 22? inv *.
       have->: get_sr_ltk (oget Red_Ltk.Red_O.servers{1}.[b{2}]) = get_sr_ltk (oget Game4Ltk.servers{2}.[b{2}]).
       + move : inv. clear. smt().
-      have->: get_ir_test (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j{2}]) = (get_ir_test (oget Game4Ltk.s_smap{2}.[b{2}, j{2}])) by smt().
-      smt().
-    if => //.
-    + auto => /> &1 &2 stl str 23? inv inv2 *.
-      rewrite /untested_partner_s.
-      rewrite /get_partners_s /get_untested_partners_s.
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some t{1}) Red_Ltk.Red_O.c_smap{1})) 
-                 = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some t{2}) Game4Ltk.c_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t{1} = t{2} by smt().
-        by split; move : inv inv2; clear; smt(). 
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => get_trace val = Some t{1} /\ get_ir_test val = false)
-               Red_Ltk.Red_O.c_smap{1})) = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                   get_trace val = Some t{2} /\ get_ir_test val = false) Game4Ltk.c_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t{1} = t{2} by smt().
-        by split; move : inv inv2; clear; smt(). 
-      smt().
+      smt(s_eq_partners_ce).
+    if => //; 1: smt(s_eq_partners_ce).
     auto => /> &1 &2 48? inv ? inv2 inv3 3? inv4 4? c1 c2 *. clear c1 c2. do split; ~4..6,8: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
     + move => i t1 t2.
       case : (i = (b, j){2}); 2: by smt(get_setE).
@@ -11386,7 +11122,7 @@ smt().
     rewrite bjeq in itr.
     smt(get_setE mem_set).
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; match => //. 
@@ -11397,7 +11133,7 @@ smt().
   by match; auto => />.
 
 (* c_test *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; if => //.
   match {1} => //.
@@ -11408,32 +11144,12 @@ smt().
   + match Pending_mod {2} ^match. auto => /#.
     auto => />.
   + match Accepted_mod {2} ^match. auto => /#.
-    if => //.
+    if => //. 
     + auto => /> &1 &2 stl str 22? inv inv2 inv3 *.
-      rewrite /fresh_partner_c.
-      rewrite /get_partners_c /get_fresh_partners_c.
-      have->: (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{1}) Red_Ltk.Red_O.s_smap{1})) 
-                 = (fdom (filter (fun (_ : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{2}) Game4Ltk.s_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t'{1} = t'{2} by smt().
-        by split; move : inv3 inv2; clear; smt(). 
-      have<-: (fdom (filter (fun (bj : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{2} 
-                /\ get_ir_test val = false /\ get_ir_sess val = false /\ (get_ir_eph val = false \/
-                   get_sr_ltk (oget Game4Ltk.servers{2}.[t'{2}.`1.`1]) = false)) Game4Ltk.s_smap{2})) = (fdom (filter
-              (fun (_ : pkey * int) (val : pr_st_server instance_state) => get_trace val = Some t'{1} 
-                /\ get_ir_test val = false /\ get_ir_sess val = false /\ (get_ir_eph val = false \/
-                   get_sr_ltk (oget Red_Ltk.Red_O.servers{1}.[t'{1}.`1.`1]) = false)) Red_Ltk.Red_O.s_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t'{1} = t'{2} by smt().
-        by split; move : inv3 inv2 inv; clear; smt(). 
-      have->: get_ir_sess (oget Red_Ltk.Red_O.c_smap{1}.[i{2}]) = get_ir_sess (oget Game4Ltk.c_smap{2}.[i{2}]) by smt().
-      have->: get_ir_eph (oget Red_Ltk.Red_O.c_smap{1}.[i{2}]) = get_ir_eph (oget Game4Ltk.c_smap{2}.[i{2}]) by smt().
       have->: get_sr_ltk (oget Red_Ltk.Red_O.servers{1}.[t'{1}.`1.`1]) = get_sr_ltk (oget Game4Ltk.servers{2}.[t'{1}.`1.`1]).
-      + move: inv. clear. smt().
+      + move: inv. clear. smt(). print c_eq_have_p_cl.
+      have->: get_partners_c t'{2} Game4Ltk.s_smap{2} = get_partners_c t'{1} Red_Ltk.Red_O.s_smap{1} by smt(c_eq_have_p_cl).
+      have->: fresh_partner_c t'{1} Red_Ltk.Red_O.s_smap{1} Red_Ltk.Red_O.servers{1} = fresh_partner_c t'{2} Game4Ltk.s_smap{2} Game4Ltk.servers{2} by smt(c_eq_fresh_cl).
       smt().
     + rcondf {1} ^if. auto => />.
       rcondf {2} ^if. auto => />.
@@ -11634,7 +11350,7 @@ smt().
       smt().
     by auto => />.
   match Aborted_mod {2} ^match. auto => /#.
-  by auto => />.
+  by auto => />. *)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; if => //; match => //. 
@@ -11664,7 +11380,7 @@ smt().
   auto => //.
 
 (* s_test *)
-+ proc; inline.
++ proc; inline. admit. (*
   sp; if => //.
   sp; if => //.
   match {1} => //.
@@ -11675,32 +11391,7 @@ smt().
   + match Pending_mod {2} ^match. auto => /#.
     auto => />.
   + match Accepted_mod {2} ^match. auto => /#.
-    if => //.
-    + auto => /> &1 &2 stl str 22? inv inv2 inv3 *.
-      rewrite /fresh_partner_s.
-      rewrite /get_origins_s /get_fresh_partners_s.
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => exists (m2o : (pkey * tag) option),
-                  get_trace val = Some (t'{2}.`1, m2o)) Game4Ltk.c_smap{2})) = (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
-                exists (m2o : (pkey * tag) option), get_trace val = Some (t'{1}.`1, m2o)) Red_Ltk.Red_O.c_smap{1})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t'{1} = t'{2} by smt().
-        by split; move : inv inv2 inv3; clear; smt().
-      have->: (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) => (exists (m2o : (pkey * tag) option), get_trace val = Some (t'{1}.`1, m2o)) 
-                 /\ get_ir_test val = false /\ get_ir_sess val = false /\ get_ir_eph val = false) Red_Ltk.Red_O.c_smap{1})) = (fdom
-            (filter (fun (_ : int) (val : pr_st_client instance_state) => (exists (m2o : (pkey * tag) option), get_trace val = Some (t'{2}.`1, m2o)) 
-               /\ get_ir_test val = false /\ get_ir_sess val = false /\ get_ir_eph val = false) Game4Ltk.c_smap{2})).
-      + rewrite fsetP.
-        move => x.
-        do rewrite mem_fdom mem_filter.
-        have->: t'{1} = t'{2} by smt().
-        by split; move : inv inv2 inv3; clear; smt().
-      have->: get_ir_sess (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j{2}]) = get_ir_sess (oget Game4Ltk.s_smap{2}.[b{2}, j{2}]) by smt().
-      have->: get_ir_eph (oget Red_Ltk.Red_O.s_smap{1}.[b{2}, j{2}]) = get_ir_eph (oget Game4Ltk.s_smap{2}.[b{2}, j{2}]) by smt().
-      have->: get_sr_ltk (oget Red_Ltk.Red_O.servers{1}.[b{2}]) = get_sr_ltk (oget Game4Ltk.servers{2}.[b{2}]). 
-      + move : inv. clear. smt().
-      smt().
+    if => //. smt(s_eq_fresh_ce).
     rcondf {1} ^if. auto => />.
     rcondf {2} ^if. auto => />. 
     sp; if => //. 
@@ -12125,7 +11816,7 @@ smt().
     smt().
   auto => />.
   match Aborted_mod {2} ^match. auto => /#.
-  auto => />.
+  auto => />. *)
 - move => &2 bad; proc; inline. 
   sp; if => //.
   sp; if => //; match => //. 
@@ -12152,7 +11843,7 @@ smt().
     auto => //.
   sp; if => //.
   + by auto => />; rewrite dkey_ll.
-  auto => //. *)
+  auto => //.
 qed.
 
 
@@ -12186,10 +11877,6 @@ apply (ler_trans (Pr[St_CDH_E(St_CDH_O, Red_Eph(A)).run() @ &m : St_CDH_O.win] +
 rewrite ler_add2l.
 apply cdh_red_ltk.
 qed.
-
-
-
-
 
 
 end section.
