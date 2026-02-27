@@ -7841,6 +7841,13 @@ by case : (!ar) => />.
         + sp; seq 1 1 : (#pre /\ ={ks}). auto => />.
           auto => /> &1 &2 6? stl str 30? c1 c2 2? inv9 2? inv5 inv 16? inv6 inv2 inv3 inv4 b1 b2 ? fresh net *.
           split.
+
+
+(* I AM HERE *)
+
+
+
+
           + move => inhq.
             case (St_CDH_O.win{1}) => nwin; 1: done.
             move : net.
