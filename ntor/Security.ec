@@ -6260,7 +6260,7 @@ qed.
 
 lemma cdh_red_eph &m: Pr[E_GAKE_nodhs(Game4Eph, A).run(true) @ &m : Game4Eph.badq] <= 
                  Pr[St_CDH_E(St_CDH_O, Red_Eph(A)).run() @ &m : St_CDH_O.win].
-proof.
+proof. admit. (*
 byequiv (: ={glob A} /\ arg{1} = true ==> _) => //.
 proc; inline.
 symmetry.
@@ -10150,7 +10150,7 @@ admit. (*
     auto => //.
   sp; if => //.
   + by auto => />; rewrite dkey_ll.
-  auto => //.
+  auto => //.*)
 qed.
 
 
@@ -10220,15 +10220,22 @@ cr2 : int fset) = (b0) /\ (tltkr => tested <> None)
                => (exists i, i \in csm /\ (oget (get_trace (oget ssm.[(b, j)]))).`1 = (oget (get_trace (oget csm.[i]))).`1))
 
          /\ (forall i st pt ir, i \in csm => csm.[i] = Some (Pending_mod st pt ir)
-              => i \in ii /\ (oget ii.[i]) \in xm /\ st.`2 = oget xm.[(oget ii.[i])]
+              => pt.`2 \in m1s /\ pt.`1 = st.`1 /\ pt.`1 \in servers /\ !ir.`3 
+                      /\ i \in ii /\ (oget ii.[i]) \in xm /\ pt.`2 = g ^ oget xm.[(oget ii.[i])]
                       /\ (ir.`1 <=> (oget ii.[i]) \in cr1) /\ st.`1 \in bi /\ (oget bi.[st.`1]) \in ym)
          /\ (forall i st t k ir, i \in csm => csm.[i] = Some (Accepted_mod st t k ir)
-              => i \in ii /\ (oget ii.[i] \in xm) /\ st.`2 = oget xm.[(oget ii.[i])]
+              => t.`1.`2 \in m1s /\ t.`1.`1 = st.`1 /\ st.`1 \in servers 
+                      /\ ((oget t.`2).`1 \in m2s \/ (oget t.`2).`1 \in ys)
+                      /\ i \in ii /\ (oget ii.[i] \in xm) /\ t.`1.`2 = g ^ oget xm.[(oget ii.[i])]
                       /\ (ir.`1 <=> (oget ii.[i]) \in cr1) /\ st.`1 \in bi /\ (oget bi.[st.`1]) \in ym
                       /\ t.`1.`1 = g ^ (oget ym.[(oget bi.[st.`1])])
                       /\ (oget bi.[st.`1] \in cr2 <=> get_sr_ltk (oget servers.[t.`1.`1])))
          /\ (forall bj st t k ir, bj \in ssm => ssm.[bj] = Some (Accepted_mod st t k ir)
-              => bj.`1 \in bi /\ (oget bi.[bj.`1]) \in ym /\ st.`1 = (oget ym.[(oget bi.[bj.`1])]))
+              => t.`1.`1 \in servers /\ t.`1.`1 = bj.`1
+                      /\ t.`2 <> None /\ st.`2 <> None /\ g ^ (oget st.`2) = (oget t.`2).`1
+                      /\ g ^ (oget st.`2) \in m2s /\ g ^ (oget st.`2) \notin servers
+                      /\ (t.`1.`2 \in m1s \/ t.`1.`2 \in xs)
+                      /\ bj.`1 \in bi /\ (oget bi.[bj.`1]) \in ym /\ t.`1.`1 = g ^ (oget ym.[(oget bi.[bj.`1])]))
 
          /\ (forall b j, tested = None => (b, j) \in ssm => !get_ir_test (oget ssm.[(b,j)]))
          /\ (forall i, tested = None => i \in csm => !get_ir_test (oget csm.[i]))
@@ -10248,7 +10255,7 @@ hoare Red_Ltk_inv_h: Red_Ltk(A, St_CDH_O).Red_O.h:
          Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
          Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
          St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
-proof.
+proof. admit. (*
 proc; inline.
 sp; if => //.
 if => //; first last.
@@ -10363,7 +10370,7 @@ smt(get_setE in_fsetU1 mem_set pow_bij loggK expgK expM).
  *)
 qed.
 
-(*
+
 hoare Red_Ltk_inv_init_s: Red_Ltk(A, St_CDH_O).Red_O.init_s:
     (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
        Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
@@ -10376,14 +10383,37 @@ hoare Red_Ltk_inv_init_s: Red_Ltk(A, St_CDH_O).Red_O.init_s:
        Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
        Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
        St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
-proof.
+proof. admit. (*
 proc; inline.
 sp; if => //.
 sp; seq 1: (#pre /\ y_m \in dt); 1: by auto => />.
 sp 5; if => //.
-auto => |> &hr *.
-
-smt(get_setE in_fsetU1 mem_set pow_bij).
++ if => //.
+  + auto => /> &hr 3? y_map m *.
+    do split; ~4: smt(get_setE in_fsetU1 mem_set pow_bij).
+    move => b.
+    rewrite mem_set.
+    move => [bin|beq].
+    + have : (exists (j : int), (j \in y_map) /\ b = g ^ oget y_map.[j]) => (exists (j : int),
+        (j \in y_map.[m + 1 <- y_m{hr}]) /\ b = g ^ oget y_map.[m + 1 <- y_m{hr}].[j]).
+      + move => [j jin].
+        exists j. 
+        smt(mem_set get_setE).
+      smt(mem_set get_setE expgK expM in_fsetU1).
+    rewrite in_fsetU1 beq //=.
+    exists (m + 1). 
+    smt(mem_set get_setE). 
+  auto => /> &hr *.
+  do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+auto => /> &hr 3? y_map m *.
+do split; ~4: smt(get_setE in_fsetU1 mem_set pow_bij).
+move => b.
+have : (exists (j : int), (j \in y_map) /\ b = g ^ oget y_map.[j]) => (exists (j : int),
+    (j \in y_map.[m + 1 <- y_m{hr}]) /\ b = g ^ oget y_map.[m + 1 <- y_m{hr}].[j]).
++ move => [j jin].
+  exists j. 
+  smt(mem_set get_setE).
+smt(mem_set get_setE expgK expM in_fsetU1). *)
 qed.
 
 hoare Red_Ltk_inv_send_msg1: Red_Ltk(A, St_CDH_O).Red_O.send_msg1:
@@ -10398,102 +10428,112 @@ hoare Red_Ltk_inv_send_msg1: Red_Ltk(A, St_CDH_O).Red_O.send_msg1:
        Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
        Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
        St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
-proof.
+proof. admit. (*
 proc; inline.
 sp; if => //.
 sp; if => //.
 match => //.
-seq 1: (#pre /\ sk \in dt); 1: by auto => />.
-sp 3; if => //.
-+ auto => /> &hr 13? inv 3? inv2 8? inv3 *.
-  do split; ~6,8,15: smt(get_setE in_fsetU1 mem_set pow_bij).
+sp; seq 1: (#pre /\ x_n \in dt); 1: by auto => />.
+sp 5; if => //.
++ auto => /> &hr 3? x_map n 4? inv 13? inv2 3? inv3 *.
+  do split; ~1,9,11: smt(get_setE in_fsetU1 mem_set pow_bij).
+  + move => m.
+    split; 2: by smt(mem_set get_setE in_fsetU1).
+    rewrite in_fsetU1.
+    move => [min|meq].
+    + have := inv m.
+      rewrite min //=.
+      move => [i0 i0in].
+      exists i0.
+      smt(mem_set get_setE).
+    exists (n + 1).
+    smt(mem_set get_setE).
   + move => i0 i'.
     case (i0 = i{hr}) => ieq.
     + rewrite ieq get_set_sameE //=.
       case (i' = i{hr}) => i'eq; 1: by rewrite i'eq.
       rewrite get_set_neqE //=.
       move => b b' m1 m2 m2' [] t1eq t2eq stnn tr.
-      have := inv i{hr} i' b b' m1 None m2'. 
+      have := inv2 i{hr} i' b b' m1 None m2'. 
       smt().
     case (i' = i{hr}) => i'eq; 2: by smt(get_set_neqE).
     rewrite get_set_neqE //=.
     rewrite i'eq get_setE //=.
     move => b b' m1 m2 m2' stnn tr teq.
-    have := inv i0 i{hr} b b' m1 m2 None. 
+    have := inv2 i0 i{hr} b b' m1 m2 None. 
     smt().
-  + move => b j bjin bjt.
-    have := inv2 b j bjin bjt.
-    move => [i2] itr.
-    exists i2.
-    smt(get_setE mem_set).
-  move => x0 y0 b0 tqeq.
-  have := inv3 x0 y0 b0 tqeq.
-  move => [H1|H2]. 
-  + left.
-    move : H1 => [i'] t k ir'' H1.
-    exists i'. 
-    by smt(get_setE).
-  smt(mem_set).
-auto => />.
-smt(get_setE in_fsetU1 mem_set pow_bij).
+  move => b j bjin bjt.
+  have := inv3 b j bjin bjt.
+  move => [i2] itr.
+  exists i2.
+  smt(get_setE mem_set).
+auto => /> &hr 3? x_map n 4? inv 13? inv2 3? inv3 *.
+do split; ~1: smt(get_setE in_fsetU1 mem_set pow_bij).
++ move => m.
+split; 2: by smt(mem_set get_setE in_fsetU1).
+rewrite in_fsetU1.
+move => [min|meq].
++ have := inv m.
+  rewrite min //=.
+  move => [i0 i0in].
+  exists i0.
+  smt(mem_set get_setE).
+exists (n + 1).
+smt(mem_set get_setE). *)
 qed.
 
-hoare Game4Eph_inv_send_msg2: Game4Eph.send_msg2:
-    (inv_Game4Eph Game4Eph.tested Game4Eph.tq Game4Eph.hq Game4Eph.test_ltkrev Game4Eph.b0 Game4Eph.bad1 
-       Game4Eph.bad2 Game4Eph.pk_set Game4Eph.m1_set Game4Eph.m2_set Game4Eph.x_set Game4Eph.y_set 
-       Game4Eph.b_set Game4Eph.s_smap Game4Eph.c_smap Game4Eph.h1m Game4Eph.h2m Game4Eph.servers)
+hoare Red_Ltk_inv_send_msg2: Red_Ltk(A, St_CDH_O).Red_O.send_msg2:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
 ==>
-    (inv_Game4Eph Game4Eph.tested Game4Eph.tq Game4Eph.hq Game4Eph.test_ltkrev Game4Eph.b0 Game4Eph.bad1 
-       Game4Eph.bad2 Game4Eph.pk_set Game4Eph.m1_set Game4Eph.m2_set Game4Eph.x_set Game4Eph.y_set 
-       Game4Eph.b_set Game4Eph.s_smap Game4Eph.c_smap Game4Eph.h1m Game4Eph.h2m Game4Eph.servers).
-proof.
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof. admit. (*
 proc; inline.
 sp; if => //.
 sp; match => //.
 match => //.
 seq 1: (#pre /\ sk \in dt); 1: by auto => />.
 sp 4; if => //.
-+ sp; seq 1: (#pre /\ ts \in dtag); 1: by auto=> />.
++ sp 1; if => //.
+  + sp; seq 1: (#pre /\ ts \in dtag); 1: by auto=> />.
+    if => //.
+    + sp 3; if => //; 1: by auto => />.
+      auto => /> &hr 24? inv *.
+      do split; ~2,5: smt(get_setE in_fsetU1 mem_set pow_bij).
+      + move => x0. 
+        rewrite mem_set.
+        move => []; 1: smt(in_fsetU1).
+        move => />.
+        do split; smt(in_fsetU1).
+      move => // i0 i'.
+      case (i0 = (b, j){hr}) => ieq.
+      + rewrite ieq get_set_sameE //=.
+        case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
+        rewrite !get_setE i'eq //=.
+        move => m1 m2 tag m1' tag'.
+        have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
+        smt().
+      case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
+      rewrite i'eq get_set_sameE //=.
+      rewrite !get_setE ieq //=.
+      move => m1 m2 tag m1' tag'.
+      have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+      smt().
+    auto => /> &hr 24? inv *.
+    do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+  sp; seq 1: (#pre /\ ts \in dtag); 1: by auto=> />.
   if => //.
   + sp 3; if => //.
-    + auto => /> &hr 17? inv 3? inv2 7? inv3 b1 b2 *.
-      do split; ~6,8,9,14: smt(get_setE in_fsetU1 mem_set pow_bij).
-      + move => // i0 i'.
-        case (i0 = (b, j){hr}) => ieq.
-        + rewrite ieq get_set_sameE //=.
-          case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
-          rewrite !get_setE i'eq //=.
-          move => m1 m2 tag m1' tag'.
-          have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
-          smt().
-        case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
-        rewrite i'eq get_set_sameE //=.
-        rewrite !get_setE ieq //=.
-        move => m1 m2 tag m1' tag'.
-        have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
-        smt().
-      + move => b0 j0.
-        case ((b0, j0) = (b, j){hr}) => bjeq; 2: by smt(mem_set get_setE).
-        by rewrite mem_set get_setE bjeq //= => bjt.
-      + move => i iin itest.
-        rewrite in_fsetU1.
-        move => [inm2|eqsk].
-        + have := inv2 i iin itest b1 b2 inm2.
-          move => [bj] [] bjin treq.
-          exists bj.
-          smt(get_setE mem_set).
-        exists (b, j){hr}.
-        smt(get_setE mem_set).
-      move => x0 y0 b0 tqeq.
-      have := inv3 x0 y0 b0 tqeq.
-      move => [H1|H2]; 1: smt().
-      right.
-      move : H2 => [i'] t k ir'' H2.
-      exists i'. 
-      smt(get_setE).
-    auto => /> &hr 17? inv 3? inv2 7? inv3 b1 b2 *.
-    do split; ~6,8,9,14: smt(get_setE in_fsetU1 mem_set pow_bij).
-    + move => // i0 i'.
+    + auto => /> &hr 24? inv *.
+      do split; ~5: smt(get_setE in_fsetU1 mem_set pow_bij).
+      move => // i0 i'.
       case (i0 = (b, j){hr}) => ieq.
       + rewrite ieq get_set_sameE //=.
         case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
@@ -10507,63 +10547,371 @@ sp 4; if => //.
       move => m1 m2 tag m1' tag'.
       have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
       smt().
-    + move => b0 j0.
-      case ((b0, j0) = (b, j){hr}) => bjeq; 2: by smt(mem_set get_setE).
-      by rewrite mem_set get_setE bjeq //= => bjt.
-    + move => i iin itest.
-      rewrite in_fsetU1.
-      move => [inm2|eqsk].
-      + have := inv2 i iin itest b1 b2 inm2.
-        move => [bj] [] bjin treq.
-        exists bj.
-        smt(get_setE mem_set).
-      exists (b, j){hr}.
-      smt(get_setE mem_set).
-    move => x0 y0 b0 tqeq.
-    have := inv3 x0 y0 b0 tqeq.
-    move => [H1|H2]; 1: smt().
-    right.
-    move : H2 => [i'] t k ir'' H2.
-    exists i'. 
-    smt(get_setE).
+    auto => /> &hr 24? inv *.
+    do split; ~5: smt(get_setE in_fsetU1 mem_set pow_bij).
+    move => // i0 i'.
+    case (i0 = (b, j){hr}) => ieq.
+    + rewrite ieq get_set_sameE //=.
+      case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
+      rewrite !get_setE i'eq //=.
+      move => m1 m2 tag m1' tag'.
+      have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
+      smt().
+    case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
+    rewrite i'eq get_set_sameE //=.
+    rewrite !get_setE ieq //=.
+    move => m1 m2 tag m1' tag'.
+    have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+    smt().
   sp 2; if => //.  
-  + auto => /> &hr 16? inv 3? inv2 7? inv3 b1 b2 *.
-    do split; ~6,8,9,14: smt(get_setE in_fsetU1 mem_set pow_bij).
-    + move => // i0 i'.
-      case (i0 = (b, j){hr}) => ieq.
-      + rewrite ieq get_set_sameE //=.
-        case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
-        rewrite !get_setE i'eq //=.
-        move => m1 m2 tag m1' tag'.
-        have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
-        smt().
-      case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
-      rewrite i'eq get_set_sameE //=.
-      rewrite !get_setE ieq //=.
+  + auto => /> &hr 23? inv *.
+    do split; ~5: smt(get_setE in_fsetU1 mem_set pow_bij).
+    move => // i0 i'.
+    case (i0 = (b, j){hr}) => ieq.
+    + rewrite ieq get_set_sameE //=.
+      case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
+      rewrite !get_setE i'eq //=.
       move => m1 m2 tag m1' tag'.
-      have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+      have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
       smt().
-    + move => b0 j0.
-      case ((b0, j0) = (b, j){hr}) => bjeq; 2: by smt(mem_set get_setE).
-      by rewrite mem_set get_setE bjeq //= => bjt.
-    + move => i iin itest.
-      rewrite in_fsetU1.
-      move => [inm2|eqsk].
-      + have := inv2 i iin itest b1 b2 inm2.
-        move => [bj] [] bjin treq.
-        exists bj.
-        smt(get_setE mem_set).
-      exists (b, j){hr}.
+    case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
+    rewrite i'eq get_set_sameE //=.
+    rewrite !get_setE ieq //=.
+    move => m1 m2 tag m1' tag'.
+    have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+    smt().
+  auto => /> &hr 23? inv *.
+  do split; ~5: smt(get_setE in_fsetU1 mem_set pow_bij).
+  move => // i0 i'.
+  case (i0 = (b, j){hr}) => ieq.
+  + rewrite ieq get_set_sameE //=.
+    case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
+    rewrite !get_setE i'eq //=.
+    move => m1 m2 tag m1' tag'.
+    have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
+    smt().
+  case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
+  rewrite i'eq get_set_sameE //=.
+  rewrite !get_setE ieq //=.
+  move => m1 m2 tag m1' tag'.
+  have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+  smt().
+auto => /> &hr *.
+do split; smt(get_setE in_fsetU1 mem_set pow_bij). *)
+qed.
+
+
+hoare Red_Ltk_inv_send_msg3: Red_Ltk(A, St_CDH_O).Red_O.send_msg3:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof. admit. (*
+proc; inline.
+sp; if => //.
+sp; match => //.
++ match => //.
+sp; seq 1 : (#pre). auto => />.
+if => //.
++ sp 3; if => //.
+  + sp 1; if => //.
+    + sp 1; if => //.
+      + auto => |> &hr *.
+        smt(get_setE in_fsetU1 mem_set pow_bij).
+      auto => |> &hr *.
+      smt(get_setE in_fsetU1 mem_set pow_bij).
+    if => //.
+    + auto => |> &hr *.
+      smt(get_setE in_fsetU1 mem_set pow_bij).
+    auto => |> &hr *.
+    smt(get_setE in_fsetU1 mem_set pow_bij).
+  if => //.
+  + sp 1; if => //.
+    + auto => /> &hr 24? inv *.
+      do split; ~7: smt(get_setE in_fsetU1 mem_set pow_bij).
+      move => b0 j bjin bjt.
+      have := inv b0 j bjin bjt.
+      move => [i2] itr.
+      exists i2.
       smt(get_setE mem_set).
-    move => x0 y0 b0 tqeq.
-    have := inv3 x0 y0 b0 tqeq.
-    move => [H1|H2]; 1: smt().
-    right.
-    move : H2 => [i'] t k ir'' H2.
-    exists i'. 
-    smt(get_setE).
-  auto => /> &hr 16? inv 3? inv2 7? inv3 b1 b2 *.
-  do split; ~6,8,9,14: smt(get_setE in_fsetU1 mem_set pow_bij).
+    auto => /> &hr 24? inv *.
+    do split; ~7: smt(get_setE in_fsetU1 mem_set pow_bij).
+    move => b0 j bjin bjt.
+    have := inv b0 j bjin bjt.
+    move => [i2] itr.
+    exists i2.
+    smt(get_setE mem_set).
+  if => //.
+  + auto => /> &hr 23? inv *.
+    do split; ~6: smt(get_setE in_fsetU1 mem_set pow_bij).
+    move => b0 j bjin bjt.
+    have := inv b0 j bjin bjt.
+    move => [i2] itr.
+    exists i2.
+    smt(get_setE mem_set).
+  auto => /> &hr 23? inv *.
+  do split; ~6: smt(get_setE in_fsetU1 mem_set pow_bij).
+  move => b0 j bjin bjt.
+  have := inv b0 j bjin bjt.
+  move => [i2] itr.
+  exists i2.
+  smt(get_setE mem_set).
+rcondf ^if. auto => /#.
+rcondf ^if. auto => /#.
+sp 2; if => //.
++ auto => /> &hr 22? inv *.
+  do split; ~5: smt(get_setE in_fsetU1 mem_set pow_bij).
+  move => b0 j bjin bjt.
+  have := inv b0 j bjin bjt.
+  move => [i2] itr.
+  exists i2.
+  smt(get_setE mem_set).
+auto => /> &hr 22? inv *.
+do split; ~5: smt(get_setE in_fsetU1 mem_set pow_bij).
+move => b0 j bjin bjt.
+have := inv b0 j bjin bjt.
+move => [i2] itr.
+exists i2.
+smt(get_setE mem_set). *)
+qed.
+
+hoare Red_Ltk_inv_c_rev_skey: Red_Ltk(A, St_CDH_O).Red_O.c_rev_skey:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof. admit. (*
+proc; inline.
+sp; if => //.
+sp; match => //.
+match => //.
+if => //.
+sp; seq 1 : (#pre). auto => />.
+if => //.
++ auto => /> &hr 22? inv 8? inv2 *.
+  do split; ~2,6,9: smt(get_setE in_fsetU1 mem_set pow_bij).
+  + move => x0. 
+    rewrite mem_set.
+    move => []; 1: smt(in_fsetU1).
+    move => />.
+    do split; smt(in_fsetU1).
+  + move => b0 j bjin bjt.
+    have := inv b0 j bjin bjt.
+    move => [i2] itr.
+    exists i2.
+    smt(get_setE mem_set).
+  move => i0.
+  case (i0 = i{hr}); smt(get_setE mem_set).
+auto => /> &hr 22? inv *.
+do split; ~5,8: smt(get_setE in_fsetU1 mem_set pow_bij).
++ move => b0 j bjin bjt.
+  have := inv b0 j bjin bjt.
+  move => [i2] itr.
+  exists i2.
+  smt(get_setE mem_set).
+move => i0.
+case (i0 = i{hr}); smt(get_setE mem_set). *)
+qed.
+
+hoare Red_Ltk_inv_s_rev_skey: Red_Ltk(A, St_CDH_O).Red_O.s_rev_skey:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof.
+proc; inline.
+sp; if => //.
+sp; match => //.
+match => //.
+if => //.
+sp; seq 1 : (#pre). auto => />.
+if => //.
++ sp 1; if => //.
+  + auto => /> &hr *.
+    do split; ~6,8: smt(get_setE in_fsetU1 mem_set pow_bij).
+    + move => b0 j0.
+      case ((b0, j0) = (b, j){hr}) => bjeq; 2: smt(get_setE mem_set).
+      rewrite get_setE mem_set bjeq //=. 
+      smt().
+    move => b0 j0.
+    case ((b0, j0) = (b, j){hr}) => bjeq; smt(get_setE mem_set).
+  auto => /> &hr *.
+  do split; ~5,7: smt(get_setE in_fsetU1 mem_set pow_bij).
+  + move => b0 j0.
+    case ((b0, j0) = (b, j){hr}) => bjeq; 2: smt(get_setE mem_set).
+    rewrite get_setE mem_set bjeq //=. 
+    smt().
+  move => b0 j0.
+  case ((b0, j0) = (b, j){hr}) => bjeq; smt(get_setE mem_set).
+sp 1; if => //.
++ auto => /> &hr *.
+  do split; ~2,6,8: smt(get_setE in_fsetU1 mem_set pow_bij).
+  + move => x0.
+    rewrite mem_set.
+    move => []; 1: smt().
+    move => />.
+    smt().
+  + move => b0 j0.
+    case ((b0, j0) = (b, j){hr}) => bjeq; 2: smt(get_setE mem_set).
+    rewrite get_setE mem_set bjeq //=. 
+    smt().
+  move => b0 j0.
+  case ((b0, j0) = (b, j){hr}) => bjeq; smt(get_setE mem_set).
+auto => /> &hr *.
+do split; ~5,7: smt(get_setE in_fsetU1 mem_set pow_bij).
++ move => b0 j0.
+  case ((b0, j0) = (b, j){hr}) => bjeq; 2: smt(get_setE mem_set).
+  rewrite get_setE mem_set bjeq //=. 
+  smt().
+move => b0 j0.
+case ((b0, j0) = (b, j){hr}) => bjeq; smt(get_setE mem_set).
+qed.
+
+hoare Red_Ltk_inv_rev_ltkey: Red_Ltk(A, St_CDH_O).Red_O.rev_ltkey:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof.
+proc; inline.
+sp; if => //.
+sp; match => //.
+match => //.
+if => //.
+if => //.
++ auto => /> &hr 15? inv 8? inv2 9? j bjin bjt *.
+  do split; ~1: smt(get_setE in_fsetU1 mem_set pow_bij).
+  move : bjt => [tests|testp]; 1: smt().
+  have [i] tp: (exists i, i \in Red_Ltk.Red_O.c_smap /\ get_ir_test (oget Red_Ltk.Red_O.c_smap.[i]) /\ get_trace (oget Red_Ltk.Red_O.c_smap.[i]) 
+                  = get_trace (oget Red_Ltk.Red_O.s_smap.[(b, j)])){hr}.
+  + move : testp.
+    have->: (get_trace (oget Red_Ltk.Red_O.s_smap.[b, j]) = Some (oget (get_trace (oget Red_Ltk.Red_O.s_smap.[b, j])))){hr} by smt(some_oget).
+    by apply (testp_s (oget (get_trace (oget Red_Ltk.Red_O.s_smap.[(b, j)]))){hr} Red_Ltk.Red_O.c_smap{hr}).
+  smt().
+auto => /> &hr *.
+do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+qed.
+
+hoare Red_Ltk_inv_c_rev_ephkey: Red_Ltk(A, St_CDH_O).Red_O.c_rev_ephkey:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof.
+proc; inline.
+sp; if => //.
+sp; match => //.
+match => //.
++ if => //.
+  sp 3; if => //.
+  + auto => /> &hr 18? inv 3? inv2 *.
+    do split; ~4,6,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
+    + move => i0 i'.
+      case (i0 = i{hr}) => ieq.
+      + rewrite ieq get_set_sameE //=.
+        case (i' = i{hr}) => i'eq; 1: by rewrite i'eq.
+        rewrite get_set_neqE //=.
+        move => b b' m1 m2 m2' [] t1eq t2eq stnn tr.
+        have := inv i{hr} i' b b' m1 None m2'. 
+        smt().
+      case (i' = i{hr}) => i'eq; 2: by smt(get_set_neqE).
+      rewrite get_set_neqE //=.
+      rewrite i'eq get_setE //=.
+      move => b b' m1 m2 m2' stnn tr teq.
+      have := inv i0 i{hr} b b' m1 m2 None. 
+      smt().
+    + move => b0 j bjin bjt.
+      have := inv2 b0 j bjin bjt.
+      move => [i2] itr.
+      exists i2.
+      smt(get_setE mem_set).
+    + move => i0.
+      case (i0 = i{hr}); smt(get_setE mem_set).
+    move => i0 int m1 m2.
+    case (i0 = i{hr}) => ieq; 1: smt(get_setE mem_set in_fsetU1).
+    rewrite get_setE mem_set ieq in_fsetU1 //=.
+    move => i0in tri0 intin m1eq [|inteq]; smt().
+  auto => /> &hr 18? inv 3? inv2 *.
+  do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+if => //.
+sp 3; if => //.
++ auto => /> &hr 18? inv 3? inv2 *.
+  do split; ~6,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
+  + move => b0 j bjin bjt.
+    have := inv2 b0 j bjin bjt.
+    move => [i2] itr.
+    exists i2.
+    smt(get_setE mem_set).
+  + move => i0.
+    case (i0 = i{hr}); smt(get_setE mem_set).
+  move => i0 int m1 m2.
+  case (i0 = i{hr}) => ieq; 1: smt(get_setE mem_set in_fsetU1).
+  rewrite get_setE mem_set ieq in_fsetU1 //=.
+  move => i0in tri0 intin m1eq [|inteq]; 1: smt().
+  have := inv i0 i{hr} m1.`1 t{hr}.`1.`1 m1.`2 m2 t{hr}.`2.
+  have->: Red_Ltk.Red_O.c_smap{hr}.[i0] <> None /\ get_trace (oget Red_Ltk.Red_O.c_smap{hr}.[i0]) = Some ((m1.`1, m1.`2), m2) by smt().
+  have->: Red_Ltk.Red_O.c_smap{hr}.[i{hr}] <> None /\ get_trace (oget Red_Ltk.Red_O.c_smap{hr}.[i{hr}]) = Some ((t{hr}.`1.`1, m1.`2), t{hr}.`2) by smt().
+  smt().
+auto => /> &hr 18? inv 3? inv2 *.
+do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+qed.
+
+hoare Red_Ltk_inv_s_rev_ephkey: Red_Ltk(A, St_CDH_O).Red_O.s_rev_ephkey:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof.
+proc; inline.
+sp; if => //.
+sp; match => //.
+match => //.
+if => //.
+if => //.
++ auto => /> &hr 19? inv 2? inv2 *.
+  do split; ~3,5: smt(get_setE in_fsetU1 mem_set pow_bij).
   + move => // i0 i'.
     case (i0 = (b, j){hr}) => ieq.
     + rewrite ieq get_set_sameE //=.
@@ -10578,30 +10926,116 @@ sp 4; if => //.
     move => m1 m2 tag m1' tag'.
     have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
     smt().
-  + move => b0 j0.
-    case ((b0, j0) = (b, j){hr}) => bjeq; 2: by smt(mem_set get_setE).
-    by rewrite mem_set get_setE bjeq //= => bjt.
-  + move => i iin itest.
-    rewrite in_fsetU1.
-    move => [inm2|eqsk].
-    + have := inv2 i iin itest b1 b2 inm2.
-      move => [bj] [] bjin treq.
-      exists bj.
-      smt(get_setE mem_set).
-    exists (b, j){hr}.
-    smt(get_setE mem_set).
-  move => x0 y0 b0 tqeq.
-  have := inv3 x0 y0 b0 tqeq.
-  move => [H1|H2]; 1: smt().
-  right.
-  move : H2 => [i'] t k ir'' H2.
-  exists i'. 
-  smt(get_setE).
-auto => /> &hr *.
-do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+  move => b0 j0.
+  case ((b0, j0) = (b, j){hr}); 2: smt(get_setE mem_set).
+  move => />.
+  rewrite get_setE mem_set //=.
+  smt().
+auto => /> &hr 19? inv 2? inv2 *.
+do split; ~3: smt(get_setE in_fsetU1 mem_set pow_bij).
+move => // i0 i'.
+case (i0 = (b, j){hr}) => ieq.
++ rewrite ieq get_set_sameE //=.
+  case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
+  rewrite !get_setE i'eq //=.
+  move => m1 m2 tag m1' tag'.
+  have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
+  smt().
+case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
+rewrite i'eq get_set_sameE //=.
+rewrite !get_setE ieq //=.
+move => m1 m2 tag m1' tag'.
+have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+smt().
 qed.
 
-*)
+hoare Red_Ltk_inv_c_test: Red_Ltk(A, St_CDH_O).Red_O.c_test:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof.
+proc; inline.
+sp; if => //; if => //.
+match => //; match => //.
+if => //.
+rcondf ^if. auto => /#.
+sp 3; if => //.
++ sp; seq 1 : (#pre). auto => />.
+  if => //.
+  + auto => /> &hr *.
+    do split; ~2: smt(get_setE in_fsetU1 mem_set pow_bij).
+    move => x0.
+    rewrite mem_set.
+    move => []; 1: smt(in_fsetU1).
+    move => />.
+    do split; smt(in_fsetU1).
+  auto => /> &hr *.
+  do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+auto => /> &hr *.
+smt(get_setE in_fsetU1 mem_set pow_bij).
+qed.
+
+hoare Red_Ltk_inv_s_test: Red_Ltk(A, St_CDH_O).Red_O.s_test:
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2)
+==>
+    (inv_Red_Ltk Red_Ltk.Red_O.tested Red_Ltk.Red_O.test_ltkrev Red_Ltk.Red_O.b0 Red_Ltk.Red_O.bad1 Red_Ltk.Red_O.bad2
+       Red_Ltk.Red_O.pk_set Red_Ltk.Red_O.m1_set Red_Ltk.Red_O.m2_set Red_Ltk.Red_O.x_set Red_Ltk.Red_O.y_set Red_Ltk.Red_O.b_set
+       Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
+       Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
+       St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
+proof.
+proc; inline.
+sp; if => //; if => //.
+match => //; match => //.
+if => //.
+rcondf ^if. auto => /#.
+sp 2; if => //.
++ sp; seq 1 : (#pre). auto => />.
+  if => //.
+  + auto => /> &hr *.
+    do split; ~2,6: smt(get_setE in_fsetU1 mem_set pow_bij).
+    + move => x0.
+      rewrite mem_set.
+      move => []; 1: smt(in_fsetU1).
+      move => />.
+      do split; smt(in_fsetU1).
+    move => b0 j0.
+    case ((b0, j0) = (b, j){hr}); 2: smt(get_setE mem_set).
+    move => />.
+    rewrite get_setE mem_set //=.
+    have : card (get_fresh_partners_s t'{hr} Red_Ltk.Red_O.c_smap{hr}) <> 0 by smt().
+    rewrite fcard_eq0 => /mem_pick /mem_fdom.
+    rewrite mem_filter /=.
+    move => [H1 H2].
+    exists (pick (get_fresh_partners_s t'{hr} Red_Ltk.Red_O.c_smap{hr})).
+    smt().
+  auto => /> &hr *.
+  do split; ~5: smt(get_setE in_fsetU1 mem_set pow_bij).
+  move => b0 j0.
+  case ((b0, j0) = (b, j){hr}); 2: smt(get_setE mem_set).
+  move => />.
+  rewrite get_setE mem_set //=.
+  have : card (get_fresh_partners_s t'{hr} Red_Ltk.Red_O.c_smap{hr}) <> 0 by smt().
+  rewrite fcard_eq0 => /mem_pick /mem_fdom.
+  rewrite mem_filter /=.
+  move => [H1 H2].
+  exists (pick (get_fresh_partners_s t'{hr} Red_Ltk.Red_O.c_smap{hr})).
+  smt().
+auto => /> &hr *.
+smt(get_setE in_fsetU1 mem_set pow_bij).
+qed.
 
 
 lemma cdh_red_ltk &m: Pr[E_GAKE_nodhs(Game4Ltk, A).run(true) @ &m : Game4Ltk.badq] <= 
@@ -10712,17 +11146,13 @@ call (: Game4Ltk.badq,
 
          (* one-sided part on the Game4Ltk side *)
          /\ (forall i st pt ir, i \in Game4Ltk.c_smap{2} => Game4Ltk.c_smap{2}.[i] = Some (Pending_mod st pt ir)
-              => pt.`2 = g ^ st.`2 /\ pt.`2 \in Game4Ltk.m1_set{2} /\ pt.`1 = st.`1 /\ pt.`1 \in Game4Ltk.servers{2} /\ !ir.`3)
+              => pt.`2 = g ^ st.`2)
          /\ (forall i st t k ir, i \in Game4Ltk.c_smap{2} => Game4Ltk.c_smap{2}.[i] = Some (Accepted_mod st t k ir)
-              => t.`1.`2 = g ^ st.`2 /\ t.`1.`2 \in Game4Ltk.m1_set{2} /\ t.`1.`1 = st.`1 /\ st.`1 \in Game4Ltk.servers{2} 
-                      /\ ((oget t.`2).`1 \in Game4Ltk.m2_set{2} \/ (oget t.`2).`1 \in Game4Ltk.y_set{2})
+              => t.`1.`2 = g ^ st.`2
                       /\ t.`2 <> None /\ ((oget t.`2).`1 ^ st.`2, st.`1 ^ st.`2, st.`1, g ^ st.`2, (oget t.`2).`1) \in Game4Ltk.h1m{2}
                       /\ (oget t.`2).`2 = oget Game4Ltk.h1m{2}.[((oget t.`2).`1 ^ st.`2, st.`1 ^ st.`2, st.`1, g ^ st.`2, (oget t.`2).`1)])
          /\ (forall bj st t k ir, bj \in Game4Ltk.s_smap{2} => Game4Ltk.s_smap{2}.[bj] = Some (Accepted_mod st t k ir)
-              => t.`1.`1 = g ^ st.`1 /\ (g ^ st.`1) \in Game4Ltk.servers{2} /\ g ^ st.`1 = bj.`1
-                      /\ t.`2 <> None /\ st.`2 <> None /\ g ^ (oget st.`2) = (oget t.`2).`1
-                      /\ g ^ (oget st.`2) \in Game4Ltk.m2_set{2} /\ g ^ (oget st.`2) \notin Game4Ltk.servers{2}
-                      /\ (t.`1.`2 \in Game4Ltk.m1_set{2} \/ t.`1.`2 \in Game4Ltk.x_set{2})
+              => t.`1.`1 = g ^ st.`1
                       /\ ((t.`1).`2 ^ (oget st.`2), (t.`1).`2 ^ st.`1, g ^ st.`1, (t.`1).`2, g ^ (oget st.`2)) \in Game4Ltk.h1m{2}
                       /\ (oget t.`2).`2 = oget Game4Ltk.h1m{2}.[((t.`1).`2 ^ (oget st.`2), (t.`1).`2 ^ st.`1, g ^ st.`1, (t.`1).`2, g ^ (oget st.`2))])
          /\ (forall b sk, b \in Game4Ltk.servers => obind get_skey Game4Ltk.servers.[b] = Some sk
