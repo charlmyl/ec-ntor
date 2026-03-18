@@ -5738,19 +5738,8 @@ sp; match => //.
 + match => //.
 sp; seq 1 : (#pre). auto => />.
 if => //.
++ rcondf ^if. auto => /#.
 + sp 3; if => //.
-  + sp 1; if => //.
-    + sp 1; if => //.
-      + auto => |> &hr *.
-        smt(get_setE in_fsetU1 mem_set pow_bij).
-      auto => |> &hr *.
-      smt(get_setE in_fsetU1 mem_set pow_bij).
-    if => //.
-    + auto => |> &hr *.
-      smt(get_setE in_fsetU1 mem_set pow_bij).
-    auto => |> &hr *.
-    smt(get_setE in_fsetU1 mem_set pow_bij).
-  if => //.
   + sp 1; if => //.
     + auto => /> &hr 17? inv 8? inv2 *.
       do split; ~8,15: smt(get_setE in_fsetU1 mem_set pow_bij).
@@ -5819,25 +5808,9 @@ if => //.
     left. exists i'.
     by smt(get_setE).
   smt().
+rcondf ^if. auto => /#.
+rcondf ^if. auto => /#.
 sp 2; if => //.
-+ sp 1; if => //.
-  + sp 1; if => //.
-    + auto => |> &hr *.
-      smt(get_setE in_fsetU1 mem_set pow_bij).
-    auto => />. 
-    smt(get_setE in_fsetU1 mem_set pow_bij).
-  if => //.
-  + auto => |> &hr *.
-    smt(get_setE in_fsetU1 mem_set pow_bij).
-  auto => |> &hr *.
-  smt(get_setE in_fsetU1 mem_set pow_bij).
-if => //.
-+ sp 1; if => //.
-  + auto => |> &hr *.
-    smt(get_setE in_fsetU1 mem_set pow_bij).
-  auto => |> &hr *.
-  smt(get_setE in_fsetU1 mem_set pow_bij).
-if => //.
 + auto => /> &hr 15? inv 8? inv2 *.
   do split; ~5,12: smt(get_setE in_fsetU1 mem_set pow_bij).
   + move => b0 j bjin bjt.
@@ -6085,38 +6058,35 @@ if => //.
 if => //.
 + sp 1; if => //.
   auto => />.
-if => />.
-+ auto => /> &hr 12? inv 3? inv2 7? inv3 b1 b2 *.
-  do split; smt(get_setE in_fsetU1 mem_set pow_bij).
-+ auto => /> &hr 12? inv 3? inv2 7? inv3 b1 b2 *.
-  do split; ~3,6,10: smt(get_setE in_fsetU1 mem_set pow_bij).
-  + move => // i0 i'.
-    case (i0 = (b, j){hr}) => ieq.
-    + rewrite ieq get_set_sameE //=.
-      case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
-      rewrite !get_setE i'eq //=.
-      move => m1 m2 tag m1' tag'.
-      have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
-      smt().
-    case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
-    rewrite i'eq get_set_sameE //=.
-    rewrite !get_setE ieq //=.
+if => //.
+auto => /> &hr 12? inv 3? inv2 7? inv3 b1 b2 *.
+do split; ~3,6,10: smt(get_setE in_fsetU1 mem_set pow_bij).
++ move => // i0 i'.
+  case (i0 = (b, j){hr}) => ieq.
+  + rewrite ieq get_set_sameE //=.
+    case (i' = (b, j){hr}) => i'eq; 1: by rewrite i'eq.
+    rewrite !get_setE i'eq //=.
     move => m1 m2 tag m1' tag'.
-    have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+    have := inv (b,j){hr} i' m1 m2 tag m1' tag'.
     smt().
-  + move => i0 iin it inm2.
-    have := inv2 i0 iin it b1 b2 inm2.
-    move => [i2] itr.
-    exists i2.
-    smt(get_setE mem_set).
-  move => x0 y0 b0 tqeq.
-  have := inv3 x0 y0 b0 tqeq.
-  move => [H1|H2]; 1: by smt().
-  right.
-  move : H2 => [i'] t k ir'' H2.
-  exists i'. 
-  by smt(get_setE).
-auto => />. *)
+  case (i' = (b, j){hr}) => i'eq; 2: by smt(get_set_neqE).
+  rewrite i'eq get_set_sameE //=.
+  rewrite !get_setE ieq //=.
+  move => m1 m2 tag m1' tag'.
+  have := inv i0 (b,j){hr} m1 m2 tag m1' tag'.
+  smt().
++ move => i0 iin it inm2.
+  have := inv2 i0 iin it b1 b2 inm2.
+  move => [i2] itr.
+  exists i2.
+  smt(get_setE mem_set).
+move => x0 y0 b0 tqeq.
+have := inv3 x0 y0 b0 tqeq.
+move => [H1|H2]; 1: by smt().
+right.
+move : H2 => [i'] t k ir'' H2.
+exists i'. 
+by smt(get_setE). *)
 qed.
 
 hoare Game4Eph_inv_c_test: Game4Eph.c_test:
@@ -6131,13 +6101,8 @@ proof. admit. (*
 proc; inline.
 sp; if => //; if => //.
 match => //; match => //.
-if => //; if => //.
-+ sp 3; if => //.
-  + sp; seq 1 : (#pre). auto => //.
-    if => //.
-    + auto => />.
-    auto => />.
-  auto => />.
+if => //.
+rcondf ^if. auto => /#.
 sp 3; if => //.
 + sp; seq 1 : (#pre). auto => />.
   if => //.
@@ -6201,13 +6166,8 @@ proof. admit. (*
 proc; inline.
 sp; if => //; if => //.
 match => //; match => //.
-if => //; if => //.
-+ sp 2; if => //.
-  + sp; seq 1 : (#pre). auto => //.
-    if => //.
-    + auto => />.
-    auto => />.
-  auto => />.
+if => //.
+rcondf ^if. auto => /#.
 sp 2; if => //.
 + sp; seq 1 : (#pre). auto => />.
   if => //.
