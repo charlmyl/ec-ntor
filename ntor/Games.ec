@@ -127,7 +127,7 @@ module Game0 : GAKE_nodhs_i = {
           pk <- g ^ sk;
           bad2 <- bad2 \/ pk \in x_set;
           bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
-          c_smap.[i] <- Pending_mod (m1, sk) (m1, pk) (false, false, false);
+          c_smap.[i] <- Pending_mod (m1, sk) (m1, pk) (false, false, false, false);
           m1_set <- m1_set `|` fset1 pk;
           r <- Some pk;
         }
@@ -157,7 +157,11 @@ module Game0 : GAKE_nodhs_i = {
           bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
           m2_set <- m2_set `|` fset1 pk;
           (t_B, key) <@ h(m2 ^ sk, m2 ^ sk_b, g ^ sk_b, m2, pk);
-          s_smap.[(b, j)] <- Accepted_mod (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false);
+          if (get_sr_ltk (oget servers.[b])) {
+            s_smap.[(b, j)] <- Accepted_mod (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false, true);
+          } else {
+            s_smap.[(b, j)] <- Accepted_mod (sk_b, Some sk) ((b, m2), Some (pk, t_B)) key (false, false, false, false);
+          }
           r <- Some (pk, t_B);
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -179,7 +183,11 @@ module Game0 : GAKE_nodhs_i = {
             (b, sk_ce) <- st;
             (t_A, key) <@ h(m3.`1 ^ sk_ce, b ^ sk_ce, b, g ^ sk_ce, m3.`1);
             if (t_A = m3.`2) {
-              c_smap.[i] <- Accepted_mod st (pt, Some m3) key ir;
+              if (get_sr_ltk (oget servers.[pt.`1])) {
+                c_smap.[i] <- set_ir_cor (Accepted_mod st (pt, Some m3) key ir);
+              } else {
+                c_smap.[i] <- Accepted_mod st (pt, Some m3) key ir;
+              }
               r <- Some ();
             } else {
               c_smap.[i] <- Aborted_mod (Some st) (Some (pt, Some m3)) ir;
@@ -192,7 +200,6 @@ module Game0 : GAKE_nodhs_i = {
     end;
     return r;
   }
-
 
 (* reveal and test *)
   proc c_rev_skey(i: int) : key option = {
@@ -322,7 +329,7 @@ module Game0 : GAKE_nodhs_i = {
           if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
                   \/ (fresh_partner_c t' s_smap servers = Some false)
-                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_sr_ltk (oget servers.[t'.`1.`1])))) {
+                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_ir_cor (oget c_smap.[i])))) {
               if (b0 = false) {
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
@@ -559,9 +566,11 @@ print Game3.
 module Game4 = Game3 with {
   var test_ephrev_s : bool
   var test_ltkrev : bool
+  var bad3 : bool
+  var nih1m : (pkey * pkey * pkey * pkey * pkey) fset
 
   proc init_mem [
-    -1 + { test_ephrev_s <- false; test_ltkrev <- false; }
+    -1 + { test_ephrev_s <- false; test_ltkrev <- false; bad3 <- false; nih1m <- fset0; }
   ]
 
   proc send_msg2 [
@@ -570,6 +579,8 @@ module Game4 = Game3 with {
   ]
 
   proc send_msg3 [
+    ^if.^match#Some.^match#Pending_mod.^if.^h1m<- + {nih1m <- nih1m `|` fset1 x;}
+    ^if.^match#Some.^match#Pending_mod.^if{4}.^if + ^ {bad3 <- bad3 \/ x \in nih1m;}
     ^if.^match#Some.^match#Pending_mod.^ks<$ ~ {key <- witness;}
     ^if.^match#Some.^match#Pending_mod.^if{2} ~ (pt.`2 \notin m1_set /\ pt.`2 \notin x_set)
     ^if.^match#Some.^match#Pending_mod.^if{2}.^x_set<- ~ {x_set <- x_set `|` fset1 pt.`2;}
@@ -628,115 +639,176 @@ module Game4 = Game3 with {
 
 print Game4.
 
-module Game4Ltk = Game4 with {
+module Game5 = Game4 with {
+  var comp_tag : (pkey * pkey * pkey * pkey * pkey) fset
+
+  proc init_mem [
+    -1 + { comp_tag <- fset0; }
+  ]
+
+ 
   proc h [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
   proc init_s [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
   proc send_msg1 [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
   proc send_msg2 [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
   proc send_msg3 [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
+    [^if.^match#Some.^match#Pending_mod.^if{4}.^bad3<- - 1] + (!bad3)
+    ^if.^match#Some.^match#Pending_mod.^if{4}.^if?^c_smap<- + {if (card (get_partners_c (pt, Some m3) s_smap) = 0) {comp_tag <- comp_tag `|` fset1 x;}}
   ]
 
   proc c_rev_skey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
   proc s_rev_skey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
   proc rev_ltkey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
+  ]
+
+  proc c_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
+  ]
+
+  proc s_rev_ephkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
+  ]
+
+  proc c_test [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)    
+  ]
+
+  proc s_test [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
+  ]
+}.
+
+print Game5.
+
+module Game5Ltk = Game5 with {
+  proc h [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc init_s [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc send_msg1 [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc send_msg2 [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc send_msg3 [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc c_rev_skey [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc s_rev_skey [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc rev_ltkey [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
     [^if.^match#Some.^match#Honest_mod.^if.^if - ^servers<-] + (!test_ltkrev)
   ]
 
   proc c_rev_ephkey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
 
   proc s_rev_ephkey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
 
   proc c_test [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^c_smap<-] + (!test_ltkrev)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^c_smap<-] + (!test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^badq<- - ^c_smap<-] + (!test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^badq<- - ^c_smap<-] + (!test_ltkrev)
     
   ]
 
   proc s_test [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ltkrev)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
     [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^s_smap<-] + (!test_ltkrev)
     [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^s_smap<-] + (!test_ltkrev)
   ]
 }.
 
-print Game4.
+print Game5Ltk.
 
-module Game4Eph = Game4 with {
+module Game5Eph = Game5 with {
   proc h [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc init_s [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc send_msg1 [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc send_msg2 [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc send_msg3 [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc c_rev_skey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc s_rev_skey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc rev_ltkey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc c_rev_ephkey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
   proc s_rev_ephkey [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
     [^if.^match#Some.^match#Accepted_mod.^if.^if - ^s_smap<-] + (!test_ephrev_s)
   ]
 
   proc c_test [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
     [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^c_smap<-] + (!test_ephrev_s)
     [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^c_smap<-] + (!test_ephrev_s)
     
   ]
 
   proc s_test [
-    ^if ~ (!bad1 /\ !bad2 /\ !test_ephrev_s)
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
     [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^s_smap<-] + (!test_ephrev_s)
     [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^s_smap<-] + (!test_ephrev_s)
   ]

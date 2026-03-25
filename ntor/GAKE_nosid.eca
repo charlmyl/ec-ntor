@@ -12,7 +12,7 @@ type trace = (pkey * pkey) * (pkey * tag) option.
 type part_trace = pkey * pkey.
 type sid = (pkey * pkey) * trace.
 
-type ir_status = bool * bool * bool.
+type ir_status = bool * bool * bool * bool.
 
 type h_input = pkey * pkey * pkey * pkey * pkey.
 
@@ -57,21 +57,31 @@ with s = Pending_mod _ _ ir    => ir.`3
 with s = Accepted_mod _ _ _ ir => ir.`3
 with s = Aborted_mod _ _ ir    => ir.`3.
 
+op get_ir_cor (s: 'a instance_state) : bool =
+with s = Pending_mod _ _ ir    => ir.`4
+with s = Accepted_mod _ _ _ ir => ir.`4
+with s = Aborted_mod _ _ ir    => ir.`4.
+
 (* operators for getting or setting the revealed status of an instance *)
 op set_ir_eph (s: 'a instance_state) : 'a instance_state =
-with s = Pending_mod s t ir    => Pending_mod s t (true, ir.`2, ir.`3)
-with s = Accepted_mod s t k ir => Accepted_mod s t k (true, ir.`2, ir.`3)
-with s = Aborted_mod s t ir    => Aborted_mod s t (true, ir.`2, ir.`3).
+with s = Pending_mod s t ir    => Pending_mod s t (true, ir.`2, ir.`3, ir.`4)
+with s = Accepted_mod s t k ir => Accepted_mod s t k (true, ir.`2, ir.`3, ir.`4)
+with s = Aborted_mod s t ir    => Aborted_mod s t (true, ir.`2, ir.`3, ir.`4).
 
 op set_ir_sess (s: 'a instance_state) : 'a instance_state =
-with s = Pending_mod s t ir    => Pending_mod s t (ir.`1, true, ir.`3)
-with s = Accepted_mod s t k ir => Accepted_mod s t k (ir.`1, true, ir.`3)
-with s = Aborted_mod s t ir    => Aborted_mod s t (ir.`1, true, ir.`3).
+with s = Pending_mod s t ir    => Pending_mod s t (ir.`1, true, ir.`3, ir.`4)
+with s = Accepted_mod s t k ir => Accepted_mod s t k (ir.`1, true, ir.`3, ir.`4)
+with s = Aborted_mod s t ir    => Aborted_mod s t (ir.`1, true, ir.`3, ir.`4).
 
 op set_ir_test (s: 'a instance_state) : 'a instance_state =
-with s = Pending_mod s t ir    => Pending_mod s t (ir.`1, ir.`2, true)
-with s = Accepted_mod s t k ir => Accepted_mod s t k (ir.`1, ir.`2, true)
-with s = Aborted_mod s t ir    => Aborted_mod s t (ir.`1, ir.`2, true).
+with s = Pending_mod s t ir    => Pending_mod s t (ir.`1, ir.`2, true, ir.`4)
+with s = Accepted_mod s t k ir => Accepted_mod s t k (ir.`1, ir.`2, true, ir.`4)
+with s = Aborted_mod s t ir    => Aborted_mod s t (ir.`1, ir.`2, true, ir.`4).
+
+op set_ir_cor (s: 'a instance_state) : 'a instance_state =
+with s = Pending_mod s t ir    => Pending_mod s t (ir.`1, ir.`2, ir.`3, true)
+with s = Accepted_mod s t k ir => Accepted_mod s t k (ir.`1, ir.`2, ir.`3, true)
+with s = Aborted_mod s t ir    => Aborted_mod s t (ir.`1, ir.`2, ir.`3, true).
 
 (* operators for getting information from a server state *)
 op get_skey s_st =
@@ -327,7 +337,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
       match st with
       | None => {
           (st', m2) <@ C(H).new_session(m1);
-           c_smap.[i] <- Pending_mod st' (m1, m2) (false, false, false);
+           c_smap.[i] <- Pending_mod st' (m1, m2) (false, false, false, false);
           r <- Some m2;
         }
       | Some st => { (*
@@ -353,10 +363,14 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
           resp <@ S(H).respond_session(Some (sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
-            s_smap.[(b, j)] <- Accepted_mod st' ((b, m2), Some m3) k (false, false, false);
+            if (get_sr_ltk (oget servers.[b])) {
+              s_smap.[(b, j)] <- Accepted_mod st' ((b, m2), Some m3) k (false, false, false, true);
+            } else {
+              s_smap.[(b, j)] <- Accepted_mod st' ((b, m2), Some m3) k (false, false, false, false);
+            }
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted_mod None (Some ((b, m2), None)) (false, false, false);
+            s_smap.[(b, j)] <- Aborted_mod None (Some ((b, m2), None)) (false, false, false, false);
           }
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -378,7 +392,11 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
             resp <@ C(H).complete_session(st, m3);
             if (resp is Some r') {
               (st', k) <- r';
-              c_smap.[i] <- Accepted_mod st' (pt, Some m3) k ir;
+              if (get_sr_ltk (oget servers.[pt.`1])) {
+                c_smap.[i] <- set_ir_cor (Accepted_mod st' (pt, Some m3) k ir);
+              } else {
+                c_smap.[i] <- Accepted_mod st' (pt, Some m3) k ir;
+              }
               r <- Some ();
             } else {
               c_smap.[i] <- Aborted_mod (Some st) (Some (pt, Some m3)) ir;
@@ -521,7 +539,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
           if (st is Accepted_mod st' t' k' ir') {
             if (!(   get_ir_sess (oget c_smap.[i]) \/ get_ir_eph (oget c_smap.[i]) 
                   \/ (fresh_partner_c t' s_smap servers = Some false)
-                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_sr_ltk (oget servers.[t'.`1.`1])))) {
+                  \/ (card (get_partners_c t' s_smap) = 0 /\ get_ir_cor (oget c_smap.[i])))) {
               if (b0 = false) {
                 k <- Some k';
                 c_smap.[i] <- set_ir_test (Accepted_mod st' t' k' ir');
