@@ -751,12 +751,12 @@ module Game5Ltk = Game5 with {
 
   proc s_test [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^s_smap<-] + (!test_ltkrev)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^s_smap<-] + (!test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^badq<- - ^s_smap<-] + (!test_ltkrev)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^badq<- - ^s_smap<-] + (!test_ltkrev)
   ]
 }.
 
-print Game5Ltk.
+print Game5.
 
 module Game5Eph = Game5 with {
   proc h [
@@ -802,16 +802,16 @@ module Game5Eph = Game5 with {
 
   proc c_test [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^c_smap<-] + (!test_ephrev_s)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^c_smap<-] + (!test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^badq<- - ^c_smap<-] + (!test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^badq<- - ^c_smap<-] + (!test_ephrev_s)
     
   ]
 
   proc s_test [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^test_ltkrev<- - ^s_smap<-] + (!test_ephrev_s)
-    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^test_ltkrev<- - ^s_smap<-] + (!test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if.^badq<- - ^s_smap<-] + (!test_ephrev_s)
+    [^if.^if.^match#Some.^match#Accepted_mod.^if.^if?^badq<- - ^s_smap<-] + (!test_ephrev_s)
   ]
 }.
 
-print Game4Eph.
+print Game5Eph.
