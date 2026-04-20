@@ -14220,7 +14220,7 @@ by case : (!bqr) => />.
 
 - exact A_ll.
 
-(* h *)
+(* h *) admit. (*
 - conseq (: !(Game5Ltk.badq{2} \/ Game5Ltk.comp_tag{2}) /\ ={arg} 
          /\ ={b0, hm, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, test_ephrev_s, test_ltkrev, guessed_tag, comp_tag}(Red_Ltk.Red_O, Game5Ltk)
          /\ (forall x, x \in Game5Ltk.h1m{2} => !Game5Ltk.bad1{2} => !Game5Ltk.bad2{2} => !Game5Ltk.bad3{2}
@@ -14493,12 +14493,12 @@ by case : (!bqr) => />.
                   \/ (g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y) \in Game5Ltk.hq{2})) Red_Ltk_inv_h => // [/>|].
   proc; inline. 
   sp; if => //. smt().
-  if {1} => //. 
+  if {1} => //. admit. (*
   + rcondf {1} ^if{5}. auto => /#.
     rcondf {2} ^if{3}. auto => /#.
     sp 2 0.
     case (exists (i j : int), ((i \in St_CDH_O.x_map) /\ x0 = g ^ oget St_CDH_O.x_map.[i] /\ z = y ^ oget St_CDH_O.x_map.[i] 
-          /\ (i \notin St_CDH_O.cr1) /\ (j \in St_CDH_O.y_map) /\ y = g ^ oget St_CDH_O.y_map.[j] /\ (j \notin St_CDH_O.cr2)){1}). 
+          /\ (i \notin St_CDH_O.cr1) /\ (j \in St_CDH_O.y_map) /\ y = g ^ oget St_CDH_O.y_map.[j] /\ (j \notin St_CDH_O.cr2)){1}). admit. (*
     + rcondt {1} ^if. auto => // &hr [] inv [i j ijc]. exists i. by rewrite !ijc.
       rcondt {1} ^if. auto => />.
       rcondt {1} ^if. auto.
@@ -14507,7 +14507,7 @@ by case : (!bqr) => />.
       sp 5 0.
       case (exists (i j : int), ((i \in St_CDH_O.x_map) /\ x3 = g ^ oget St_CDH_O.x_map.[i] /\ z0 = y0 ^ oget St_CDH_O.x_map.[i] 
             /\ (i \notin St_CDH_O.cr1) /\ (j \in St_CDH_O.y_map) /\ y0 = g ^ oget St_CDH_O.y_map.[j] /\ (j \notin St_CDH_O.cr2)){1}). admit. (*
-      + rcondt {1} ^if. auto => // &hr [] inv [i j ijc]. exists i. by rewrite !ijc.
+      + rcondt {1} ^if. auto => // &hr [] inv [i j ijc]. exists i. by rewrite !ijc. 
         rcondt {1} ^if. auto => />.
         rcondt {1} ^if. auto.
         rcondt {1} ^if. auto => /#.
@@ -14517,7 +14517,15 @@ by case : (!bqr) => />.
           rcondt {1} ^if. auto; smt(expgK expM loggK).
           rcondt {2} ^if. auto; smt(expgK expM loggK).
           sp 2 2; if => //.
-          + auto => |> &1 &2 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). admit.
+          + auto => |> &1 &2 41? inv 3? b3 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1).             
           auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
         seq 1 1: (#pre /\ ={k}). auto => />.
         rcondf {1} ^if{2}. auto => /#.
@@ -14535,13 +14543,32 @@ by case : (!bqr) => />.
           rcondt {1} ^if. auto; smt(expgK expM loggK).
           rcondt {2} ^if. auto; smt(expgK expM loggK).
           sp 2 2; if => //.
-          + auto => |> &1 &2 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij). admit.
-          auto => |> &1 &2 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij). admit.
+          + auto => |> &1 &2 41? inv 3? b3 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1). 
+          auto => |> &1 &2 41? inv 3? b3 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
         seq 1 1: (#pre /\ ={k}). auto => />.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         if => //. smt(expgK expM loggK).
-        + auto => |> &1 &2 *. do split; 1..15: smt(mem_set get_setE in_fsetU1 expgK expM loggK). 
+        + auto => |> &1 &2 37? inv 3? b3 *. do split; ~16: smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+          move => x0 y0 b0 xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
         auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK).
       if {1} => //.
       + rcondt {1} ^if. auto.
@@ -14568,14 +14595,25 @@ by case : (!bqr) => />.
         rcondt {1} ^if. auto; smt(expgK expM loggK).
         rcondt {2} ^if. auto; smt(expgK expM loggK).
         sp 2 2; if => //.
-        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
+        + auto => |> &1 &2 41? inv 3? b3 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
         auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
       seq 1 1: (#pre /\ ={k}). auto => />.
       rcondf {1} ^if{2}. auto => /#.
       rcondf {2} ^if{2}. auto => /#.
       if => //. smt(expgK expM loggK).
       + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-      auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). *)
+      auto => |> &1 &2 37? inv 3? b3 *. do split; ~4: smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+      move => x0 y0 b0 xin.
+      have := inv x0 y0 b0 xin b3.
+      smt(get_setE in_fsetU1). *)
     if {1} => //. admit. (*
     + rcondf {1} ^if. auto.
       rcondt {1} ^if. auto.
@@ -14594,14 +14632,36 @@ by case : (!bqr) => />.
           rcondt {1} ^if. auto; smt(expgK expM loggK).
           rcondt {2} ^if. auto; smt(expgK expM loggK).
           sp 2 2; if => //.
-          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). 
-          auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+          + auto => |> &1 &2 41? inv 3? b3 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1).
+          auto => |> &1 &2 41? inv 3? b3 *. do split; ~28: smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
         seq 1 1: (#pre /\ ={k}). auto => />.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         if => //. smt(expgK expM loggK).
-        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM).
-        auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM).
+        + auto => |> &1 &2 37? inv 3? b3 *. do split; ~16: smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+          move => x0 y0 b0 xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
+        auto => |> &1 &2 37? inv 3? b3 *. do split; ~4: smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+        move => x0 y0 b0 xin.
+        have := inv x0 y0 b0 xin b3.
+        smt(get_setE in_fsetU1).
       if {1} => //.
       + rcondf {1} ^if. auto.
         rcondt {1} ^if. auto.
@@ -14618,8 +14678,8 @@ by case : (!bqr) => />.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         if => //. smt(expgK expM loggK).
-        + auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM).
-        auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM).
+        + auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+        auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK).
       if {1} => //.
       + rcondt {1} ^if. auto.
         rcondt {1} ^if. auto => /#.
@@ -14629,8 +14689,8 @@ by case : (!bqr) => />.
           rcondt {1} ^if. auto; smt(expgK expM loggK).
           rcondt {2} ^if. auto; smt(expgK expM loggK).
           sp 2 2; if => //.
-          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM).
-          auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+          auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
         seq 1 1: (#pre /\ ={k}). auto => />.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
@@ -14645,14 +14705,33 @@ by case : (!bqr) => />.
         rcondt {1} ^if. auto; smt(expgK expM loggK).
         rcondt {2} ^if. auto; smt(expgK expM loggK).
         sp 2 2; if => //.
-        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-        auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+        + auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
+        auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+        move => x0 y0 b0.
+        case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+        + rewrite mem_set xeq.
+          right; right.
+          smt(in_fsetU1).
+        rewrite mem_set xeq //= => xin.
+        have := inv x0 y0 b0 xin b3.
+        smt(get_setE in_fsetU1).
       seq 1 1: (#pre /\ ={k}). auto => />.
       rcondf {1} ^if{2}. auto => /#.
       rcondf {2} ^if{2}. auto => /#.
       if => //. smt(expgK expM loggK).
-      + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). 
-      auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). *)
+      + auto => |> &1 &2 36? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~18: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+        move => x0 y0 b0 xin.
+        have := inv x0 y0 b0 xin b3.
+        smt(get_setE in_fsetU1).
+      auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK). *)
     if {1} => //. admit. (*
     + rcondt {1} ^if. auto.
       sp 4 0.
@@ -14670,14 +14749,14 @@ by case : (!bqr) => />.
           rcondt {1} ^if. auto; smt(expgK expM loggK).
           rcondt {2} ^if. auto; smt(expgK expM loggK).
           sp 2 2; if => //.
-          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-          auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK). 
+          auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
         seq 1 1: (#pre /\ ={k}). auto => />.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         if => //. smt(expgK expM loggK).
-        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-        auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). *)
+        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK). 
+        auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK). *)
       if {1} => //. admit. (*
       + rcondf {1} ^if. auto.
         rcondt {1} ^if. auto.
@@ -14725,17 +14804,54 @@ by case : (!bqr) => />.
           rcondt {2} ^if. auto; smt(expgK expM loggK).
           sp 2 2; if => //.
           + sp 1 1; if => //.
-            + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-            auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+            + auto => |> &1 &2 41? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK). 
+              move => x0 y0 b0.
+              case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+              + rewrite mem_set xeq.
+                right; right.
+                smt(in_fsetU1).
+              rewrite mem_set xeq //= => xin.
+              have := inv x0 y0 b0 xin b3.
+              smt(get_setE in_fsetU1).
+            auto => |> &1 &2 41? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1).
           if => //.
-          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-          auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+          + auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30:  smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1).
+          auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
         seq 1 1: (#pre /\ ={k}). auto => />.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         if => //. smt(expgK expM loggK).
-        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-        auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). *)
+        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK). 
+        rcondf {1} ^if. auto => /#.
+        rcondf {2} ^if. auto => /#.
+        auto => |> &1 &2 36? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~6: smt(mem_set get_setE in_fsetU1 expgK expM loggK). 
+        move => x0 y0 b0 xin.
+        have := inv x0 y0 b0 xin b3.
+        smt(get_setE in_fsetU1). *)
       rcondf {1} ^if. auto => //.
       sp 1 0.
       if {1} => //. admit. (*
@@ -14747,32 +14863,85 @@ by case : (!bqr) => />.
           rcondt {1} ^if. auto; smt(expgK expM loggK).
           rcondt {2} ^if. auto; smt(expgK expM loggK).
           sp 2 2; if => //.
-          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). 
-          auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+          + auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1).
+          auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
         seq 1 1: (#pre /\ ={k}). auto => />.
         rcondf {1} ^if{2}. auto => /#.
         rcondf {2} ^if{2}. auto => /#.
         if => //. smt(expgK expM loggK).
-        + auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
-        auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). *)
+        + auto => |> &1 &2 36? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~18: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+          move => x0 y0 b0 xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
+        auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij). *)
       sp; seq 1 1: (#pre /\ ={t}). by rnd; skip => &1 &2 H; do split.
       if => //. auto => /> &1 &2 *.  smt(expgK expM). admit. (*
       + sp 1 1; seq 1 1: (#pre /\ ={k}). by rnd; skip => &1 &2 H; do split.
         rcondt {1} ^if. auto; smt(expgK expM loggK).
         rcondt {2} ^if. auto; smt(expgK expM loggK).
-        sp 2 2; if => //.
+        sp 2 2; if => //. admit. (*
         + sp 1 1; if => //.
-          + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-          auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+          + auto => |> &1 &2 41? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1).
+          auto => |> &1 &2 41? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1). *)
         if => //.
-        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-        auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). *)
+        + auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
+        auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+        move => x0 y0 b0.
+        case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+        + rewrite mem_set xeq.
+          right; right.
+          smt(in_fsetU1).
+        rewrite mem_set xeq //= => xin.
+        have := inv x0 y0 b0 xin b3.
+        smt(get_setE in_fsetU1). *)
       seq 1 1: (#pre /\ ={k}). auto => />.
       rcondf {1} ^if{2}. auto => /#.
       rcondf {2} ^if{2}. auto => /#.
       if => //. smt(expgK expM loggK).
-      + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). 
-      auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM). *)
+      + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK).
+      rcondf {1} ^if. auto => /#.
+      rcondf {2} ^if. auto => /#.
+      auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK). *)
     rcondf {1} ^if. auto => />.
     sp; seq 1 1: (#pre /\ ={t}). by rnd; skip => &1 &2 H; do split.
     if => //. auto => /> &1 &2 *.  smt(expgK expM loggK).
@@ -14781,49 +14950,89 @@ by case : (!bqr) => />.
       rcondt {2} ^if. auto; smt(expgK expM loggK).
       sp 2 2; if => //.
       + sp 1 1; if => //.
-        + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). 
-        auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+        + auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij). 
+        auto => |> &1 &2 41? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+        move => x0 y0 b0.
+        case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+        + rewrite mem_set xeq.
+          right; right.
+          smt(in_fsetU1).
+        rewrite mem_set xeq //= => xin.
+        have := inv x0 y0 b0 xin b3.
+        smt(get_setE in_fsetU1).
       if => //.
-      + auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). 
-      auto => |> &1 &2 *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
+      + auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij). 
+        move => x0 y0 b0.
+        case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+        + rewrite mem_set xeq.
+          right; right.
+          smt(in_fsetU1).
+        rewrite mem_set xeq //= => xin.
+        have := inv x0 y0 b0 xin b3.
+        smt(get_setE in_fsetU1).
+      auto => |> &1 &2 40? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+      move => x0 y0 b0.
+      case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+      + rewrite mem_set xeq.
+        right; right.
+        smt(in_fsetU1).
+      rewrite mem_set xeq //= => xin.
+      have := inv x0 y0 b0 xin b3.
+      smt(get_setE in_fsetU1).
     seq 1 1: (#pre /\ ={k}). auto => />.
     rcondf {1} ^if{2}. auto => /#.
     rcondf {2} ^if{2}. auto => /#.
     rcondf {1} ^if{2}. auto => /#.
     rcondf {2} ^if{2}. auto => /#.
     if => //. smt(expgK expM loggK).
-    + auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij).
-    auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM pow_bij). *)
+    + auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij).
+    auto => |> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE in_fsetU1 expgK expM loggK pow_bij). *)
   sp; seq 1 1: (#pre /\ ={t}). auto => />.
   if => //. auto => /> &1 &2 *. smt(loggK expgK expM).
   + sp; seq 1 1: (#pre /\ ={k}). auto => />.
     if => //. smt(loggK expgK expM).
-    + sp 2 2; if => //.
+    + sp 2 2; if => //. admit. (*
       + sp 1 1; if => //.
         + sp 1 1; if => //.
-          + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-          auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+          + auto => |> &1 &2 42? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE expgK expM loggK in_fsetU1).
+            move => x0 y0 b0.
+            case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+            + rewrite mem_set xeq.
+              right; right.
+              smt(in_fsetU1).
+            rewrite mem_set xeq //= => xin.
+            have := inv x0 y0 b0 xin b3.
+            smt(get_setE in_fsetU1).
+          auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
         if => //.
-        + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-        auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+        + auto => |> &1 &2 41? inv 3? b3 *. split. smt(in_fsetU1). move => *. do split; ~30: smt(mem_set get_setE expgK expM loggK in_fsetU1).
+          move => x0 y0 b0.
+          case ((g ^ (x0 * y0), g ^ (x0 * b0), g ^ b0, g ^ x0, g ^ y0) = x{2}) => xeq.
+          + rewrite mem_set xeq.
+            right; right.
+            smt(in_fsetU1).
+          rewrite mem_set xeq //= => xin.
+          have := inv x0 y0 b0 xin b3.
+          smt(get_setE in_fsetU1).
+        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1). *)
       if => //.
       + sp 1 1; if => //.
-        + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM in_fsetU1). 
-        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+        + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1). 
+        auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
       if => //.
-      + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-      auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
+      + auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+      auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM loggK in_fsetU1).
     sp 1 1; if => //.
     + sp 1 1; if => //.
       + sp 1 1; if => //.
-        + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-        auto => /> &1 &2 *.  do split; smt(mem_set get_setE expgK expM in_fsetU1).
+        + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+        auto => /> &1 &2 *.  do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
       if => //.
-      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-      auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+      auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
     if => //.
     + sp 1 1; if => //.
-      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
       auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM).
     if => //.
     + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
@@ -14833,33 +15042,33 @@ by case : (!bqr) => />.
   + sp 2 2; if => //.
     + sp 1 1; if => //.
       + sp 1 1; if => //.
-        + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-        auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+        + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+        auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
       if => //.
-      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-      auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+      auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
     if => //.
     + sp 1 1; if => //.
-      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
       auto => /> &1 &2 *. split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM).
     if => //.
-    + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-    auto => /> &1 &2 *.  split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM in_fsetU1).
+    + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+    auto => /> &1 &2 *.  split. smt(in_fsetU1). move => *. do split; smt(mem_set get_setE loggK expgK expM loggK in_fsetU1).
   sp 1 1; if => //.
   + sp 1 1; if => //.
     + sp 1 1; if => //.
-      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-      auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+      + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+      auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
     if => //.
-    + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-    auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+    + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+    auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
   if => //.
   + sp 1 1; if => //.
-    + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-    auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
+    + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+    auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
   if => //.
-  + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1).
-  auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM in_fsetU1). *)
+  + auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1).
+  auto => /> &1 &2 *. do split; smt(mem_set get_setE expgK expM loggK in_fsetU1). *)
 - move => &2 bad; proc; inline.
   sp; if => //; auto => />. 
   by rewrite dtag_ll dkey_ll //=.
