@@ -105,7 +105,7 @@ module Game0 : GAKE_nodhs_i = {
 
     sk <$ dt;
     pk <- g ^ sk;
-    bad2 <- bad2 \/ pk \in b_set;
+    bad2 <- bad2 \/ pk \in b_set; 
     bad1 <- bad1 \/ pk \in pk_set \/ pk \in m1_set \/ pk \in m2_set;
     pk_set <- pk_set `|` fset1 pk;
     if (pk \notin servers) {
@@ -566,10 +566,9 @@ module Game4 = Game3 with {
   var test_ephrev_s : bool
   var test_ltkrev : bool
   var bad3 : bool
-  var guessed_tag : bool
 
   proc init_mem [
-    -1 + { test_ephrev_s <- false; test_ltkrev <- false; bad3 <- false; guessed_tag <- false; }
+    -1 + { test_ephrev_s <- false; test_ltkrev <- false; bad3 <- false; }
   ]
 
   proc send_msg2 [
@@ -578,6 +577,9 @@ module Game4 = Game3 with {
   ]
 
   proc send_msg3 [
+    var guessed_tag : bool
+
+    1 + {guessed_tag <- false;}
     ^if.^match#Some.^match#Pending_mod.^if.^h1m<- + {guessed_tag <- true;}
     ^if.^match#Some.^match#Pending_mod.^if{4}.^if + ^ {bad3 <- bad3 \/ guessed_tag;}
     ^if.^match#Some.^match#Pending_mod.^ks<$ ~ {key <- witness;}
