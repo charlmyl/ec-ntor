@@ -759,7 +759,7 @@ qed.
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 1: Remove collisions in ephemeral and long-term keys. Strategy with 2 * bound *)
 lemma game0_game1 b &m: `| Pr[E_GAKE_nodhs(Game0, A).run(b) @ &m : res] - Pr[E_GAKE_nodhs(Game1, A).run(b) @ &m : res] | <= Pr[E_GAKE_nodhs(Game0, A).run(b) @ &m : Game0.bad1].
-proof. admit. (*
+proof. admit. (* 
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Game1.bad1 => //; first last.
 + smt().
@@ -833,7 +833,19 @@ call (: Game1.bad1
   match; auto => />.
   by rewrite weight_dprod dkey_ll dtag_ll.
 - move => &1.
-  proc; inline*.
+  proc; inline.
+  rcondf ^if; auto => />.
+
+- proc; inline.
+  rcondt{2} ^if. auto => />.
+  sp; match = => // st.
+  match = => // s t k ir.
+  auto => />.
+- move => &2 bad.
+  proc; sp; match; 1: by auto.
+  match; auto => />.
+- move => &1.
+  proc; inline.
   rcondf ^if; auto => />.
 
 - proc; inline.
@@ -845,19 +857,7 @@ call (: Game1.bad1
   proc; sp; match; 1: by auto. 
   match; auto => />.
 - move => &1.
-  proc; inline*.
-  rcondf ^if; auto => />.
-
-- proc; inline.
-  rcondt{2} ^if. auto => />.
-  sp; match = => // st.
-  match = => // s t k ir.
-  auto => />.
-- move => &2 bad.
-  proc; sp; match; 1: by auto. 
-  match; auto => />.
-- move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 - proc; inline.
@@ -869,7 +869,7 @@ call (: Game1.bad1
   proc; sp; match; 1: by auto. 
   match; auto => />.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 - proc; inline.
@@ -882,7 +882,7 @@ call (: Game1.bad1
   proc; sp; match; 1: by auto. 
   match; auto => />.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 - proc; inline.
@@ -894,7 +894,7 @@ call (: Game1.bad1
   proc; sp; match; 1: by auto. 
   match; auto => />.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 - proc; inline.
@@ -913,7 +913,7 @@ call (: Game1.bad1
   auto => />.
   by rewrite dkey_ll.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 - proc; inline.
@@ -932,7 +932,7 @@ call (: Game1.bad1
   auto => />.
   by rewrite dkey_ll.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 auto => />.
@@ -971,7 +971,7 @@ apply (StdOrder.RealOrder.ler_trans Pr[BB.Exp(BB.Sample, Red_Coll_ideal(A)).main
     + by match; 1: auto; match; islossless.
   proc; inline.
   sp.
-  conseq (: _ ==> size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) (: Counter.ch = 0 /\ Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2)=> //.
+  conseq (: _ ==> size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) (: Counter.ch = 0 /\ Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.cm3 = 0 ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.cm3 < q_m3)=> //.
   + smt().
   + by call (A_bounded_qs (Red_Coll_O_AKE(BB.Sample))).
   call (: size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) => //.
@@ -1036,7 +1036,7 @@ apply (StdOrder.RealOrder.ler_trans Pr[BB.Exp(BB.Sample, Red_Coll_real(A)).main(
     + by match; 1: auto; match; islossless.
   proc; inline.
   sp.
-  conseq (: _ ==> size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) (: Counter.ch = 0 /\ Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2)=> //.
+  conseq (: _ ==> size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) (: Counter.ch = 0 /\ Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.cm3 = 0 ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.cm3 < q_m3)=> //.
   + smt().
   + by call (A_bounded_qs (Red_Coll_O_AKE(BB.Sample))).
   call (: size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) => //.
@@ -1312,7 +1312,7 @@ have ->: Pr[E_GAKE_nodhs(Counter(Game1), A).run(b) @ &m : Game1.bad2]
             /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h].
 + byequiv => //.
   proc.
-  conseq (: _ ==> ={bad2}(Game1, Game1)) _ (: _ ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h) => //.
+  conseq (: _ ==> ={bad2}(Game1, Game1)) _ (: _ ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h /\ Counter.cm3 < q_m3) => //.
   + call (A_bounded_qs (Game1)).
     by inline; auto.
   by sim. 
@@ -1330,7 +1330,7 @@ fel
     Counter(Game1).send_msg3 : false
   ]
   (card Game1.b_set <= Counter.ch /\ card Game1.x_set <= Counter.ch /\ card Game1.y_set <= Counter.ch
-   /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2 /\ 0 <= Counter.cis /\ 0 <= Counter.ch)
+   /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2 /\ 0 <= Counter.cis /\ 0 <= Counter.ch /\ 0 <= Counter.cm3)
 .
 + rewrite -mulr_suml StdBigop.Bigreal.sumidE.
   + smt(ge0_q_m1 ge0_q_m2 ge0_q_is ge0_q_h).
@@ -1944,7 +1944,7 @@ qed.
 lemma LRO_game4 bit &m: Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res] = Pr[E_GAKE_nodhs(Game4, A).run(bit) @ &m : res].
 proof. admit. (*
 byequiv => //.
-proc*.
+proc.
 inline; wp.
 call (: ={b0, hm, servers, c_smap, s_smap, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, hq, tq, badq}(Red_ROM2.AKE_O, Game4) 
            /\ ROSc.I1.RO.m{1} = Game4.h1m{2} /\ ROSc.I2.RO.m{1} = Game4.h2m{2}); try sim />.
