@@ -890,7 +890,7 @@ qed.
 (* First restricted => unrestricted security *)
 lemma res_to_unres bit &m: Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : res]
   = Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S, NTOR_C, GAKEc.HROc.RO), Dh_Red(A_res)).run(bit) @ &m : res].
-proof. admit. (*
+proof.
 byequiv => //.
 proc; inline.
 wp; call (: ={b0, servers, c_smap, s_smap, tested}(GAKEb_nodhs, GAKEc.GAKEb) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
@@ -953,13 +953,13 @@ wp; call (: ={b0, servers, c_smap, s_smap, tested}(GAKEb_nodhs, GAKEc.GAKEb) /\ 
   if => //; auto => />; smt(get_setE).
 
 auto => />.
-smt(emptyE mem_empty). *)
+smt(emptyE mem_empty).
 qed.
 
 (* Unrestricted => restricted security *)
 lemma gake_hon bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S, NTOR_C, GAKEc.HROc.RO), A).run(bit) @ &m : res] 
   = Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_Red(A)).run(bit) @ &m : res].
-proof. admit. (*
+proof.
 byequiv => //.
 proc; inline.
 wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO)
@@ -984,7 +984,7 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
                    => (get_name (oget Hon_Red.O_GAKE.dhc_smap{2}.[i]), j) \notin GAKEc.GAKEb_hon.s_smap{2})
               /\ (forall i st pt ir m3, i \in Hon_Red.O_GAKE.dhc_smap{2} => Hon_Red.O_GAKE.dhc_smap{2}.[i] = Some (Pending st pt ir)
                    => (1 <= card (get_partners_c (pt, Some m3) GAKEc.GAKEb_hon.s_smap{2})) = false)
-              /\ (forall i st pt ir, i \in Hon_Red.O_GAKE.dhc_smap{2} => Hon_Red.O_GAKE.dhc_smap{2}.[i{2}] = Some (Pending st pt ir)
+              /\ (forall i st pt ir, i \in Hon_Red.O_GAKE.dhc_smap{2} => Hon_Red.O_GAKE.dhc_smap{2}.[i] = Some (Pending st pt ir)
                    => (1 <= card (get_origins_c (pt, None) GAKEc.GAKEb_hon.s_smap{2}) = false))
               /\ (forall i st t k ir, i \in Hon_Red.O_GAKE.dhc_smap{2} => Hon_Red.O_GAKE.dhc_smap{2}.[i] = Some (Accepted st t k ir)
                    => (1 <= card (get_origins_c t GAKEc.GAKEb_hon.s_smap{2}) = false)
@@ -1594,12 +1594,12 @@ wp; call (: ={b0, servers, s_smap, tested}(GAKEc.GAKEb, GAKEc.GAKEb_hon) /\ ={m}
   match None {1} ^match. auto => /#.
   auto => />.
 
-auto => />; smt(fmap_eqP joinE mem_empty emptyE). *)
+auto => />; smt(fmap_eqP joinE mem_empty emptyE).
 qed.
 
 lemma gake_rem_dhs bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb_hon(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_Red(A)).run(bit) @ &m : res] 
  = Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(Hon_Red(A))).run(bit) @ &m : res].
-proof. admit. (*
+proof.
 byequiv => //.
 proc; inline.
 wp; call (: ={b0, c_smap, s_smap, tested}(GAKEb_hon, GAKEc.GAKEb_nodhs) /\ ={m}(GAKEc.HROc.RO, GAKEc.HROc.RO) /\ ={glob Hon_Red}
@@ -1780,7 +1780,7 @@ qed.
 lemma unres_to_res bit &m: Pr[GAKEc.E_GAKE(GAKEc.GAKEb(NTOR_S, NTOR_C, GAKEc.HROc.RO), A).run(bit) @ &m : res] 
   = Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(NTOR_S, NTOR_C, GAKEc.HROc.RO), Hon_s_Red(Hon_Red(A))).run(bit) @ &m : res].
 proof.
-by rewrite gake_hon -gake_rem_dhs. *)
+by rewrite gake_hon -gake_rem_dhs.
 qed.
 
 
@@ -1827,7 +1827,7 @@ end.
 local lemma gake_no_name bit &m: `| Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : res]
      - Pr[GAKE_mod.E_GAKE_nodhs(GAKE_mod.GAKEb_nodhs(NTOR_S_mod, NTOR_C_mod, GAKE_mod.HROc.RO), Name_Red(A_res)).run(bit) @ &m : res] | 
                  <= Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : GAKEb_st.stop].
-proof. admit. (*
+proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Name_Red.O_GAKE.stop => //; first last.
 + smt().
@@ -1876,7 +1876,7 @@ wp; call (: Name_Red.O_GAKE.stop
                /\ (forall b j, b \in Name_Red.O_GAKE.sid_pk{2}
                     => (oget Name_Red.O_GAKE.sid_pk{2}.[b], j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} <=> (b, j) \in GAKEb_st.s_smap{1})
                /\ (forall b j st t k ir, (b, j) \in GAKEb_st.s_smap{1} => GAKEb_st.s_smap{1}.[(b, j)] = Some (Accepted st t k ir)
-                    => t.`1.`1 = b /\ t.`2 <> None /\ Name_Red.O_GAKE.sid_pk{2}.[b] = Some (g ^ st{1}.`2))
+                    => t.`1.`1 = b /\ t.`2 <> None /\ Name_Red.O_GAKE.sid_pk{2}.[b] = Some (g ^ st.`2))
                /\ (forall pk j st t k ir, (pk, j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} => GAKE_mod.GAKEb_nodhs.s_smap{2}.[(pk, j)] = Some (Accepted_mod st t k ir)
                     => t.`1.`1 = pk)
                /\ (forall pk_s j, (pk_s, j) \in GAKE_mod.GAKEb_nodhs.s_smap{2} => (exists pk m3, get_trace (oget GAKE_mod.GAKEb_nodhs.s_smap{2}.[pk_s, j]) = Some ((pk_s, pk), m3)))
@@ -1897,7 +1897,7 @@ wp; call (: Name_Red.O_GAKE.stop
                /\ (forall pk b sk1 sk2, pk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] = Some sk1 
                     => b \in GAKEb_st.servers{1} => obind GAKEc.get_skey GAKEb_st.servers{1}.[b] = Some sk2 
                     => b \in Name_Red.O_GAKE.sid_pk{2} => (oget Name_Red.O_GAKE.sid_pk{2}.[b]) = pk => sk1 = sk2)
-               /\ (forall b, b \in Name_Red.O_GAKE.sid_pk{2} => (oget Name_Red.O_GAKE.sid_pk{2}.[b{2}]) \in Name_Red.O_GAKE.pk_set{2})
+               /\ (forall b, b \in Name_Red.O_GAKE.sid_pk{2} => (oget Name_Red.O_GAKE.sid_pk{2}.[b]) \in Name_Red.O_GAKE.pk_set{2})
                /\ (forall b pk, b \in Name_Red.O_GAKE.sid_pk{2} => oget Name_Red.O_GAKE.sid_pk{2}.[b] = pk
                     =>  obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[pk] <> None)
                /\ (forall sk, g ^ sk \in GAKE_mod.GAKEb_nodhs.servers{2} => obind GAKE_mod.get_skey GAKE_mod.GAKEb_nodhs.servers{2}.[g ^ sk] = Some sk)
@@ -3071,7 +3071,7 @@ wp; call (: Name_Red.O_GAKE.stop
 auto => />.
 split. smt(emptyE in_fset0).
 move => 46? str 6?.
-by case : (!str) => />. *)
+by case : (!str) => />.
 qed.
 
 
