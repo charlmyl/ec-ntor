@@ -941,143 +941,157 @@ qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 1b: Bound the bad event. *)
-lemma game0_bad1 bit &m: Pr[E_GAKE_nodhs(Game0, A).run(bit) @ &m : Game0.bad1] <= ((q_is + q_m1 + q_m2) ^ 2)%r / order%r.
+lemma game0_bad1 bit &m: Pr[E_GAKE_nodhs(Game0, A).run(bit) @ &m : Game0.bad1] <= ((q_is + q_m1 + q_m2) * (q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r.
 proof.
-have <- : mu1 dt (mode dt) = inv order%r.
-+ rewrite duniform1E.
-  by rewrite DZmodP.Support.enumP undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-case (bit) => real_ideal.
+have ->: Pr[E_GAKE_nodhs(Game0, A).run(bit) @ &m : Game0.bad1]
+       = Pr[E_GAKE_nodhs(Counter(Game0), A).run(bit) @ &m : Game0.bad1].
++ byequiv => //.
+  proc.
+  call (: ={glob Game0}); try (proc; inline; sim />).
+  + proc; inline. 
+    auto => />.
+  + by auto => />. 
+  + by auto => />. 
+  + by auto => />.
+  by inline; auto => />. 
+have ->: Pr[E_GAKE_nodhs(Counter(Game0), A).run(bit) @ &m : Game0.bad1]
+       = Pr[E_GAKE_nodhs(Counter(Game0), A).run(bit) @ &m : Game0.bad1
+            /\ Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2].
++ byequiv => //.
+  proc.
+  conseq (: _ ==> ={Game0.bad1}) _ (: _ ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2) => //.
+  + call (A_bounded_qs Game0).
+    by inline; auto.
+  by sim. 
+fel
+  1
+  (Counter.cis + Counter.cm1 + Counter.cm2)
+  (fun x => x%r / order%r)
+  (q_m1 + q_m2 + q_is)
+  Game0.bad1
+  [ Counter(Game0).init_s : true;
+    Counter(Game0).send_msg1 : ((arg.`2 \in Game0.servers) /\ Game0.c_smap.[arg.`1] = None);
+    Counter(Game0).send_msg2 : (Game0.s_smap.[(arg.`1, arg.`2)] = None
+                                /\ exists v, obind get_skey Game0.servers.[arg.`1] = Some v)
+  ]
+  (card (Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr}) <= Counter.cis + Counter.cm1 + Counter.cm2 /\ 0 <= Counter.cis /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2)
+.
++ rewrite -mulr_suml StdBigop.Bigreal.sumidE.
+  + smt(ge0_q_m1 ge0_q_m2 ge0_q_is).
+  smt().
++ smt().
++ inline; auto.
+  smt(fcards0 fsetU0).
 
-(* Proof for the ideal side *)
-apply (StdOrder.RealOrder.ler_trans Pr[BB.Exp(BB.Sample, Red_Coll_ideal(A)).main() @ &m : ! uniq BB.Sample.l]); first last.
-+ apply (BB.pr_collision_q2 (Red_Coll_ideal(A))).
-  + move => S S_ll.
-    islossless.
-    apply (A_ll (Counter(Red_Coll_O_AKE(S)))); islossless.
-    + match; 1: auto; islossless.
-    + match; auto. 
-      by sp; match; auto; islossless.
-    + match => //.
-      by sp; match; auto; islossless.
-    + match => //; islossless.
-      by match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
++ proc; inline.
+  wp.
+  rnd (fun x => g ^ x \in Game0.pk_set \/ g ^ x \in Game0.m1_set \/ g ^ x \in Game0.m2_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem (Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr})))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game0.pk_set{hr} \/ y \in Game0.m1_set{hr} \/ y \in Game0.m2_set{hr})).
+    smt(in_fsetU mu_le).
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
   proc; inline.
-  sp.
-  conseq (: _ ==> size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) (: Counter.ch = 0 /\ Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.cm3 = 0 ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.cm3 < q_m3)=> //.
-  + smt().
-  + by call (A_bounded_qs (Red_Coll_O_AKE(BB.Sample))).
-  call (: size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) => //.
-  + by proc; inline; auto.
-  + by proc; inline; sp; auto => /#.
-  + proc; inline; sp; if => //; 2: auto => /#.
-    by sp; match; auto => /#.
-  + proc; inline; sp; match; 1: auto => /#.
-    case ((Red_Coll_O_AKE.s_smap.[b, j]) = None).
-    + by match None ^match; auto => /#.
-    by match Some ^match; auto => /#.
-  + by proc; inline; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; if => //; sp; match; 1: auto; match; auto; if => //; if => //; auto.
-  + by proc; sp; if => //; sp; match; 1: auto; match; auto; if => //; if => //; auto.
-  by auto => /#.
-byequiv => //.
-proc. inline.
-call (:
- ={b0, hm, servers, c_smap, s_smap, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2}(Game0, Red_Coll_O_AKE(BB.Sample))
- /\ (Game0.bad1{1} => !uniq BB.Sample.l{2})
- /\ (forall sk, g ^ sk \in (Game0.pk_set{1} `|` Game0.m1_set{1} `|` Game0.m2_set{1})  => sk \in BB.Sample.l{2})
-) => //; try sim />.
-+ by proc; inline; auto.
-+ proc; inline; sp 0 2; auto => />.
-  smt(mem_set in_fsetU1 in_fsetU pow_bij).
-+ proc; inline; sp 2 4; if => //; auto.
-  sp; match = => //.
   auto => />.
-  smt(mem_set in_fsetU1 in_fsetU pow_bij).
-+ proc; inline; sp 2 5; match = => // [|st]; 1: auto.
-  match = => // [|st']; 2: auto.
-  auto => />.
-  smt(mem_set in_fsetU1 in_fsetU pow_bij).
-+ proc; inline; sp; match = => // [|st]; 1: auto.
-  by match =; auto => />.
-auto => />.
-smt(in_fset0).
+  move => &hr 4? sk ?. 
+  have->: Game0.pk_set{hr} `|` fset1 (g ^ sk) `|` Game0.m1_set{hr} `|` Game0.m2_set{hr}
+           = Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr} `|` fset1 (g ^ sk).
+  + smt(@FSet).
+  rewrite fcardU1.
+  smt().
++ move => b c.
+  proc; inline.
+  by auto => />.
 
-(* Proof for the real side *)
-apply (StdOrder.RealOrder.ler_trans Pr[BB.Exp(BB.Sample, Red_Coll_real(A)).main() @ &m : ! uniq BB.Sample.l]); first last.
-+ apply (BB.pr_collision_q2 (Red_Coll_real(A))).
-  + move => S S_ll.
-    islossless.
-    apply (A_ll (Counter(Red_Coll_O_AKE(S)))); islossless.
-    + match; 1: auto; islossless.
-    + match; auto. 
-      by sp; match; auto; islossless.
-    + match => //.
-      by sp; match; auto; islossless.
-    + match => //; islossless.
-      by match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
-    + by match; 1: auto; match; islossless.
++ proc; inline.
+  rcondt ^if; 1: auto => />.
+  match None ^match; 1: auto => />.
+  auto => />.
+  rnd (fun x => g ^ x \in Game0.pk_set \/ g ^ x \in Game0.m1_set \/ g ^ x \in Game0.m2_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem (Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr})))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game0.pk_set{hr} \/ y \in Game0.m1_set{hr} \/ y \in Game0.m2_set{hr})).
+    smt(in_fsetU mu_le).
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
   proc; inline.
-  sp.
-  conseq (: _ ==> size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) (: Counter.ch = 0 /\ Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.cm3 = 0 ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.cm3 < q_m3)=> //.
-  + smt().
-  + by call (A_bounded_qs (Red_Coll_O_AKE(BB.Sample))).
-  call (: size BB.Sample.l <= Counter.cis + Counter.cm1 + Counter.cm2) => //.
-  + by proc; inline; auto.
-  + by proc; inline; sp; auto => /#.
-  + proc; inline; sp; if => //; 2: auto => /#.
-    by sp; match; auto => /#.
-  + proc; inline; sp; match; 1: auto => /#.
-    case ((Red_Coll_O_AKE.s_smap.[b, j]) = None).
-    + by match None ^match; auto => /#.
-    by match Some ^match; auto => /#.
-  + by proc; inline; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; match; 1: auto; match; auto => /#.
-  + by proc; sp; if => //; sp; match; 1: auto; match; auto; if => //; if => //; auto.
-  + by proc; sp; if => //; sp; match; 1: auto; match; auto; if => //; if => //; auto.
+  sp; if.  
+  + sp; match; auto => />.
+    + move => &hr 8? sk ?. 
+      have->: Game0.pk_set{hr} `|` (Game0.m1_set{hr} `|` fset1 (g ^ sk)) `|` Game0.m2_set{hr}
+           = Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr} `|` fset1 (g ^ sk) by smt(@FSet).
+      rewrite fcardU1.
+      smt().
+    smt().
+  auto => /#.
++ move => b c.
+  proc; inline.
+  sp; if => //.
+  + by match Some ^match; auto => /#.
   by auto => /#.
-byequiv => //.
-proc. inline.
-call (:
- ={b0, hm, servers, c_smap, s_smap, tested, pk_set, m1_set, m2_set, bad1}(Game0, Red_Coll_O_AKE(BB.Sample))
- /\ (Game0.bad1{1} => !uniq BB.Sample.l{2})
- /\ (forall sk, g ^ sk \in (Game0.pk_set{1} `|` Game0.m1_set{1} `|` Game0.m2_set{1}) => sk \in BB.Sample.l{2})
-) => //; try sim />.
-+ by proc; inline; auto.
-+ proc; inline; sp 0 2; auto => />.
-  smt(mem_set in_fsetU1 in_fsetU pow_bij).
-+ proc; inline; sp 2 4; if => //; auto.
-  sp; match = => //.
+
++ proc; inline.
+  match Some ^match. auto => />.
+  match None ^match. auto => />.
+  wp.
+  swap ^tk<$ @ 1.
+  wp.
+  rnd (fun x => g ^ x \in Game0.pk_set \/ g ^ x \in Game0.m1_set \/ g ^ x \in Game0.m2_set).
   auto => />.
-  smt(mem_set in_fsetU1 in_fsetU pow_bij).
-+ proc; inline; sp 2 5; match = => // [|st]; 1: auto.
-  match = => // [|st']; 2: auto.
+  move => &hr 3? H *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem (Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr})))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game0.pk_set{hr} \/ y \in Game0.m1_set{hr} \/ y \in Game0.m2_set{hr})).
+    smt(in_fsetU mu_le).
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  move => />.
+  move : H. clear.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  sp; match; 1: auto => /#.
+  match; 2: auto => /#.
   auto => />.
-  smt(mem_set in_fsetU1 in_fsetU pow_bij).
-+ proc; inline; sp; match = => // [|st]; 1: auto.
-  by match =; auto => />.
-auto => />.
-smt(in_fset0).
+  move => &hr 10? sk *. 
+  have->: Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` (Game0.m2_set{hr} `|` fset1 (g ^ sk))
+           = Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr} `|` fset1 (g ^ sk).
+  + smt(@FSet).
+  rewrite fcardU1.
+  smt().
++ move => b c.
+  proc; inline.
+  sp; match; 1: auto => /#.
+  match Some ^match; auto => /#.
 qed.
+
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Restricting ability to predict public keys in RO queries *)
