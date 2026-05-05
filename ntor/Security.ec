@@ -13035,7 +13035,6 @@ by case : (!bqr) => />.
   auto => //.
 qed.
 
-
 (* One-sided invariant for ReductionLtk *)
 op inv_Red_Ltk (tested : int option,
 tltkr : bool,
@@ -13141,7 +13140,7 @@ hoare Red_Ltk_inv_h: Red_Ltk(A, St_CDH_O).Red_O.h:
          Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
          Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
          St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
-proof.
+proof. 
 proc; inline.
 sp; if => //. 
 if => //; first last. 
@@ -13321,7 +13320,7 @@ hoare Red_Ltk_inv_send_msg1: Red_Ltk(A, St_CDH_O).Red_O.send_msg1:
        Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
        Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
        St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
-proof.
+proof. 
 proc; inline.
 sp; if => //.
 sp; if => //.
@@ -13768,7 +13767,7 @@ hoare Red_Ltk_inv_c_rev_ephkey: Red_Ltk(A, St_CDH_O).Red_O.c_rev_ephkey:
        Red_Ltk.Red_O.s_smap Red_Ltk.Red_O.c_smap Red_Ltk.Red_O.h1m_opt Red_Ltk.Red_O.h2m_opt Red_Ltk.Red_O.servers 
        Red_Ltk.Red_O.count_i Red_Ltk.Red_O.count_b Red_Ltk.Red_O.i_inst Red_Ltk.Red_O.b_inst St_CDH_O.n St_CDH_O.m 
        St_CDH_O.x_map St_CDH_O.y_map St_CDH_O.cr1 St_CDH_O.cr2).
-proof.
+proof. 
 proc; inline.
 sp; if => //.
 sp; match => //.
@@ -14167,12 +14166,12 @@ call (: (Game5Ltk.badq \/ Game5Ltk.comp_tag),
 
 auto => |>.
 split. do split; smt(emptyE mem_empty in_fset0).
-move => 70? bqr 17?.
+move => 69? bqr 16?.
 by case : (!bqr) => />.
 
 - exact A_ll.
 
-(* h *)
+(* h *) 
 - conseq (: !(Game5Ltk.badq{2} \/ Game5Ltk.comp_tag{2}) /\ ={arg} 
          /\ ={b0, hm, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, test_ephrev_s, test_ltkrev, comp_tag}(Red_Ltk.Red_O, Game5Ltk)
          /\ (forall x, x \in Game5Ltk.h1m{2} => !Game5Ltk.bad1{2} => !Game5Ltk.bad2{2} => !Game5Ltk.bad3{2}
@@ -15469,7 +15468,7 @@ by case : (!bqr) => />.
     exists i1 j.
     smt(mem_set get_setE expgK expM loggK loggK).
   match Some {2} ^match. auto => /#.
-  auto => />. 
+  auto => />.
 - move => &2 bad; proc; inline.
   sp; if => //.
   sp; if => //; match; auto => />. 
@@ -15479,7 +15478,7 @@ by case : (!bqr) => />.
   sp; if => //; match; auto => />.
   by rewrite dt_ll //=.
 
-(* send_msg2 *)
+(* send_msg2 *) 
 - conseq (: ={res}
          /\ ={b0, hm, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, test_ephrev_s, test_ltkrev, comp_tag}(Red_Ltk.Red_O, Game5Ltk)
          /\ (forall x, x \in Game5Ltk.h1m{2} => !Game5Ltk.bad1{2} => !Game5Ltk.bad2{2} => !Game5Ltk.bad3{2} 
@@ -16252,12 +16251,12 @@ auto => /> &1 &2 *. smt().
         + if => //. auto => /#.
           + auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM). 
           auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
-        auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        auto => />.
       auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU1 loggK expgK expM).
     if => //. auto => /> &1 &2 *. split; smt(expM expgK loggK).
     + sp 1 1; if => //.
       + if => //. auto => /#.
-        + auto => |> &1 &2 35? inv ? inv2 3? b3 *. do split; ~19,20: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        + auto => |> &1 &2 35? inv ? inv2 3? b3 *. do split; ~4,5: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
           + move => x0 y0 b0 tqeq.
             have := inv x0 y0 b0 tqeq.
             move => [H1|H2].
@@ -16304,7 +16303,7 @@ auto => /> &1 &2 *. smt().
           rewrite H6 -H8 H10 //=.
           have->: sk_ce{2} = oget St_CDH_O.x_map{1}.[oget Red_Ltk.Red_O.i_inst{1}.[i{2}]] by smt(pow_bij loggK expgK expM).
           do split; smt().
-        auto => |> &1 &2 28? inv5 inv6 7? inv ? inv2 3? b3 7? nct *. do split; ~18..20: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        auto => |> &1 &2 28? inv5 inv6 7? inv ? inv2 3? b3 6? nct *. do split; ~3..5: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
         + move => i0 s t k r.
           case (i0 = i{2}) => ieq; 2: smt(get_setE loggK expgK expM pow_bij ComRing.mulrC).
           rewrite mem_set get_setE ieq //=.
@@ -18924,14 +18923,7 @@ auto => /> &1 &2 *. smt().
             smt(loggK expgK expM pow_bij some_oget).
           exists i (oget Red_Ltk.Red_O.b_inst{1}.[b{2}]).
           do split; ~7,8: smt(loggK expgK expM ComRing.mulrC).
-          + move : fresh.
-            rewrite !negb_or negb_and nltk //= => [#] nses.
-            rewrite /fresh_partner_s => fp.
-            have : card (get_fresh_partners_s t'{1} Red_Ltk.Red_O.c_smap{1}) <> 0 by smt().
-            rewrite /get_fresh_partners_s fcard_eq0 => /mem_pick /mem_fdom.
-            rewrite mem_filter /=.
-            move => [H1 [#] [m] H2 H3 H4 H5].
-            have := inv13 (pick (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
+          + have := inv13 (pick (fdom (filter (fun (_ : int) (val : pr_st_client instance_state) =>
                (exists (m2o : (pkey * tag) option), get_trace val = Some (t'{1}.`1, m2o)) /\ get_ir_test val = false /\
                get_ir_sess val = false /\ get_ir_eph val = false) Red_Ltk.Red_O.c_smap{1}))) i t'{1}.`1 m H1 H2 iin ieq.
             smt().
@@ -19156,7 +19148,7 @@ auto => /> &1 &2 *. smt().
       by rewrite dkey_ll => /#.
     hoare.
     by auto => />.
-  auto => //. 
+  auto => //.
 qed.
 
 
@@ -19165,10 +19157,11 @@ lemma security &m: `| Pr[E_GAKE_nodhs(GAKEb_nodhs(NTOR_S_mod, NTOR_C_mod, RO), A
   <= Pr[St_CDH_E(St_CDH_O, Red_Eph(A)).run() @ &m : St_CDH_O.win] + Pr[St_CDH_E(St_CDH_O, Red_Ltk(A)).run() @ &m : St_CDH_O.win]
        + 2%r * q_m3%r * p_max dtag
        + 2%r * ((q_h + q_is + q_m1 + q_m2) * (q_h + q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r 
-       + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r / order%r.
+       + 2%r * ((q_is + q_m1 + q_m2) * (q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r.
 proof. 
 rewrite !(gake_game0 _).
-apply (ler_trans (`|Pr[E_GAKE_nodhs(Game1, A).run(false) @ &m : res] - Pr[E_GAKE_nodhs(Game1, A).run(true) @ &m : res]| + 2%r * ((q_is + q_m1 + q_m2) ^ 2)%r / order%r)).
+apply (ler_trans (`|Pr[E_GAKE_nodhs(Game1, A).run(false) @ &m : res] - Pr[E_GAKE_nodhs(Game1, A).run(true) @ &m : res]| 
+        + 2%r * ((q_is + q_m1 + q_m2) * (q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r)).
 + smt(game0_game1 game0_bad1).
 rewrite ler_add2r.
 apply (ler_trans (`|Pr[E_GAKE_nodhs(Game2, A).run(false) @ &m : res] - Pr[E_GAKE_nodhs(Game2, A).run(true) @ &m : res]| 
