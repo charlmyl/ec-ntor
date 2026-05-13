@@ -983,7 +983,7 @@ qed.
 
 lemma bound_stop1 bit &m: Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : GAKEb_st.stop1] 
   <= ((q_is + q_m1 + q_m2) * (q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r.
-proof. admit. (*
+proof.
 have ->: Pr[E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : GAKEb_st.stop1]
        = Pr[E_GAKE_nodhs(Counter(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO)), A_res).run(bit) @ &m : GAKEb_st.stop1].
 + byequiv => //.
@@ -1098,7 +1098,7 @@ fel
   match Some ^match. auto => /#.
   rcondt ^if{3}. auto => />.
   wp.
-  swap ^r2<$ @ 1.
+  swap ^r1<$ @ 1.
   wp.
   rnd (fun x => g ^ x \in GAKEb_st.pk_set).
   auto => />.
@@ -1132,7 +1132,7 @@ fel
   proc; inline.
   sp; match; 1: auto => /#.
   match Some ^match; 1: auto => /#.
-  by auto => /#. *)
+  by auto => /#. 
 qed.
 
 lemma bound_stop2 bit &m: Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : GAKEb_st.stop2] 
@@ -1195,26 +1195,6 @@ fel
   smt(fcardU1).
 
 + by exfalso.
-(*
-+ proc; inline.
-  rcondt ^if; 1: auto => />.
-  wp.
-  rnd (fun x => g ^ x \in GAKEb_st.pred_set).
-  auto => />.
-  move => &hr *.
-  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem GAKEb_st.pred_set{hr}))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in GAKEb_st.pred_set{hr})).
-    exact mu_le.
-  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-  + move => x xin.
-    rewrite dmap1E /(\o) /pred1 /=.
-    rewrite (mu_eq dt _ (pred1 (loge x))).
-    + move => v.
-      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-    rewrite duniform1E.
-    rewrite DZmodP.Support.enumP /=.
-    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-  smt(gt0_order).*)
 + move => c.
   proc; inline.
   sp; if; auto => />.
@@ -1319,7 +1299,6 @@ fel
   smt(fcardU1).
 qed.
 
-(*
 
 (* Unrestricted vs. restricted for the name-based model *)
 (* First restricted => unrestricted security *)
@@ -2218,7 +2197,6 @@ proof.
 by rewrite gake_hon -gake_rem_dhs. 
 qed.
 
-*)
 
 (* Names vs. Public keys in the restricted model *)
 (* We only do reduction from restricted name-based model to restricted public-key-only model *)
@@ -2268,7 +2246,7 @@ byequiv (: _ ==> _) : (Name_Red.O_GAKE.stop1 \/  Name_Red.O_GAKE.stop2) => //; f
 + smt().
 symmetry; proc; inline.
 wp; call (: (Name_Red.O_GAKE.stop1 \/  Name_Red.O_GAKE.stop2)
-          , ={b0, tested}(GAKEb_st, GAKE_mod.GAKEb_nodhs) /\ ={pk_set, pred_set, stop1, stop2}(GAKEb_st, Name_Red.O_GAKE)
+          , ={b0, tested}(GAKEb_st, GAKE_mod.GAKEb_nodhs) /\ ={pk_set, x_set, y_set, stop1, stop2}(GAKEb_st, Name_Red.O_GAKE)
 
                /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`3 \in Name_Red.O_GAKE.sid_pk{2} => x \notin Name_Red.O_GAKE.unreg_ro{2}
                     => GAKEc.HROc.RO.m{1}.[x] = GAKE_mod.HROc.RO.m{2}.[(x.`1, x.`2, (oget Name_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5)])
@@ -2282,10 +2260,12 @@ wp; call (: (Name_Red.O_GAKE.stop1 \/  Name_Red.O_GAKE.stop2)
                /\ (forall x, x \in Name_Red.O_GAKE.unreg_ro{2} => x.`3 \in Name_Red.O_GAKE.sid_pk{2} 
                     => (x.`1, x.`2, (oget Name_Red.O_GAKE.sid_pk{2}.[x.`3]), x.`4, x.`5) \notin GAKE_mod.HROc.RO.m{2})
                /\ (forall x, x \in GAKE_mod.HROc.RO.m{2} => (exists b, b \in Name_Red.O_GAKE.sid_pk{2} /\ Name_Red.O_GAKE.sid_pk{2}.[b] = Some x.`3 
-                                    /\ (x.`1, x.`2, b, x.`4, x.`5) \notin Name_Red.O_GAKE.unreg_ro{2}))
-               /\ (forall x, x \in GAKEc.HROc.RO.m{1} => x.`4 \in Name_Red.O_GAKE.pred_set{2} /\ x.`5 \in Name_Red.O_GAKE.pred_set{2})
-               /\ (forall x, x \in GAKE_mod.HROc.RO.m{2} => x.`4 \in Name_Red.O_GAKE.pred_set{2} /\ x.`5 \in Name_Red.O_GAKE.pred_set{2})
-               /\ (forall x, x \in Name_Red.O_GAKE.unreg_ro{2} => x.`4 \in Name_Red.O_GAKE.pred_set{2} /\ x.`5 \in Name_Red.O_GAKE.pred_set{2})
+                                     /\ (x.`1, x.`2, b, x.`4, x.`5) \notin Name_Red.O_GAKE.unreg_ro{2}))
+               /\ (forall x, x \in GAKEc.HROc.RO.m{1} => (x.`4 \in Name_Red.O_GAKE.x_set{2} \/ x.`4 \in Name_Red.O_GAKE.pk_set{2}) 
+                                     /\ (x.`5 \in Name_Red.O_GAKE.y_set{2} \/ x.`5 \in Name_Red.O_GAKE.pk_set{2}))
+               /\ (forall x, x \in GAKE_mod.HROc.RO.m{2} => (x.`4 \in Name_Red.O_GAKE.x_set{2} \/ x.`4 \in Name_Red.O_GAKE.pk_set{2}) 
+                                     /\ (x.`5 \in Name_Red.O_GAKE.y_set{2} \/ x.`5 \in Name_Red.O_GAKE.pk_set{2}))
+               /\ (forall x, x \in Name_Red.O_GAKE.unreg_ro{2} => x.`4 \in Name_Red.O_GAKE.x_set{2} /\ x.`5 \in Name_Red.O_GAKE.y_set{2})
 
                /\ (forall i, omap rem_sid_c GAKEb_st.c_smap{1}.[i] = GAKE_mod.GAKEb_nodhs.c_smap{2}.[i])
                /\ (forall i b pk m3, i \in GAKEb_st.c_smap{1} => get_trace (oget GAKEb_st.c_smap{1}.[i]) = Some ((b, pk), m3)
@@ -2347,7 +2327,7 @@ wp; call (: (Name_Red.O_GAKE.stop1 \/  Name_Red.O_GAKE.stop2)
           , (GAKEb_st.stop1{1} \/ GAKEb_st.stop2{1}) = (Name_Red.O_GAKE.stop1{2} \/ Name_Red.O_GAKE.stop2{2})) => //; last first.
 auto => />.
 split. smt(emptyE in_fset0).
-move => 49? st1r st2r 6?.
+move => 50? st1r st2r 8?.
 case : (!(st1r \/ st2r)) => />. smt().
 
 - exact B_ll. 
@@ -2383,16 +2363,13 @@ case : (!(st1r \/ st2r)) => />. smt().
     + sp; seq 1 1 : (#pre /\ ={sk_s}). auto => />.
       sp 2 2; if {2} => //.
       + match Some {2} ^match. auto => /#.
-        sp 1 5; if => //.
-        + auto => /> &1 &2 14? inv *. split. smt(in_fsetU1 mem_set). move => *.
-          do split; ~11: smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
-          move => i1 b1 pk0 m3 iin.
-          case (b{2} = b1) => beq; 2: by smt(get_setE mem_set in_fsetU in_fset1).
-          rewrite beq get_setE //=.
-          have<-: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[i1] = rem_sid_c (oget GAKEb_st.c_smap{1}.[i1]). smt().
-          smt(get_setE mem_set in_fsetU in_fset1).
-        auto => /> &1 &2 14? inv *. split. smt(). move => *. 
-         do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
+        auto => /> &1 &2 14? inv *. split. smt(in_fsetU1 mem_set). move => *.
+        do split; ~12: smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
+        move => i1 b1 pk0 m3 iin.
+        case (b{2} = b1) => beq; 2: by smt(get_setE mem_set in_fsetU in_fset1).
+        rewrite beq get_setE //=.
+        have<-: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[i1] = rem_sid_c (oget GAKEb_st.c_smap{1}.[i1]). smt().
+        smt(get_setE mem_set in_fsetU in_fset1).
       match None {2} ^match. auto => />.
       auto => /> &1 &2 *. smt(get_setE mem_set in_fsetU in_fset1).
     auto => /> &1 &2 *.
@@ -2400,16 +2377,8 @@ case : (!(st1r \/ st2r)) => />. smt().
   if {1} => //; auto => />.
 - move => &2 bad; proc; inline.
   sp; if => //.
-  seq 1 : (#pre); try by auto.
-  + auto => />.
-    by rewrite dt_ll /=.
-  + sp 3; if => //.
-    + auto => />.
-      smt().
-    auto => />.
-    smt().
-  hoare.
   auto => />.
+  by rewrite dt_ll /#.
 - move => &1; proc; inline.
   sp; if => //.
   rcondf ^if; auto => />.
@@ -2433,13 +2402,10 @@ case : (!(st1r \/ st2r)) => />. smt().
   rcondf {1} ^if. auto => /#.
   auto => //.
 - move => &2 bad; proc; inline.
-  sp; if => //. 
-  + sp; match. 
-    + auto => />.
-      rewrite dt_ll //=.
-    auto => />.
-  if => //. 
+  sp; if => //; 2: auto => />.
+  sp; match; 2: auto => />.
   auto => />.
+  rewrite dt_ll /#.
 - move => &1; proc; inline.
   sp; if => //.
   sp; if => //.
@@ -2447,7 +2413,7 @@ case : (!(st1r \/ st2r)) => />. smt().
   auto => />.
 
 - proc; inline. 
-  case (Name_Red.O_GAKE.stop{2}). 
+  case (Name_Red.O_GAKE.stop1{2} \/ Name_Red.O_GAKE.stop2{2}).
   + rcondf {2} ^if. auto => />.
     sp; match {1} => //. 
     + auto => />.
@@ -2469,41 +2435,18 @@ case : (!(st1r \/ st2r)) => />. smt().
         + match None {2} ^match => //; auto => /#.
         match Some {2} ^match => //; 1: auto => /#.
         sp 1 1; if => //; 1: auto => /#.
-        + sp 2 3; if => //.
-          + sp 1 1; if => //.
-            auto => /> &1 &2 *. do split; ~14: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            move => b1 j1.
-            do rewrite get_setE //=.
-            case (b1 = b{2} /\ j1 = j{2}) => bjeq; smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
-          if => //.
-          auto => /> &1 &2 *. do split; ~14: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          move => b1 j1.
-          do rewrite get_setE //=.
-          case (b1 = b{2} /\ j1 = j{2}) => bjeq; smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
-        sp 2 3; if => //.
-        + sp 1 1; if => //.
-          auto => /> &1 &2 *. do split; ~14: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          move => b1 j1.
-          do rewrite get_setE //=.
-          case (b1 = b{2} /\ j1 = j{2}) => bjeq; smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
-        if => //.
-        auto => /> &1 &2 *. do split; ~14: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        move => b1 j1.
-        do rewrite get_setE //=.
-        case (b1 = b{2} /\ j1 = j{2}) => bjeq; smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
+        + sp 3 4; if => //.
+          auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+        sp 3 4; if => //.
+        auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       sp; match {1} => //.
       + match None {2} ^match => //; auto => /#.
       match Some {2} ^match => //; 1: auto => /#.
       sp 1 1; if => //; 1: auto => /#.
-      + sp 2 3; if => //; 1: auto => /#.
-        + sp 1 1; if => //.
-          auto => /> &1 &2 *. split. smt(in_fset0). move => *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        if => //.
-        auto => /> &1 &2 *. split. smt(in_fset0). move => *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-      sp 2 3; if => //; auto => /#.
+      + sp 3 4; if => //; 1: auto => /#.
+      by sp 3 4; if => //; auto => /#.
     move => str stl.
-    sp 0 1; if => //; 2: auto => /#.
-    sp 1 1; if => //; 1: auto => /#.
+    sp 1 2; if => //; 1: auto => /#.
     auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
   match None {1} ^match. auto => /#.
   auto => />. 
@@ -2512,7 +2455,7 @@ case : (!(st1r \/ st2r)) => />. smt().
   match; 2: by auto => />.
   sp; match; 1: by auto => />.
   auto => /> &hr *.
-  by rewrite weight_dprod dkey_ll dtag_ll dt_ll bad //=.
+  by rewrite weight_dprod dkey_ll dtag_ll dt_ll bad /#.
 - move => &1; proc; inline.
   rcondf ^if; auto => />.
 
@@ -2533,102 +2476,26 @@ case : (!(st1r \/ st2r)) => />. smt().
       + sp; match Some {1} ^match. auto => /#.
         match Some {2} ^match. auto => /#.
         sp 1 1; if => //; 1: smt().
-        + sp 2 3; if => //.
-          + auto => /> &1 &2 *. do split; ~11,12,14: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            + move => i0.
-              case (i0 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-              rewrite !get_setE ieq //=.
-              rewrite /rem_sid_c //=.
-              do !split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            + move => i1 b0 pk m32.
-              case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-              rewrite !mem_set ieq get_setE //=.
-              move => [] pteq m3eq.
-              split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-              rewrite /rem_sid_c //=.
-              smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            move => i1 b0 pk m32.
-            case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            rewrite !mem_set ieq get_setE //=.
-            move => [] //= [] pkbeq pteq m3eq.
-            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          auto => /> &1 &2 *. do !split; ~1,10..12: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          + move => x.
-            case (x = (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1)) => xeq; 1: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            rewrite mem_set xeq //=.
-            rewrite get_set_neqE //=.
-            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          + move => i0.
+        + auto => /> &1 &2 *. do split; ~11: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+            move => i0.
             case (i0 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
             rewrite !get_setE ieq //=.
             rewrite /rem_sid_c //=.
-            do !split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          + move => i1 b0 pk m32.
-            case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            rewrite !mem_set ieq get_setE //=.
-            move => [] pteq m3eq.
-            split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            rewrite /rem_sid_c //=.
-            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          move => i1 b0 pk m32.
-          case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          rewrite ieq mem_set get_setE //=.
-          move => [] //= pteq m3eq.
-          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        sp 2 3; if => //.
-        + auto => /> &1 &2 *. do split; ~11,12,14: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          + move => i0.
-            case (i0 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            rewrite !get_setE ieq //=.
-            rewrite /rem_sid_c //=.
-            do !split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          + move => i1 b0 pk m32.
-            case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            rewrite !mem_set ieq get_setE //=.
-            move => [] pteq m3eq.
-            split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-            rewrite /rem_sid_c //=.
-            smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          move => i1 b0 pk m32.
-          case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          rewrite !mem_set ieq get_setE //=.
-          move => [] //= [] pkbeq pteq m3eq.
-          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        auto => /> &1 &2 *. do !split; ~1,10..12: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        + move => x.
-          case (x = (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1)) => xeq; 1: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          rewrite mem_set xeq //=.
-          rewrite get_set_neqE //=.
-          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        + move => i0.
+            do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          auto => /> &1 &2 *. do split; ~11: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          move => i0.
           case (i0 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
           rewrite !get_setE ieq //=.
           rewrite /rem_sid_c //=.
-          do !split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        + move => i1 b0 pk m32.
-          case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          rewrite !mem_set ieq get_setE //=.
-          move => [] pteq m3eq.
-          split. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-          rewrite /rem_sid_c //=.
-          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        move => i1 b0 pk m32.
-        case (i1 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        rewrite ieq mem_set get_setE //=.
-        move => [] //= pteq m3eq.
-        smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+          do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       sp; match None {1} ^match. auto => /#.
       match None {2} ^match. auto => /#.
-      sp 1 2; if => //.
-      + auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
     sp 1 1; if => //. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
     + sp; match Some {1} ^match. auto => /#.
       match Some {2} ^match. auto => /#.
       sp 1 1; if => //; 1: smt().
-      + sp 2 3; if => //.
-        + auto => /> &1 &2 *.  do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-        auto => /> &1 &2 ? ? roxl roxr ? ? ? inv *.  do split; ~1: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+      + auto => /> &1 &2 roxl roxr 3? inv *.  do split; ~4: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
         move => i0.
         case (i0 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
         rewrite !get_setE ieq //=.
@@ -2638,15 +2505,13 @@ case : (!(st1r \/ st2r)) => />. smt().
         move => bpk.
         have : (t_A{2}, sk{2}) = (m3{2}.`2, sk{1}).
         + have := inv (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1). 
-          have-> : (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1) \in HROc.RO.m{1} by smt().
-          have-> :  b{1} \in Name_Red.O_GAKE.sid_pk{2} by smt().
-          have-> :  (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1) \notin Name_Red.O_GAKE.unreg_ro{2} by smt().
+          have->: (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1) \in HROc.RO.m{1} by smt().
+          have->:  b{1} \in Name_Red.O_GAKE.sid_pk{2} by smt().
+          have->:  (m3{2}.`1 ^ sk_ce{1}, pk_b{1} ^ sk_ce{1}, b{1}, g ^ sk_ce{1}, m3{2}.`1) \notin Name_Red.O_GAKE.unreg_ro{2} by smt().
           rewrite roxl roxr.
           smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
         smt().
-      sp 2 3; if => //.
-      + auto => /> &1 &2 *.  do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-      auto => /> &1 &2 ? ? roxl roxr ? ? ? inv *.  do split; ~1: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
+      auto => /> &1 &2 roxl roxr 3? inv *.  do split; ~4: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       move => i0.
       case (i0 = i{2}) => ieq; 2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
       rewrite !get_setE ieq //=.
@@ -2664,8 +2529,6 @@ case : (!(st1r \/ st2r)) => />. smt().
       smt().
     sp; match None {1} ^match. auto => /#.
     match None {2} ^match. auto => /#.
-    sp 1 2; if => //.
-    + auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
     auto => /> &1 &2 *. do split; smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
   + match Accepted_mod {2} ^match. auto => /#.
     auto => />. smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
@@ -2792,7 +2655,7 @@ case : (!(st1r \/ st2r)) => />. smt().
     auto => />.
   + match Accepted_mod {2} ^match. auto => />. auto => /#.
     if => //.
-    + auto => /> &1 &2 15? inv ? inv2 *.
+    + auto => /> &1 &2 14? inv3 inv ? inv2 *.
       rewrite /untested_partner_s.
       rewrite /get_partners_s.
       have-> : (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) => get_trace val 
@@ -2812,20 +2675,6 @@ case : (!(st1r \/ st2r)) => />. smt().
           have v := inv x b{2} t'{1}.`1.`2 t'{1}.`2 xin.
           smt().
         smt(get_setE mem_set in_fsetU in_fset1 pow_bij).
-    (*    have : (Accepted_mod st'{2} t'{2} k'{2} ir'{2}) = rem_sid_s (Accepted st'{1} t'{1} k'{1} ir'{1}) by smt().
-        rewrite /rem_sid_s //=.
-        move => [#] steq teq keq ireq.
-        rewrite teq.
-        move => [] xin.
-        have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]). smt().
-        move => trx.
-        have v := inv2 x (g ^ st'{1}.`2) b{2} t'{1}.`1.`2 t'{1}.`2.
-          rewrite v.
-          smt().
-          rewrite trx. smt().
-          smt().
-          smt().
-          smt(get_setE mem_set in_fsetU in_fset1 pow_bij).*)
       rewrite /get_untested_partners_s.
       have->: (fdom (filter (fun (_ : int) (val : GAKEc.pr_st_client GAKEc.instance_state) =>
                   get_trace val = Some t'{1} /\ get_ir_test val = false) GAKEb_st.c_smap{1})) = (fdom
@@ -2857,7 +2706,9 @@ case : (!(st1r \/ st2r)) => />. smt().
         have->: oget GAKE_mod.GAKEb_nodhs.c_smap{2}.[x] = rem_sid_c (oget GAKEb_st.c_smap{1}.[x]) by smt().
         move => trx.
         have v := inv2 x (g ^ st'{1}.`2) b{2} t'{1}.`1.`2 t'{1}.`2.
-        rewrite v; smt().
+        rewrite v; 1..4: smt(). 
+        do split; 1,2: smt().
+        move : trx inv3. clear. smt().
       smt().
     + auto => /> &1 &2 *. do split; ~2: smt(get_setE mem_set in_fsetU in_fset1 pow_bij). 
       move => b0 j0.
@@ -3506,19 +3357,19 @@ case : (!(st1r \/ st2r)) => />. smt().
   by rewrite dkey_ll.
 - move => &1; proc; inline.
   rcondf ^if; auto => />.
-
-auto => />.
-split. smt(emptyE in_fset0).
-move => 46? str 6?.
-by case : (!str) => />.
 qed.
 
 
 lemma name_to_pk bit &m: `| Pr[GAKEc.E_GAKE_nodhs(GAKEc.GAKEb_nodhs(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : res]
      - Pr[GAKE_mod.E_GAKE_nodhs(GAKE_mod.GAKEb_nodhs(NTOR_S_mod, NTOR_C_mod, GAKE_mod.HROc.RO), Name_Red(A_res)).run(bit) @ &m : res] | 
-                 <= Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : GAKEb_st.stop].
+                 <= ((q_is + q_m1 + q_m2) * (q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r
+                     + ((q_h + q_m1 + q_m2 + q_m3) * (q_h + q_m1 + q_m2 + q_m3 - 1))%r / (2 * order)%r.
 proof. 
-by rewrite gake_st gake_no_name.
+rewrite gake_st.
+apply (ler_trans (Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : (GAKEb_st.stop1 \/ GAKEb_st.stop2)])).
++ apply gake_no_name.
+apply (ler_trans (Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : GAKEb_st.stop1] 
+      + Pr[GAKEc.E_GAKE_nodhs(GAKEb_st(NTOR_S, NTOR_C, GAKEc.HROc.RO), A_res).run(bit) @ &m : GAKEb_st.stop2])).
++ apply sum_stop.
+smt(bound_stop1 bound_stop2).
 qed.
-
-
