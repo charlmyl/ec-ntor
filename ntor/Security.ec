@@ -138,8 +138,6 @@ clone ROc.SplitCodom as ROSc with
 realize topairK by rewrite /topair /ofpair.
 realize sample_spec by rewrite /ofpair dprodC dmap_comp //=.
 
-print Game2.
-
 module (Red_ROM (D : A_GAKE_nodhs) : ROc.IdealAll.RO_Distinguisher) (O : ROc.IdealAll.RO) = {
   module AKE_O : GAKE_nodhs = Game2 with {
     proc h [ 
@@ -156,8 +154,6 @@ module (Red_ROM (D : A_GAKE_nodhs) : ROc.IdealAll.RO_Distinguisher) (O : ROc.Ide
     return b';
   }
 }.
-
-print Game3.
 
 module (Red_ROM2 (D : A_GAKE_nodhs) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
   module AKE_O : GAKE_nodhs = Game3 with {
@@ -407,8 +403,6 @@ module St_CDH_E (O : Oracle_i) (A : St_CDH_A) = {
 }.
 
 (* CDH reductions *)
-print Game5Ltk.
-
 module (Red_Ltk (A : A_GAKE_nodhs) : St_CDH_A) (O : Oracle) = {
   module Red_O : GAKE_nodhs_i = Game5Ltk with {
     var count_b : int
@@ -561,10 +555,6 @@ module (Red_Ltk (A : A_GAKE_nodhs) : St_CDH_A) (O : Oracle) = {
   }
 }.
 
-print Red_Ltk.Red_O.
-
-print Game5Eph.
-
 module (Red_Eph (A : A_GAKE_nodhs) : St_CDH_A) (O : Oracle) = {
   module Red_O : GAKE_nodhs_i = Game5Eph with {
     var count_j : int
@@ -698,8 +688,6 @@ module (Red_Eph (A : A_GAKE_nodhs) : St_CDH_A) (O : Oracle) = {
   }
 }.
 
-print Red_Eph.Red_O.
-
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Security Proof *)
@@ -761,7 +749,7 @@ proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Game1.bad1 => //; first last.
 + smt().
-symmetry; proc; inline*.
+symmetry; proc; inline.
 call (: Game1.bad1
       , ={b0, servers, c_smap, s_smap, tested, b_set, x_set, y_set, m1_set, m2_set, pk_set, hm, bad1, bad2}(Game0, Game1)
       , ={bad1}(Game0, Game1)) => //; try sim />.
@@ -1100,7 +1088,7 @@ proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: _ ==> _) : Game2.bad2 => //; first last.
 + smt().
-symmetry; proc; inline*.
+symmetry; proc; inline.
 call (: Game2.bad2
       , ={b0, servers, c_smap, s_smap, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, hm, bad1, bad2}(Game1, Game2)
       , ={bad2}(Game1, Game2)) => //; try sim />.
@@ -1191,7 +1179,7 @@ call (: Game2.bad2
   auto => />.
   by rewrite weight_dprod dkey_ll dtag_ll.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 - proc; inline.
@@ -2014,7 +2002,7 @@ proof.
 rewrite StdOrder.RealOrder.distrC.
 byequiv (: ={glob A, arg} = true ==> _) : Game5.bad3 => //; first last.
 + smt().
-symmetry; proc; inline*.
+symmetry; proc; inline.
 call (: Game5.bad3
       , ={b0, servers, c_smap, s_smap, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, hm, h1m, h2m, bad1, bad2, bad3, test_ephrev_s, test_ltkrev}(Game4, Game5)
       , ={bad3}(Game4, Game5)) => //; try sim />.
@@ -6314,7 +6302,7 @@ lemma game5_eph &m: Pr[E_GAKE_nodhs(Game5, A).run(true) @ &m : Game5.badq /\ Gam
                   Pr[E_GAKE_nodhs(Game5Eph, A).run(true) @ &m : Game5Eph.badq].
 proof.
 byequiv (: ={glob A, arg} /\ arg{1} = true ==> _) => //.
-proc; inline *.
+proc; inline.
 call (: Game5Eph.test_ephrev_s, 
         ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, tq, hq, badq, test_ephrev_s, test_ltkrev, comp_tag}(Game5, Game5Eph)
          /\ Game5.b0{1}
@@ -6604,7 +6592,7 @@ by case : (tephr) => />.
   hoare. 
   by auto => />.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 (* c_rev_skey *) 
@@ -6885,7 +6873,7 @@ auto => /> &1 &2 *. smt().
   auto => />.
   smt(get_setE mem_set).
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 (* c_test *)
@@ -7127,7 +7115,7 @@ lemma game5_ltk &m: Pr[E_GAKE_nodhs(Game5, A).run(true) @ &m : Game5.badq /\ Gam
                   Pr[E_GAKE_nodhs(Game5Ltk, A).run(true) @ &m : Game5Ltk.badq].
 proof.
 byequiv (: ={glob A, arg} /\ arg{1} = true ==> _) => //.
-proc; inline *.
+proc; inline.
 call (: Game5Ltk.test_ltkrev
       , ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, tq, hq, badq, test_ephrev_s, test_ltkrev, comp_tag}(Game5, Game5Ltk)
         /\ Game5.b0{1}
@@ -7353,7 +7341,7 @@ by case (tltkr) => //.
     by auto => />.
   auto => />.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 (* s_rev_skey *)
@@ -7384,7 +7372,7 @@ by case (tltkr) => //.
   match => //; if; auto => />.
   rewrite dkey_ll //=.
 - move => &1.
-  proc; inline*.
+  proc; inline.
   rcondf ^if; auto => />.
 
 (* rev_ltkey *)

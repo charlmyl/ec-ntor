@@ -379,9 +379,6 @@ module Game0 : GAKE_nodhs_i = {
 }.
 
 
-print Game0.
-
-
 (* Step1: Removing key collisions *)
 module Game1 = Game0 with {
   proc h [
@@ -438,7 +435,6 @@ module Game1 = Game0 with {
   ]
 }.
 
-print Game1.
 
 module Game2 = Game1 with {
   proc h [
@@ -493,7 +489,6 @@ module Game2 = Game1 with {
   ]
 }.
 
-print Game2.
 
 (* Step2: Splitting the random oracle and tracking bad event of overlap between RO queries and test query *)
 module Game3 = Game2 with {
@@ -559,7 +554,6 @@ module Game3 = Game2 with {
   ]
 }.
 
-print Game3. 
 
 (* Step3: Moving the sampling of keys *)
 module Game4 = Game3 with {
@@ -637,7 +631,6 @@ module Game4 = Game3 with {
   ]
 }.
 
-print Game4.
 
 module Game5 = Game4 with {
   var comp_tag : bool
@@ -698,7 +691,6 @@ module Game5 = Game4 with {
   ]
 }.
 
-print Game5.
 
 module Game5Ltk = Game5 with {
   proc h [
@@ -756,7 +748,6 @@ module Game5Ltk = Game5 with {
   ]
 }.
 
-print Game5.
 
 module Game5Eph = Game5 with {
   proc h [
@@ -814,4 +805,3 @@ module Game5Eph = Game5 with {
   ]
 }.
 
-print Game5Eph.

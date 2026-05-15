@@ -234,8 +234,6 @@ clone import PROM.FullRO as HROc with
   type d_out_t <= bool
 proof *.
 
-print RO.
-
 (* protocol definition split into Server and Client side *)
 module type Server (H : HROc.RO) = {
   proc keygen() : pkey * skey
