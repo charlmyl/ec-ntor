@@ -6,24 +6,31 @@ clone import NTOR_nosid as NTOR_mod.
 import NTORc UAKE_mod UAKEc HROc HRO_mod_c DH.G DH.GP DH.FD DH.GP.ZModE.
 
 module Counter (G : UAKE_res_name_i) : UAKEc.UAKE_res_name_i = {
-  var ch, cis, cm1, cm2, cm3 : int
+  var ch, cg, ce, cm1, cm2 : int
 
   include G[c_rev_skey, s_rev_skey, rev_ltkey, c_rev_ephkey, s_rev_ephkey, c_test, s_test]
 
-  proc init_mem(b: bool) = {
-    (ch, cis, cm1, cm2, cm3) <- (0, 0, 0, 0, 0);
-    G.init_mem(b);
+  proc init(b: bool) = {
+    (ch, cg, ce, cm1, cm2) <- (0, 0, 0, 0, 0);
+    G.init(b);
   }
   
-  proc init_s(b) = {
+  proc gen(b) = {
     var m;
-    cis <- cis + 1;
-    m <@ G.init_s(b);
+    cg <- cg + 1;
+    m <@ G.gen(b);
+    return m;
+  }
+  proc exec(x) = {
+    var m;
+    ce <- ce + 1;
+    m <@ G.exec(x);
     return m;
   }
   proc send_msg1(x) = {
     var m;
     cm1 <- cm1 + 1;
+    ch <- ch + 2;
     m <@ G.send_msg1(x);
     return m;
   }
@@ -34,13 +41,6 @@ module Counter (G : UAKE_res_name_i) : UAKEc.UAKE_res_name_i = {
     m <@ G.send_msg2(x);
     return m;
   }
-  proc send_msg3(x) = {
-    var m;
-    cm3 <- cm3 + 1;
-    ch <- ch + 2;
-    m <@ G.send_msg3(x);
-    return m;
-  }
   proc h(x) = {
     var y;
     ch <- ch + 2;
@@ -49,10 +49,10 @@ module Counter (G : UAKE_res_name_i) : UAKEc.UAKE_res_name_i = {
   }
 }.
 
-op q_is : { int | 0 <= q_is } as ge0_q_is.
+op q_gen : { int | 0 <= q_gen } as ge0_q_gen.
+op q_exec : { int | 0 <= q_exec } as ge0_q_exec.
 op q_m1 : { int | 0 <= q_m1 } as ge0_q_m1.
 op q_m2 : { int | 0 <= q_m2 } as ge0_q_m2.
-op q_m3 : { int | 0 <= q_m3 } as ge0_q_m3.
 op q_h  : { int | 0 <= q_h } as ge0_q_h.
 
 (* ------------------------------------------------------------------------------------------ *)
@@ -72,7 +72,7 @@ module UAKE_name_st (S: Server) (C: Client) (H : UAKEc.HROc.RO) : UAKEc.UAKE_res
   
   var tested: int option
 
-  proc init_mem(b: bool) : unit = {
+  proc init(b: bool) : unit = {
     b0 <- b;
     H.init();
     unreg_ro <- fset0;
@@ -104,7 +104,7 @@ module UAKE_name_st (S: Server) (C: Client) (H : UAKEc.HROc.RO) : UAKEc.UAKE_res
   }
   
   (* server management *)
-  proc init_s(b: s_id) : pkey option = {
+  proc gen(b: s_id) : pkey option = {
     var kp;
 
     if (b \notin servers) {
@@ -116,7 +116,7 @@ module UAKE_name_st (S: Server) (C: Client) (H : UAKEc.HROc.RO) : UAKEc.UAKE_res
     return omap get_pkey servers.[b];
   }
 
-  proc send_msg1(i: int, m1: s_id) : pkey option = {
+  proc exec(i: int, m1: s_id) : pkey option = {
     var st, pk_b, st', m2;
     var r <- None;
 
@@ -142,7 +142,7 @@ module UAKE_name_st (S: Server) (C: Client) (H : UAKEc.HROc.RO) : UAKEc.UAKE_res
     return r;
   }
 
-  proc send_msg2(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
+  proc send_msg1(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
     var sko, resp, st', k, m3;
     var r <- None;
 
@@ -179,7 +179,7 @@ module UAKE_name_st (S: Server) (C: Client) (H : UAKEc.HROc.RO) : UAKEc.UAKE_res
     return r;
   }
 
-  proc send_msg3(i: int, m3: pkey * tag) : unit option = {
+  proc send_msg2(i: int, m3: pkey * tag) : unit option = {
     var resp, st', k;
     var r <- None;
 
@@ -396,7 +396,7 @@ module UAKE_name_st (S: Server) (C: Client) (H : UAKEc.HROc.RO) : UAKEc.UAKE_res
 (* Reduction from restricted to non-restricted model in the name-based setting *)
 module (Res_Red (A : UAKEc.A_UAKE_res_name) : UAKEc.A_UAKE_unres_name) (O : UAKEc.UAKE_unres_name) = {
   module O_UAKE_RN : UAKEc.UAKE_res_name = {
-   include O [-set_cert]
+   include O [-register_dishonest]
   }
 
   proc run() : bool = {
@@ -436,10 +436,10 @@ module (Hon_Red (A : UAKEc.A_UAKE_unres_name) : UAKEc.A_UAKE_unres_name) (O : UA
 
     proc h = O.h
 
-    proc init_s(b : s_id): pkey option = {
+    proc gen(b : s_id): pkey option = {
     var r <- None;
 
-      r <@ O.init_s(b);
+      r <@ O.gen(b);
       if (b \notin servers) {
         servers.[b] <- Inner (oget r) false;
       }
@@ -447,10 +447,10 @@ module (Hon_Red (A : UAKEc.A_UAKE_unres_name) : UAKEc.A_UAKE_unres_name) (O : UA
       return r;
     }
 
-    proc set_cert(b: s_id, pk: pkey) = { 
+    proc register_dishonest(b: s_id, pk: pkey) = { 
       var r <- None;
   
-      r <@ O.set_cert(b, pk);
+      r <@ O.register_dishonest(b, pk);
       if (b \notin servers) {
         servers.[b] <- Outer pk;
       }
@@ -458,13 +458,13 @@ module (Hon_Red (A : UAKEc.A_UAKE_unres_name) : UAKEc.A_UAKE_unres_name) (O : UA
       return r;
     }
   
-    proc send_msg1(i: int, m1: s_id) = {
+    proc exec(i: int, m1: s_id) = {
       var sk_ce, pk_ce, pk_b; 
       var r <- None;
   
       if (m1 \in servers) {
         if (!get_sr_out (oget servers.[m1]) /\ i \notin dhc_smap) {
-          r <@ O.send_msg1(i, m1);
+          r <@ O.exec(i, m1);
           if (r <> None) {
             c_inst.[i] <- false;
           }
@@ -483,14 +483,14 @@ module (Hon_Red (A : UAKEc.A_UAKE_unres_name) : UAKEc.A_UAKE_unres_name) (O : UA
       return r;
     }
   
-    proc send_msg2 = O.send_msg2
+    proc send_msg1 = O.send_msg1
   
-    proc send_msg3(i: int, m3: pkey * tag) = {
+    proc send_msg2(i: int, m3: pkey * tag) = {
       var pk_b, sk_ce, b, t_A, k;
       var r <- None;
   
       if (i \notin dhc_smap) {
-        r <@ O.send_msg3(i, m3);
+        r <@ O.send_msg2(i, m3);
       } else {
         match dhc_smap.[i] with 
         | None => { } (* Abort? *)
@@ -643,20 +643,20 @@ module (Hon_s_Red (A : UAKEc.A_UAKE_unres_name) : UAKEc.A_UAKE_res_name) (O : UA
   module O_UAKE : UAKEc.UAKE_unres_name = {
     var servers : (s_id, (bool * pkey option)) fmap
 
-    include O [-init_s]
+    include O [-gen]
 
-    proc init_s(b : s_id) = {
+    proc gen(b : s_id) = {
       var r;
 
       if (b \notin servers) {
-        r <@ O.init_s(b);
+        r <@ O.gen(b);
         servers.[b] <- (false, r);
       }
 
       return (oget servers.[b]).`2;
     }
 
-    proc set_cert(b: s_id, pk: pkey) = { 
+    proc register_dishonest(b: s_id, pk: pkey) = { 
       var r <- None;
   
       if (b \notin servers) {
@@ -721,13 +721,13 @@ module (Name_Red (A : UAKEc.A_UAKE_res_name) : UAKE_mod.A_UAKE_res_pk) (O : UAKE
       return r;
     }
 
-    proc init_s(b : s_id): pkey option = {
+    proc gen(b : s_id): pkey option = {
       var pko;
       var r <- None;
 
       if (!(stop1 \/ stop2)) {
         if (b \notin sid_pk) {
-          pko <@ O.init_s();
+          pko <@ O.gen();
           if (pko is Some pk) {
             stop1 <- stop1 \/ pk \in pk_set;
             pk_set <- pk_set `|` fset1 pk;
@@ -741,13 +741,13 @@ module (Name_Red (A : UAKEc.A_UAKE_res_name) : UAKE_mod.A_UAKE_res_pk) (O : UAKE
       return r;
     }
 
-    proc send_msg1(i: int, m1: s_id) = {
+    proc exec(i: int, m1: s_id) = {
       var pk_s; 
       var r <- None;
 
       if (!(stop1 \/ stop2) /\ m1 \in sid_pk) {
         pk_s <- oget sid_pk.[m1];
-        r <@ O.send_msg1(i, pk_s);
+        r <@ O.exec(i, pk_s);
 
         if (r <> None) {
           stop1 <- stop1 \/ (oget r \in pk_set);
@@ -759,13 +759,13 @@ module (Name_Red (A : UAKEc.A_UAKE_res_name) : UAKE_mod.A_UAKE_res_pk) (O : UAKE
       return r;
     }
 
-    proc send_msg2(b: s_id, j: int, m2: pkey) = {
+    proc send_msg1(b: s_id, j: int, m2: pkey) = {
       var pk_s; 
       var r <- None;
 
       if (!(stop1 \/ stop2) /\ b \in sid_pk) {
         pk_s <- oget sid_pk.[b];
-        r <@ O.send_msg2(pk_s, j, m2);
+        r <@ O.send_msg1(pk_s, j, m2);
         x_set <- x_set `|` fset1 m2;
         if (r <> None) {
           stop1 <- stop1 \/ ((oget r).`1 \in pk_set);
@@ -777,11 +777,11 @@ module (Name_Red (A : UAKEc.A_UAKE_res_name) : UAKE_mod.A_UAKE_res_pk) (O : UAKE
       return r;
     }
 
-    proc send_msg3(i: int, m3: pkey * tag) = {
+    proc send_msg2(i: int, m3: pkey * tag) = {
       var r <- None;
 
       if (!(stop1 \/ stop2)) {
-        r <@ O.send_msg3(i, m3);
+        r <@ O.send_msg2(i, m3);
         y_set <- y_set `|` fset1 m3.`1;
       } 
       return r;
@@ -894,11 +894,11 @@ declare module A_res <: UAKEc.A_UAKE_res_name {-UAKE_mod.HROc.RO, -UAKEc.HROc.RO
 
 declare axiom A_ll (G <: UAKEc.UAKE_unres_name{-A}):
   islossless G.h =>
-  islossless G.init_s =>
-  islossless G.set_cert =>
-  islossless G.send_msg1 =>
-  islossless G.send_msg2 => 
-  islossless G.send_msg3 =>
+  islossless G.gen =>
+  islossless G.register_dishonest =>
+  islossless G.exec =>
+  islossless G.send_msg1 => 
+  islossless G.send_msg2 =>
   islossless G.c_rev_skey =>
   islossless G.s_rev_skey =>
   islossless G.rev_ltkey =>
@@ -910,10 +910,10 @@ declare axiom A_ll (G <: UAKEc.UAKE_unres_name{-A}):
 
 declare axiom B_ll (G <: UAKEc.UAKE_res_name{-A_res}):
   islossless G.h =>
-  islossless G.init_s =>
-  islossless G.send_msg1 =>
-  islossless G.send_msg2 => 
-  islossless G.send_msg3 =>
+  islossless G.gen =>
+  islossless G.exec =>
+  islossless G.send_msg1 => 
+  islossless G.send_msg2 =>
   islossless G.c_rev_skey =>
   islossless G.s_rev_skey =>
   islossless G.rev_ltkey =>
@@ -923,8 +923,8 @@ declare axiom B_ll (G <: UAKEc.UAKE_res_name{-A_res}):
   islossless G.s_test => 
   islossless A_res(G).run.
 
-declare axiom A_res_bounded_qs: forall (G <: UAKEc.UAKE_res_name_i{-A_res}), hoare[A_res(Counter(G)).run: Counter.cis = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.cm3 = 0 /\ Counter.ch = 0
-                                                                  ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.cm3 < q_m3 /\ Counter.ch < q_h].
+declare axiom A_res_bounded_qs: forall (G <: UAKEc.UAKE_res_name_i{-A_res}), hoare[A_res(Counter(G)).run: Counter.cg = 0 /\ Counter.ce = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.ch = 0
+                                                                  ==> Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h].
  
 local lemma fset0_nin (s : 'a fset) x : s = fset0 => x \notin s.
 proof.
@@ -941,7 +941,7 @@ smt(ge0_mu).
 qed.
 
 lemma bound_stop1 bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1] 
-  <= ((q_is + q_m1 + q_m2) * (q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r.
+  <= ((q_gen + q_exec + q_m1) * (q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r.
 proof.
 have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1]
        = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1].
@@ -956,61 +956,33 @@ have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bi
   by inline; auto => />.
 have ->: Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1]
        = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1
-            /\ Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2].
+            /\ Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1].
 + byequiv => //.
   proc.
-  conseq (: _ ==> ={UAKE_name_st.stop1}) _ (: _ ==> Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2) => //.
+  conseq (: _ ==> ={UAKE_name_st.stop1}) _ (: _ ==> Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1) => //.
   + call (A_res_bounded_qs (UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO))).
     by inline; auto.
   by sim. 
 fel
   1
-  (Counter.cis + Counter.cm1 + Counter.cm2)
+  (Counter.cg + Counter.ce + Counter.cm1)
   (fun x => x%r / order%r)
-  (q_m1 + q_m2 + q_is)
+  (q_exec + q_m1 + q_gen)
   UAKE_name_st.stop1
-  [ Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).init_s : (arg \notin UAKE_name_st.servers);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
+  [ Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).gen : (arg \notin UAKE_name_st.servers);
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).exec : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
                                 /\ UAKE_name_st.c_smap.[arg.`1] = None);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg2 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
                                 /\ exists v, obind get_skey UAKE_name_st.servers.[arg.`1] = Some v)
   ]
-  (card UAKE_name_st.pk_set <= Counter.cis + Counter.cm1 + Counter.cm2 /\ 0 <= Counter.cis /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2)
+  (card UAKE_name_st.pk_set <= Counter.cg + Counter.ce + Counter.cm1 /\ 0 <= Counter.cg /\ 0 <= Counter.ce /\ 0 <= Counter.cm1)
 .
 + rewrite -mulr_suml StdBigop.Bigreal.sumidE.
-  + smt(ge0_q_m1 ge0_q_m2 ge0_q_is).
+  + smt(ge0_q_exec ge0_q_m1 ge0_q_gen).
   smt().
 + smt().
 + inline; auto.
   smt(fcards0).
-
-+ proc; inline.
-  rcondt ^if; 1: auto => />.
-  wp.
-  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
-  auto => />.
-  move => &hr *.
-  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
-    exact mu_le.
-  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-  + move => x xin.
-    rewrite dmap1E /(\o) /pred1 /=.
-    rewrite (mu_eq dt _ (pred1 (loge x))).
-    + move => v.
-      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-    rewrite duniform1E.
-    rewrite DZmodP.Support.enumP /=.
-    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-  smt(gt0_order).
-+ move => c.
-  proc; inline.
-  sp; if; auto => />.
-  smt(fcardU1).
-+ move => b c.
-  proc; inline.
-  rcondf ^if. auto => />.
-  by auto => /#.
 
 + proc; inline.
   rcondt ^if; 1: auto => />.
@@ -1047,6 +1019,34 @@ fel
     + smt().
     rcondf ^if. auto => />.
     by auto => /#.
+  rcondf ^if. auto => />.
+  by auto => /#.
+
++ proc; inline.
+  rcondt ^if; 1: auto => />.
+  wp.
+  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  sp; if; auto => />.
+  smt(fcardU1).
++ move => b c.
+  proc; inline.
   rcondf ^if. auto => />.
   by auto => /#.
 
@@ -1095,7 +1095,7 @@ fel
 qed.
 
 lemma bound_stop2 bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2] 
-  <= ((q_h + q_m1 + q_m2 + q_m3) * (q_h + q_m1 + q_m2 + q_m3 - 1))%r / (2 * order)%r.
+  <= ((q_h + q_exec + q_m1 + q_m2) * (q_h + q_exec + q_m1 + q_m2 - 1))%r / (2 * order)%r.
 proof.
 have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2]
        = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2].
@@ -1110,58 +1110,35 @@ have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bi
   by inline; auto => />.
 have ->: Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2]
        = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2
-            /\ Counter.ch < q_h /\ Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.cm3 < q_m3].
+            /\ Counter.ch < q_h /\ Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2].
 + byequiv => //.
   proc.
-  conseq (: _ ==> ={UAKE_name_st.stop2}) _ (: _ ==> Counter.ch < q_h /\ Counter.cis < q_is /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.cm3 < q_m3) => //.
+  conseq (: _ ==> ={UAKE_name_st.stop2}) _ (: _ ==> Counter.ch < q_h /\ Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2) => //.
   + call (A_res_bounded_qs (UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO))).
     by inline; auto.
   by sim. 
 fel
   1
-  (Counter.ch + Counter.cm1 + Counter.cm2 + Counter.cm3)
+  (Counter.ch + Counter.ce + Counter.cm1 + Counter.cm2)
   (fun x => x%r / order%r)
-  (q_h + q_m1 + q_m2 + q_m3)
+  (q_h + q_exec + q_m1 + q_m2)
   UAKE_name_st.stop2
   [ Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).h : false;
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).init_s : false;
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).gen : false;
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).exec : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
                                 /\ UAKE_name_st.c_smap.[arg.`1] = None);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg2 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
                                 /\ exists v, obind get_skey UAKE_name_st.servers.[arg.`1] = Some v);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg3 : false
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg2 : false
   ]
-  (card UAKE_name_st.x_set <= Counter.ch + Counter.cm2 /\ card UAKE_name_st.y_set <= Counter.ch + Counter.cm3 /\ 0 <= Counter.ch /\ 0 <= Counter.cis /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2 /\ 0 <= Counter.cm3)
+  (card UAKE_name_st.x_set <= Counter.ch + Counter.cm1 /\ card UAKE_name_st.y_set <= Counter.ch + Counter.cm2 /\ 0 <= Counter.ch /\ 0 <= Counter.cg /\ 0 <= Counter.ce /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2)
 .
 + rewrite -mulr_suml StdBigop.Bigreal.sumidE.
-  + smt(ge0_q_m1 ge0_q_m2 ge0_q_m3 ge0_q_h).
+  + smt(ge0_q_exec ge0_q_m1 ge0_q_m2 ge0_q_h).
   smt().
 + smt().
 + inline; auto.
   smt(fcards0).
-
-+ by exfalso.
-+ move => c.
-  conseq />.
-  proc; inline.
-  auto.
-+ move => b c.
-  proc; inline.
-  sp 2; if.
-  + auto => />.
-    smt(fcardU1).
-  auto => />.
-  smt(fcardU1).
-
-+ by exfalso.
-+ move => c.
-  proc; inline.
-  sp; if; auto => />.
-+ move => b c.
-  proc; inline.
-  sp 2; if.
-  + auto => /#.
-  auto => /#.
 
 + proc; inline.
   rcondt ^if; 1: auto => />.
@@ -1201,6 +1178,29 @@ fel
   rcondf ^if. auto => />.
   by auto => /#.
 
++ by exfalso.
++ move => c.
+  proc; inline.
+  sp; if; auto => />.
++ move => b c.
+  proc; inline.
+  sp 2; if.
+  + auto => /#.
+  auto => /#.
+
++ by exfalso.
++ move => c.
+  conseq />.
+  proc; inline.
+  auto.
++ move => b c.
+  proc; inline.
+  sp 2; if.
+  + auto => />.
+    smt(fcardU1).
+  auto => />.
+  smt(fcardU1).
+
 + proc; inline.
   match Some ^match. auto => />.
   match None ^match. auto => />.
@@ -1226,7 +1226,7 @@ fel
       rewrite duniform1E.
       rewrite DZmodP.Support.enumP /=.
       by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-    have : (card UAKE_name_st.y_set{hr})%r * (1%r / order%r) <= (Counter.ch{hr} + Counter.cm3{hr})%r / order%r.
+    have : (card UAKE_name_st.y_set{hr})%r * (1%r / order%r) <= (Counter.ch{hr} + Counter.cm2{hr})%r / order%r.
     + by move : H; clear; smt(gt0_order).
     smt(gt0_order).
   rewrite /get_as_Some //=.
@@ -3320,8 +3320,8 @@ qed.
 
 lemma name_to_pk bit &m: `| Pr[UAKEc.E_UAKE_RN(UAKEc.O_RN(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : res]
      - Pr[UAKE_mod.E_UAKE(UAKE_mod.O_RPK(S, C, UAKE_mod.HROc.RO), Name_Red(A_res)).run(bit) @ &m : res] | 
-                 <= ((q_is + q_m1 + q_m2) * (q_is + q_m1 + q_m2 - 1))%r / (2 * order)%r
-                     + ((q_h + q_m1 + q_m2 + q_m3) * (q_h + q_m1 + q_m2 + q_m3 - 1))%r / (2 * order)%r.
+                 <= ((q_gen + q_exec + q_m1) * (q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r
+                     + ((q_h + q_exec + q_m1 + q_m2) * (q_h + q_exec + q_m1 + q_m2 - 1))%r / (2 * order)%r.
 proof. 
 rewrite gake_st.
 apply (ler_trans (Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : (UAKE_name_st.stop1 \/ UAKE_name_st.stop2)])).
@@ -3331,3 +3331,4 @@ apply (ler_trans (Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)
 + apply sum_stop.
 smt(bound_stop1 bound_stop2).
 qed.
+

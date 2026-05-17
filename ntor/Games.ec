@@ -40,7 +40,7 @@ module Game0 : UAKE_res_pk_i = {
   var bad1, bad2 : bool
 
 
-  proc init_mem(b: bool) : unit = {
+  proc init(b: bool) : unit = {
     b0 <- b;
     hm <- empty;
     servers <- empty;
@@ -80,7 +80,7 @@ module Game0 : UAKE_res_pk_i = {
   }
 
   (* server management *)
-  proc init_s() : pkey option = {
+  proc gen() : pkey option = {
     var sk, pk;
     var r <- None;
 
@@ -96,7 +96,7 @@ module Game0 : UAKE_res_pk_i = {
     return r;
   }
 
-  proc send_msg1(i: int, m1: pkey) : pkey option = {
+  proc exec(i: int, m1: pkey) : pkey option = {
     var st, pk, sk;
     var r <- None;
 
@@ -118,7 +118,7 @@ module Game0 : UAKE_res_pk_i = {
     return r;
   }
 
-  proc send_msg2(b: pkey, j: int, m2: pkey) : (pkey * tag) option = {
+  proc send_msg1(b: pkey, j: int, m2: pkey) : (pkey * tag) option = {
     var sko, sk, pk, t_B, key;
     var r <- None;
 
@@ -146,7 +146,7 @@ module Game0 : UAKE_res_pk_i = {
     return r;
   }
 
-  proc send_msg3(i: int, m3: pkey * tag) : unit option = {
+  proc send_msg2(i: int, m3: pkey * tag) : unit option = {
     var b, sk_ce, t_A, key;
     var r <- None;
 
@@ -362,22 +362,22 @@ module Game1 = Game0 with {
      ^if{1} + {tk <- oget hm.[x];}
   ] res ~ (tk)
 
-  proc init_s [
+  proc gen [
     [^r<- - ^if] + (!bad1)
     [^pk_set<- - ^if] + (!bad1)
   ]
 
-  proc send_msg1 [
+  proc exec [
     [^r<- - ^if] + (!bad1)
     [^if.^match#None.^bad1<- - ^c_smap<-] + (!bad1)
   ]
 
-  proc send_msg2 [
+  proc send_msg1 [
     [^r<- - ^match] + (!bad1)
     [^match#Some.^match#None.^m2_set<- - ^r<-] + (!bad1)
   ]
 
-  proc send_msg3 [
+  proc send_msg2 [
     [^r<- - ^match] + (!bad1)
   ]
 
@@ -416,22 +416,22 @@ module Game2 = Game1 with {
     ^if ~ (!bad1 /\ !bad2)
   ]
 
-  proc init_s [
+  proc gen [
     ^if ~ (!bad1 /\ !bad2)
     ^if.^if ~ (!bad1 /\ !bad2)
   ]
 
-  proc send_msg1 [
+  proc exec [
     ^if ~ (!bad1 /\ !bad2)
     ^if.^if.^match#None.^if ~ (!bad1 /\ !bad2)
   ]
 
-  proc send_msg2 [
+  proc send_msg1 [
     ^if ~ (!bad1 /\ !bad2)
     ^if.^match#Some.^match#None.^if ~ (!bad1 /\ !bad2)
   ]
 
-  proc send_msg3 [
+  proc send_msg2 [
     ^if ~ (!bad1 /\ !bad2)
   ]
 
@@ -473,7 +473,7 @@ module Game3 = Game2 with {
   var tq : (pkey * pkey * pkey * pkey * pkey) option
   var badq : bool
 
-  proc init_mem [
+  proc init [
     -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false;}
   ]
 
@@ -486,7 +486,7 @@ module Game3 = Game2 with {
     ^if.^tk<$ + ^ {hq <- hq `|` fset1 x; badq <- badq \/ (tq <> None /\ oget tq \in hq);}
   ]
 
-  proc send_msg2 [
+  proc send_msg1 [
     var ts : tag
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
@@ -500,7 +500,7 @@ module Game3 = Game2 with {
                                       if (m2 \notin m1_set /\ m2 \notin x_set) {x_set <- x_set `|` fset1 m2;}}
   ]
 
-  proc send_msg3 [
+  proc send_msg2 [
     var ts : tag
     var ks : key
     var x : pkey * pkey * pkey * pkey * pkey
@@ -536,16 +536,16 @@ module Game4 = Game3 with {
   var test_ltkrev : bool
   var bad3 : bool
 
-  proc init_mem [
+  proc init [
     -1 + { test_ephrev_s <- false; test_ltkrev <- false; bad3 <- false; }
   ]
 
-  proc send_msg2 [
+  proc send_msg1 [
     ^if.^match#Some.^match#None.^if.^ks<$ ~ {key <- witness;}
     [^if.^match#Some.^match#None.^if.^if{2} - ^key<-] -
   ]
 
-  proc send_msg3 [
+  proc send_msg2 [
     var guessed_tag : bool
 
     1 + {guessed_tag <- false;}
@@ -610,7 +610,7 @@ module Game4 = Game3 with {
 module Game5 = Game4 with {
   var comp_tag : bool
 
-  proc init_mem [
+  proc init [
     -1 + { comp_tag <- false; }
   ]
 
@@ -619,7 +619,11 @@ module Game5 = Game4 with {
     ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
-  proc init_s [
+  proc gen [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
+  ]
+
+  proc exec [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
@@ -628,10 +632,6 @@ module Game5 = Game4 with {
   ]
 
   proc send_msg2 [
-    ^if ~ (!bad1 /\ !bad2 /\ !bad3)
-  ]
-
-  proc send_msg3 [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3)
     [^if.^match#Some.^match#Pending_mod.^if{4}.^bad3<- - 1] + (!bad3)
     ^if.^match#Some.^match#Pending_mod.^if{4}.^if?^c_smap<- + {if (card (get_partners_c (pt, Some m3) s_smap) = 0 /\ !ir.`1) {comp_tag <- true;}}
@@ -672,7 +672,11 @@ module Game5Ltk = Game5 with {
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
 
-  proc init_s [
+  proc gen [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
+  ]
+
+  proc exec [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
 
@@ -681,10 +685,6 @@ module Game5Ltk = Game5 with {
   ]
 
   proc send_msg2 [
-    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
-  ]
-
-  proc send_msg3 [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
 
@@ -729,7 +729,11 @@ module Game5Eph = Game5 with {
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
-  proc init_s [
+  proc gen [
+    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
+  ]
+
+  proc exec [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
@@ -738,10 +742,6 @@ module Game5Eph = Game5 with {
   ]
 
   proc send_msg2 [
-    ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
-  ]
-
-  proc send_msg3 [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
