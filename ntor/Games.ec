@@ -3,46 +3,27 @@ require import AllCore FMap FSet Distr.
 
 require NTOR_nosid.
 clone import NTOR_nosid as NTOR_nosid_c.
-import NTORc GAKE_mod DH.G DH.GP DH.FD.
-
+import NTORc UAKE_mod DH.G DH.GP DH.FD.
 
 (* Proof:
 - Step 0: inline everathing;
 - Step 1: prevent collisions in and between long-term and ephemeral
   keys;
-- Step 2: prevent collisions in random oracle output;
-  + IN THEORY: "at most one partner" is possible here; consider it?
-- Step 3: split the random oracle so that tag and key are sampled
-  separately;
-- Step 3.5: delay the sampling of the session key to reveal or test;
-  (use Eager/Lazy, replacing the RO call in msg2 + msg3 with sample)
-- Step 4: "reduction" if the adversary wins, it must be because they
-  directly queried H on the right input before the test session;
-  + Question: do we want to first hybrid over the instance the
-    adversary tests? Francois thinks yes.
-- Step 5: case split: is the test session a client or a server?
-  + Client: case split: (check Stebila et al)
-    * is the server's long-term key compromised? => Gap-DH one way;
-    * if not => Gap-DH another way.
-  + Server: case split:
-    * is the server's long-term key compromised? => Gap-DH one way;
-    * if not => Gap-DH another way.
-  
-Steps done:
-- Step 0: inline everathing;
-- Step 1: prevent collisions in and between long-term and ephemeral
-  keys;
-- Step 2: split the random oracle so that tag and key are sampled
+- Step 2: make the adversary loose when they predict a long-term 
+  or ephemeral public key;
+- Step 2.5: split the random oracle so that tag and key are sampled
   separately;
 - Step 3: delay the sampling of the session key to reveal or test;
   (use Eager/Lazy, replacing the RO call in msg2 + msg3 with sample)
-- Step 4: 
-
+- Step 4: make adversary loose when they guess a correct tag that 
+  makes a client instance accept;
+- Step 5: if the adversary wins, it must be because they
+  directly queried H on the right input before the test session;
+- Step 6: reduction to hardness assumption;
 *)
 
-print pr_st_client.
 (* Step0 inlining everything and adding bad event *)
-module Game0 : GAKE_nodhs_i = {
+module Game0 : UAKE_res_pk_i = {
   (* This is not aligned with the sequence above *)
   var b0 : bool 
 
@@ -50,8 +31,8 @@ module Game0 : GAKE_nodhs_i = {
 
   var servers : (pkey, server_state) fmap
 
-  var c_smap : (int, pr_st_client instance_state) fmap
-  var s_smap : (pkey * int, pr_st_server instance_state) fmap
+  var c_smap : (int, c_state instance_state) fmap
+  var s_smap : (pkey * int, s_state instance_state) fmap
   
   var tested : int option
   
@@ -131,13 +112,7 @@ module Game0 : GAKE_nodhs_i = {
           m1_set <- m1_set `|` fset1 pk;
           r <- Some pk;
         }
-      | Some st => { (*
-          match st with
-          | Pending st pt ir => c_smap.[i] <- Aborted (Some st) (Some (pt, None)) ir;
-          | Accepted _ _ _ _ => { }
-          | Aborted _ _ _ => { }
-          end;*)
-        }
+      | Some st => { }
       end;
     }
     return r;

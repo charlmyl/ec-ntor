@@ -2,12 +2,12 @@ require import AllCore Distr List.
 require GAKE_nosid NTOR.
 
 clone import NTOR as NTORc.
-import GAKEc DH.DDH DH.G DH.GP DH.FD.
+import UAKEc DH.DDH DH.G DH.GP DH.FD.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Modified protocol *)
 (* ------------------------------------------------------------------------------------------ *)
-clone import GAKE_nosid as GAKE_mod with
+clone import GAKE_nosid as UAKE_mod with
   type pkey <- pkey,
   type skey <- skey,
   type key <- key,
@@ -29,7 +29,7 @@ proof *.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Protocol using all public values as input *)
-module (NTOR_S_mod : GAKE_mod.Server) (H : RO) = {
+module (S : UAKE_mod.Server) (H : RO) = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
 
@@ -39,7 +39,7 @@ module (NTOR_S_mod : GAKE_mod.Server) (H : RO) = {
     return (pk_s, sk_s);
   }
 
-  proc respond_session(st : pr_st_server option, m2: pkey) : (pr_st_server * (pkey * tag) * key) option = {
+  proc respond_session(st : s_state option, m2: pkey) : (s_state * (pkey * tag) * key) option = {
     var sk_b, pk_se, sk_se, sko;
     var sk, t_B;
     var r <- None;
@@ -58,8 +58,8 @@ module (NTOR_S_mod : GAKE_mod.Server) (H : RO) = {
   }
 }.
 
-module (NTOR_C_mod : GAKE_mod.Client) (H : RO) = {
-  proc new_session(pk) : pr_st_client * pkey = {
+module (C : UAKE_mod.Client) (H : RO) = {
+  proc new_session(pk) : c_state * pkey = {
     var pk_ce, sk_ce;
 
     sk_ce <$ dt;
@@ -68,7 +68,7 @@ module (NTOR_C_mod : GAKE_mod.Client) (H : RO) = {
     return ((pk, sk_ce), pk_ce);
   }
 
-  proc complete_session(st: pr_st_client, m3: pkey * tag) : (pr_st_client * key) option = {
+  proc complete_session(st: c_state, m3: pkey * tag) : (c_state * key) option = {
     var r <- None;
     var pk_b, sk_ce, sk, t_A;
 

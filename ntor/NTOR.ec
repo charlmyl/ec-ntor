@@ -13,7 +13,7 @@ type key_mac, key, tag.
 op [lossless] dtag : tag distr.
 op [lossless] dkey : key distr.
 
-clone import GAKE as GAKEc with
+clone import GAKE as UAKEc with
   type s_id <- s_id,
   type pkey <- pkey,
   type skey <- skey,
@@ -25,7 +25,6 @@ clone import GAKE as GAKEc with
 
 import HROc.
 
-
 module (NTOR_S : Server) (H : RO) = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;
@@ -36,7 +35,7 @@ module (NTOR_S : Server) (H : RO) = {
     return (pk_s, sk_s);
   }
 
-  proc respond_session(st : pr_st_server option, m2: pkey) : (pr_st_server * (pkey * tag) * key) option = {
+  proc respond_session(st : s_state option, m2: pkey) : (s_state * (pkey * tag) * key) option = {
     var b, sk_b, pk_se, sk_se, sko;
     var sk, t_B;
     var r <- None;
@@ -57,7 +56,7 @@ module (NTOR_S : Server) (H : RO) = {
 }.
 
 module (NTOR_C : Client) (H : RO) = {
-  proc new_session(b, pk) : pr_st_client * pkey = {
+  proc new_session(b, pk) : c_state * pkey = {
     var pk_ce, sk_ce;
 
     sk_ce <$ dt;
@@ -66,7 +65,7 @@ module (NTOR_C : Client) (H : RO) = {
     return ((b, pk, sk_ce), pk_ce);
   }
 
-  proc complete_session(st: pr_st_client, m3: pkey * tag) : (pr_st_client * key) option = {
+  proc complete_session(st: c_state, m3: pkey * tag) : (c_state * key) option = {
     var r <- None;
     var b, pk_b, sk_ce, sk, t_A;
 

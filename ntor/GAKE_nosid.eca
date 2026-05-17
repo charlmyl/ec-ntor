@@ -16,8 +16,8 @@ type ir_status = bool * bool * bool * bool.
 
 type h_input = pkey * pkey * pkey * pkey * pkey.
 
-type pr_st_client = pkey * skey.
-type pr_st_server = skey * skey option.
+type c_state = pkey * skey.
+type s_state = skey * skey option.
 
 type 'a instance_state = [
   Pending_mod  of 'a & part_trace (* Partial trace on client side, useless state on server side *) & ir_status
@@ -100,66 +100,66 @@ with s_st = Corrupt_mod   _ => false
 with s_st = Dishonest_mod   => true. 
 
 (* helping operators for getting a set of all partners (with some specific revealed status *)
-op get_partners_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
+op get_partners_c (t: trace) (fmap: (pkey * int, s_state instance_state) fmap) : (pkey * int) fset =
 fdom (
   filter
-  (fun bj (val: pr_st_server instance_state) =>
+  (fun bj (val: s_state instance_state) =>
        get_trace val = Some t (* Partners share the same trace *)
   )
   fmap
 ).
 
-op get_partners_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+op get_partners_s (t: trace) (fmap: (int, c_state instance_state) fmap) : int fset =
 fdom (
   filter
-  (fun i (val: pr_st_client instance_state) =>
+  (fun i (val: c_state instance_state) =>
        get_trace val = Some t (* Partners share the same trace *)
   )
   fmap
 ).
 
-op get_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
+op get_origins_c (t: trace) (fmap: (pkey * int, s_state instance_state) fmap) : (pkey * int) fset =
 fdom (
   filter
-  (fun bj (val: pr_st_server instance_state) =>
+  (fun bj (val: s_state instance_state) =>
        (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
   )
   fmap
 ).
 
-op get_origins_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+op get_origins_s (t: trace) (fmap: (int, c_state instance_state) fmap) : int fset =
 fdom (
   filter
-  (fun i (val: pr_st_client instance_state) =>
+  (fun i (val: c_state instance_state) =>
        (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
   )
   fmap
 ).
 
-op get_untested_partners_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
+op get_untested_partners_c (t: trace) (fmap: (pkey * int, s_state instance_state) fmap) : (pkey * int) fset =
 fdom (
   filter
-  (fun bj (val: pr_st_server instance_state) =>
+  (fun bj (val: s_state instance_state) =>
        get_trace val = Some t  (* Partners share the same trace *)
     /\ get_ir_test val = false (* Partner is not tested *)
   )
   fmap
 ).
 
-op get_untested_partners_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+op get_untested_partners_s (t: trace) (fmap: (int, c_state instance_state) fmap) : int fset =
 fdom (
   filter
-  (fun i (val: pr_st_client instance_state) =>
+  (fun i (val: c_state instance_state) =>
        get_trace val = Some t  (* Partners share the same trace *)
     /\ get_ir_test val = false (* Partner is not tested *)
   )
   fmap
 ).
 
-op get_tested_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : (pkey * int) fset =
+op get_tested_origins_c (t: trace) (fmap: (pkey * int, s_state instance_state) fmap) : (pkey * int) fset =
 fdom (
   filter
-  (fun bj (val: pr_st_server instance_state) =>
+  (fun bj (val: s_state instance_state) =>
        (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
     /\ get_ir_test val = true                          (* Partner is tested *)
   )
@@ -167,10 +167,10 @@ fdom (
 ).
 
 
-op get_fresh_partners_c (t: trace) (fmap1: (pkey * int, pr_st_server instance_state) fmap) (fmap2: (pkey, server_state) fmap) : (pkey * int) fset =
+op get_fresh_partners_c (t: trace) (fmap1: (pkey * int, s_state instance_state) fmap) (fmap2: (pkey, server_state) fmap) : (pkey * int) fset =
 fdom ( 
   filter
-  (fun bj (val: pr_st_server instance_state) =>
+  (fun bj (val: s_state instance_state) =>
        get_trace val = Some t                                               (* Partners share the same trace *)
     /\ get_ir_test val = false                                              (* Partner is not tested *)
     /\ get_ir_sess val = false                                              (* Partner is not revealed *)
@@ -180,10 +180,10 @@ fdom (
 ).
 
 (* since ephkey reveal is permitted on Pending client instances we need to consider partial traces for partnering *)
-op get_fresh_partners_s (t : trace) (fmap: (int, pr_st_client instance_state) fmap) : int fset =
+op get_fresh_partners_s (t : trace) (fmap: (int, c_state instance_state) fmap) : int fset =
 fdom (
   filter
-  (fun i (val: pr_st_client instance_state) =>
+  (fun i (val: c_state instance_state) =>
        (* CHECK: we consider *any* client that has sent this first message to be a pre-partner *)
        (exists m2o, get_trace val = Some (fst t, m2o)) (* Partners share the same (partial) trace *)
     /\ get_ir_test val = false                         (* Partner is not tested *)
@@ -193,10 +193,10 @@ fdom (
   fmap
 ).
 
-op get_tested_pot_partner_c (b: pkey) (fmap1: (int, pr_st_client instance_state) fmap) (fmap2: (pkey * int, pr_st_server instance_state) fmap) : int fset =
+op get_tested_pot_partner_c (b: pkey) (fmap1: (int, c_state instance_state) fmap) (fmap2: (pkey * int, s_state instance_state) fmap) : int fset =
 fdom (
   filter
-  (fun i (val: pr_st_client instance_state) =>
+  (fun i (val: c_state instance_state) =>
         (exists m1o m2o, get_trace val = Some ((b, m1o), m2o))         (* Partners share the same server identifier *)
     /\ get_ir_test val = true                                                    (* Partner is tested *)
     /\ (forall j, (b,j) \in fmap2 => get_trace (oget fmap2.[(b,j)]) <> get_trace val) (* There is no full partner for this client *)
@@ -206,22 +206,22 @@ fdom (
     
 
 (* operators that return None if there is no partner, true if there is an untested/fresh partner or false if all partners are tested/unfresh *)
-op tested_origins_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : bool option =
+op tested_origins_c (t: trace) (fmap: (pkey * int, s_state instance_state) fmap) : bool option =
 if 1 <= card (get_origins_c t fmap) then Some (1 <= card (get_tested_origins_c t fmap)) else None.
 
-op untested_partner_c (t: trace) (fmap: (pkey * int, pr_st_server instance_state) fmap) : bool option =
+op untested_partner_c (t: trace) (fmap: (pkey * int, s_state instance_state) fmap) : bool option =
 if 1 <= card (get_partners_c t fmap) then Some (1 <= card (get_untested_partners_c t fmap)) else None.
 
-op fresh_partner_c (t: trace) (fmap1: (pkey * int, pr_st_server instance_state) fmap) (fmap2: (pkey, server_state) fmap) : bool option =
+op fresh_partner_c (t: trace) (fmap1: (pkey * int, s_state instance_state) fmap) (fmap2: (pkey, server_state) fmap) : bool option =
 if 1 <= card (get_partners_c t fmap1) then Some (1 <= card (get_fresh_partners_c t fmap1 fmap2)) else None.
 
-op untested_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
+op untested_partner_s (t: trace) (fmap: (int, c_state instance_state) fmap) : bool option =
 if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_untested_partners_s t fmap)) else None.
 
-op fresh_partner_s (t: trace) (fmap: (int, pr_st_client instance_state) fmap) : bool option =
+op fresh_partner_s (t: trace) (fmap: (int, c_state instance_state) fmap) : bool option =
 if 1 <= card (get_origins_s t fmap) then Some (1 <= card (get_fresh_partners_s t fmap)) else None.
 
-op tested_pot_partner_c (b: pkey) (fmap1: (int, pr_st_client instance_state) fmap) (fmap2: (pkey * int, pr_st_server instance_state) fmap) : bool = 
+op tested_pot_partner_c (b: pkey) (fmap1: (int, c_state instance_state) fmap) (fmap2: (pkey * int, s_state instance_state) fmap) : bool = 
 1 <= card (get_tested_pot_partner_c b fmap1 fmap2).
 
 
@@ -237,19 +237,19 @@ proof *.
 (* protocol definition split into Server and Client side *)
 module type Server (H : HROc.RO) = {
   proc keygen() : pkey * skey
-  proc respond_session(st: pr_st_server option, pk: pkey) : (pr_st_server * (pkey * tag) * key) option
+  proc respond_session(st: s_state option, pk: pkey) : (s_state * (pkey * tag) * key) option
 }.
 
 module type Client (H : HROc.RO) = {
-  proc new_session(pk: pkey) : pr_st_client * pkey
-  proc complete_session(st: pr_st_client, m: pkey * tag) : (pr_st_client * key) option
+  proc new_session(pk: pkey) : c_state * pkey
+  proc complete_session(st: c_state, m: pkey * tag) : (c_state * key) option
 }.
 
 (********************************************************************************)
-(* AKE games *)
+(* UAKE games *)
 
 (* oracles that are exposed to the adversary *)
-module type GAKE = {
+module type UAKE_unres_pk = {
   (* random oracle *)
   proc h(input: h_input) : tag * key
 
@@ -272,32 +272,31 @@ module type GAKE = {
   proc s_test(b: pkey, j: int) : key option
 }.
 
-module type GAKE_nodhs = {
-  include GAKE [-set_cert]
+module type UAKE_res_pk = {
+  include UAKE_unres_pk [-set_cert]
 }.
 
 (* oracles that are exposed to the experiment *)
-module type GAKE_i = {
-  include GAKE
+module type UAKE_unres_pk_i = {
+  include UAKE_unres_pk
 
   proc init_mem(b : bool) : unit
 }.
 
-module type GAKE_nodhs_i = {
-  include GAKE_nodhs
+module type UAKE_res_pk_i = {
+  include UAKE_res_pk
 
   proc init_mem(b : bool) : unit
 }.
 
-
-(* real AKE game *)
-module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
+(* UAKE game for restricted public-key-only model *)
+module O_RPK (S: Server) (C: Client) (H : RO) : UAKE_res_pk = {
   var b0 : bool 
 
   var servers : (pkey, server_state) fmap
 
-  var c_smap: (int, pr_st_client instance_state) fmap
-  var s_smap: (pkey * int, pr_st_server instance_state) fmap
+  var c_smap: (int, c_state instance_state) fmap
+  var s_smap: (pkey * int, s_state instance_state) fmap
   
   var tested: int option
 
@@ -338,13 +337,7 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
            c_smap.[i] <- Pending_mod st' (m1, m2) (false, false, false, false);
           r <- Some m2;
         }
-      | Some st => { (*
-          match st with
-          | Pending st pt ir => c_smap.[i] <- Aborted (Some st) (Some (pt, None)) ir;
-          | Accepted _ _ _ _ => { }
-          | Aborted _ _ _ => { }
-          end;*)
-        }
+      | Some st => { (* we do not abort here, the adversary is still allowed to send messages to this instance *) }
       end;
     }
     return r;
@@ -588,30 +581,12 @@ module GAKEb_nodhs (S: Server) (C: Client) (H : RO) : GAKE_nodhs = {
 
 
 (********************************************************************************)
-(* Adversary and Experiment for GAKE game *)
-module type A_GAKE (G : GAKE) = {
+(* Adversary and Experiment for restricted public-key-only UAKE game *)
+module type A_UAKE_res_pk (G : UAKE_res_pk) = {
   proc run() : bool
 }.
 
-module E_GAKE (O: GAKE_i) (A : A_GAKE) = {
-
-  proc run(b: bool) : bool = {
-    var b' : bool;
-
-    O.init_mem(b);
-    
-    b' <@ A(O).run();
-    
-    return b';
-  }
-}.
-
-
-module type A_GAKE_nodhs (G : GAKE_nodhs) = {
-  proc run() : bool
-}.
-
-module E_GAKE_nodhs (O: GAKE_nodhs_i) (A : A_GAKE_nodhs) = {
+module E_UAKE (O: UAKE_res_pk_i) (A : A_UAKE_res_pk) = {
 
   proc run(b: bool) : bool = {
     var b' : bool;
