@@ -1,8 +1,8 @@
 (* Intermediate Games *)
 require import AllCore FMap FSet Distr.
 
-require NTOR_nosid.
-clone import NTOR_nosid as NTOR_nosid_c.
+require NTOR_pkonly.
+clone import NTOR_pkonly as NTOR_nosid_c.
 import NTORc UAKE_mod DH.G DH.GP DH.FD.
 
 (* Proof:

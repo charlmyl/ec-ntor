@@ -1,8 +1,8 @@
 require import AllCore FSet FMap Distr DProd List SplitRO FelTactic.
 (*   *) import StdBigop.Bigreal.BRA StdOrder.RealOrder Mu_mem.
 
-require NTOR_nosid.
-clone import NTOR_nosid as NTOR_mod.
+require NTOR_pkonly.
+clone import NTOR_pkonly as NTOR_mod.
 import NTORc UAKE_mod UAKEc HROc HRO_mod_c DH.G DH.GP DH.FD DH.GP.ZModE.
 
 module Counter (G : UAKE_res_name_i) : UAKEc.UAKE_res_name_i = {

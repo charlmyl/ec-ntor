@@ -1,5 +1,5 @@
 require import AllCore Distr List.
-require GAKE DiffieHellman.
+require UAKE_name DiffieHellman.
 
 clone DiffieHellman as DH.
 import DH.DDH DH.G DH.GP DH.FD.
@@ -16,7 +16,7 @@ type key_mac, key, tag.
 op [lossless] dtag : tag distr.
 op [lossless] dkey : key distr.
 
-clone import GAKE as UAKEc with
+clone import UAKE_name as UAKEc with
   type s_id <- s_id,
   type pkey <- pkey,
   type skey <- skey,

@@ -59,61 +59,6 @@ module Counter (G : UAKE_res_pk_i) : UAKE_res_pk_i = {
 }.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* public key collision reduction *)
-(*clone Birthday as BB with
-  type T  <- skey,
-  op   uT <- dt,
-  op   q  <- q_gen + q_exec + q_m1
-  proof *.
-realize ge0_q by smt(ge0_q_gen ge0_q_exec ge0_q_m1).
-
-module Red_Coll_O_AKE (S : BB.ASampler) = Game0 with {
-  proc gen [
-    ^sk<$ ~ {sk <@ S.s();}
-  ]
-
-  proc exec [
-    ^if.^match#None.^sk<$ ~ {sk <@ S.s();}
-  ]
-
-  proc send_msg1 [
-    ^match#Some.^match#None.^sk<$ ~ {sk <@ S.s();}
-  ]
-}.
-
-module (Red_Coll_real (A : A_UAKE_res_pk) : BB.Adv) (S : BB.ASampler) = {
-  proc a() = {
-    var b';
-
-    Counter(Red_Coll_O_AKE(S)).init(false);
-    b' <@ A(Counter(Red_Coll_O_AKE(S))).run();
-  }
-}.
-
-module (Red_Coll_ideal (A : A_UAKE_res_pk) : BB.Adv) (S : BB.ASampler) = {
-  proc a() = {
-    var b';
-
-    Counter(Red_Coll_O_AKE(S)).init(true);
-    b' <@ A(Counter(Red_Coll_O_AKE(S))).run();
-  }
-}.
-
-module E_UAKE_BB (A : A_UAKE_res_pk) = {
-  module O = Game1
-
-  proc run(b: bool) : bool = {
-    var b' : bool;
-
-    O.init(b);
-    
-    b' <@ A(O).run();
-    
-    return b' /\ !O.bad1;
-  }
-}.
-*)
-(* ------------------------------------------------------------------------------------------ *)
 (* ROM Reductions *)
 clone Split as ROc with
   type from        <= pkey * pkey * pkey * pkey * pkey,

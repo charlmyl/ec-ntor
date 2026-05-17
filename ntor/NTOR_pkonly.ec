@@ -1,13 +1,13 @@
 require import AllCore Distr List.
-require GAKE_nosid NTOR.
+require UAKE_pkonly NTOR_name.
 
-clone import NTOR as NTORc.
+clone import NTOR_name as NTORc.
 import UAKEc DH.DDH DH.G DH.GP DH.FD.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Modified ntor protocol using only public keys *)
 (* ------------------------------------------------------------------------------------------ *)
-clone import GAKE_nosid as UAKE_mod with
+clone import UAKE_pkonly as UAKE_mod with
   type pkey <- pkey,
   type skey <- skey,
   type key <- key,
