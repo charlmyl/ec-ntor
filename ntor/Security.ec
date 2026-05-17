@@ -7,23 +7,12 @@ clone import Games as Gamesc.
 import NTOR_nosid_c NTORc UAKE_mod HRO_mod_c DH.G DH.GP DH.FD DH.GP.ZModE.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Reductions *)
-(* ------------------------------------------------------------------------------------------ *)
-
-(* ------------------------------------------------------------------------------------------ *)
-(* Ctxt Collision Reduction *)
+(* introducing counter and query bounds *)
 op q_gen : { int | 0 <= q_gen } as ge0_q_gen.
 op q_exec : { int | 0 <= q_exec } as ge0_q_exec.
 op q_m1 : { int | 0 <= q_m1 } as ge0_q_m1.
 op q_m2 : { int | 0 <= q_m2 } as ge0_q_m2.
 op q_h  : { int | 0 <= q_h } as ge0_q_h.
-
-clone Birthday as BB with
-  type T  <- skey,
-  op   uT <- dt,
-  op   q  <- q_gen + q_exec + q_m1
-  proof *.
-realize ge0_q by smt(ge0_q_gen ge0_q_exec ge0_q_m1).
 
 module Counter (G : UAKE_res_pk_i) : UAKE_res_pk_i = {
   var ch, cg, ce, cm1, cm2 : int
@@ -68,6 +57,15 @@ module Counter (G : UAKE_res_pk_i) : UAKE_res_pk_i = {
     return y;
   }
 }.
+
+(* ------------------------------------------------------------------------------------------ *)
+(* public key collision reduction *)
+(*clone Birthday as BB with
+  type T  <- skey,
+  op   uT <- dt,
+  op   q  <- q_gen + q_exec + q_m1
+  proof *.
+realize ge0_q by smt(ge0_q_gen ge0_q_exec ge0_q_m1).
 
 module Red_Coll_O_AKE (S : BB.ASampler) = Game0 with {
   proc gen [
@@ -114,7 +112,7 @@ module E_UAKE_BB (A : A_UAKE_res_pk) = {
     return b' /\ !O.bad1;
   }
 }.
-
+*)
 (* ------------------------------------------------------------------------------------------ *)
 (* ROM Reductions *)
 clone Split as ROc with
@@ -612,7 +610,7 @@ module (R_Eph (A : A_UAKE_res_pk) : A_CDH) (O : Oracle) = {
 (* ------------------------------------------------------------------------------------------ *)
 section.
 
-declare module A <: A_UAKE_res_pk {-O_RPK, -Game0, -Game1, -Game2, -Game3, -Game4, -Game5, -Game5Ltk, -Game5Eph, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, -Red_Coll_real, -Red_Coll_ideal, -BB.Sample, -Red_ROM, -Red_ROM2, -O_CDH, -R_Ltk, -R_Eph }.
+declare module A <: A_UAKE_res_pk {-O_RPK, -Game0, -Game1, -Game2, -Game3, -Game4, -Game5, -Game5Ltk, -Game5Eph, -Counter, -ROc.IdealAll.RO, -RO, -FRO, -ROSc.I1.RO, -ROSc.I2.RO, -ROSc.I1.FRO, -ROSc.I2.FRO, (*-Red_Coll_real, -Red_Coll_ideal, -BB.Sample,*) -Red_ROM, -Red_ROM2, -O_CDH, -R_Ltk, -R_Eph }.
 
 declare axiom A_ll (G <: UAKE_res_pk{-A}):
   islossless G.h =>
@@ -661,7 +659,7 @@ call (: ={b0, servers, c_smap, s_smap, tested}(O_RPK, Game0) /\ RO.m{1} = Game0.
 qed.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Step 1: Remove collisions in ephemeral and long-term keys. Strategy with 2 * bound *)
+(* Step 1: Remove collisions in ephemeral and long-term keys *)
 lemma game0_game1 b &m: `| Pr[E_UAKE(Game0, A).run(b) @ &m : res] - Pr[E_UAKE(Game1, A).run(b) @ &m : res] | <= Pr[E_UAKE(Game0, A).run(b) @ &m : Game0.bad1].
 proof.
 rewrite StdOrder.RealOrder.distrC.
@@ -998,7 +996,6 @@ fel
   match Some ^match; auto => /#.
 qed.
 
-
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2: Restricting ability to predict public keys in RO queries *)
 lemma game1_game2 b &m: `| Pr[E_UAKE(Game1, A).run(b) @ &m : res] - Pr[E_UAKE(Game2, A).run(b) @ &m : res] | <= Pr[E_UAKE(Game1, A).run(b) @ &m : Game1.bad2].
@@ -1211,7 +1208,7 @@ move => rl rr al bl b1l b2l csl hml kpl m1l m2l ssl sl tl xl yl ar br b1r b2r cs
 by case : (!b2r) => />.
 qed.
 
-(* Step2b: Bound the bad event *)
+(* Step 2b: Bound the bad event *)
 lemma game1_bad2 b &m:
         Pr[E_UAKE(Game1, A).run(b) @ &m : Game1.bad2]
         <= ((q_h + q_gen + q_exec + q_m1) * (q_h + q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r.
@@ -1420,9 +1417,8 @@ fel
   smt(fcardU1).
 qed.
 
-
 (* ------------------------------------------------------------------------------------------ *)
-(* Step 3: Splitting the random oracle. *)
+(* Step 3a: Splitting the codomain of the random oracle *)
 local clone import DProd.ProdSampling with
   type t1 <- tag,
   type t2 <- key
@@ -1548,10 +1544,8 @@ auto => />.
 smt(emptyE).
 qed.
 
-
 (* ------------------------------------------------------------------------------------------ *)
-(* Step 4: Moving sampling of the shared key. *)
-
+(* Step 3b: Moving the sampling of the session key to the reveals and tests *)
 (* Clearing the key out of the state *)
 local op s_clear_k (s : s_state instance_state) =
 match s with
@@ -1856,7 +1850,6 @@ call (: ={b0, hm, servers, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, ba
 by auto => />; smt(map_empty emptyE).
 qed.
 
-
 lemma LRO_game4 bit &m: Pr[ROSc.I2.MainD(Red_ROM2(A, ROSc.I1.RO), ROSc.I2.LRO).distinguish(bit) @ &m : res] = Pr[E_UAKE(Game4, A).run(bit) @ &m : res].
 proof.
 byequiv => //.
@@ -1914,7 +1907,8 @@ call (: ={b0, hm, servers, c_smap, s_smap, tested, b_set, x_set, y_set, pk_set, 
 auto => />.
 qed.
 
-(* Step 5: Stopping game when adversary guesses the right tag and makes a client accept *)
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 4: Stopping game when adversary guesses the right tag and makes a client accept *)
 lemma game4_game5 bit &m: `| Pr[E_UAKE(Game4, A).run(bit) @ &m : res] - Pr[E_UAKE(Game5, A).run(bit) @ &m : res] | <= Pr[E_UAKE(Game4, A).run(bit) @ &m : Game4.bad3].
 proof.
 rewrite StdOrder.RealOrder.distrC.
@@ -2137,7 +2131,7 @@ move => 26? b3r 13?.
 by case : (!b3r) => />.
 qed.
 
-(* Bound the probabilty of bad3 happening *)
+(* Step 4b: Bound the probabilty of a correct tag guess *)
 lemma game4_bad3 bit &m: Pr[E_UAKE(Game4, A).run(bit) @ &m : Game4.bad3] <= q_m2%r * p_max dtag.
 proof.
 have->: Pr[E_UAKE(Game4, A).run(bit) @ &m : Game4.bad3] = Pr[E_UAKE(Counter(Game4), A).run(bit) @ &m : Game4.bad3 /\ Counter.cm2 <= q_m2]. 
@@ -2203,8 +2197,9 @@ rcondf ^if. auto => /#.
 auto.
 qed.
 
-(* Step 6: Turn the indistinguishability of real/ideal into probability of the bad event happening *)
-(* One-sided invariant for Game4 *)
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 5: Turn the indistinguishability of real/ideal into probability of the bad event happening *)
+(* One-sided invariant for Game5 *)
 op inv_Game5 (tested : int option, 
 tq : (pkey * pkey * pkey * pkey * pkey) option, 
 badq : bool, 
@@ -4218,8 +4213,8 @@ by case : (!bqr) => />.
   by rewrite dkey_ll /#.
 qed.
 
-
-(* Step 7: Reduction to multi-instance st-CDH assumption *)
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 6: Reduction to multi-instance St-CDH assumption with corruptions *)
 lemma split_pr &m: Pr[E_UAKE(Game5, A).run(true) @ &m : Game5.badq] = 
                      Pr[E_UAKE(Game5, A).run(true) @ &m : Game5.badq /\ Game5.test_ltkrev = true] 
                      + Pr[E_UAKE(Game5, A).run(true) @ &m : Game5.badq /\ Game5.test_ltkrev = false].
@@ -7529,7 +7524,8 @@ by case (tltkr) => //.
   rcondf ^if; auto => />. 
 qed.
 
-(* Reduction steps with embedding/clearing of secret keys *)
+(* ------------------------------------------------------------------------------------------ *)
+(* Removing keys from state and proving partnering notion equivalent *)
 local op s_clear_sk (s : server_state) =
 match s with
 | Honest_mod sk => Honest_mod witness
@@ -7762,6 +7758,8 @@ rewrite !mem_filter !domE -eqsm.
 by case: (sml.[x])=> /#.
 qed.
 
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 6a: Reduction to the hardness assumption with embedding in ephemeral key *)
 (* One-sided invariant for Game5Eph *)
 op inv_Game5Eph (tested : int option,
 tq : (pkey * pkey * pkey * pkey * pkey) option,
@@ -12941,6 +12939,8 @@ by case : (!bqr) => />.
   auto => //.
 qed.
 
+(* ------------------------------------------------------------------------------------------ *)
+(* Step 6b: Reduction to the hardness assumption with embedding in long-term key *)
 (* One-sided invariant for ReductionLtk *)
 op inv_R_Ltk (tested : int option,
 tltkr : bool,
@@ -13922,7 +13922,6 @@ sp 2; if => //.
 auto => /> &hr *.
 smt(get_setE in_fsetU1 mem_set pow_bij).
 qed.
-
 
 lemma cdh_red_ltk &m: Pr[E_UAKE(Game5Ltk, A).run(true) @ &m : Game5Ltk.badq] <= 
                  Pr[E_CDH(O_CDH, R_Ltk(A)).run() @ &m : O_CDH.win].

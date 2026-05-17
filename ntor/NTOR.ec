@@ -4,6 +4,9 @@ require GAKE DiffieHellman.
 clone DiffieHellman as DH.
 import DH.DDH DH.G DH.GP DH.FD.
 
+(* ------------------------------------------------------------------------------------------ *)
+(* Simplified ntor protocol using names and only one hash (modelled as RO) *)
+(* ------------------------------------------------------------------------------------------ *)
 type s_id.
 type pkey = group.
 type skey = exp.

@@ -5,7 +5,7 @@ clone import NTOR as NTORc.
 import UAKEc DH.DDH DH.G DH.GP DH.FD.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Modified protocol *)
+(* Modified ntor protocol using only public keys *)
 (* ------------------------------------------------------------------------------------------ *)
 clone import GAKE_nosid as UAKE_mod with
   type pkey <- pkey,
@@ -18,7 +18,7 @@ clone import GAKE_nosid as UAKE_mod with
 
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Modified rondom oracle *)
+(* Modified rondom oracle with pk in input *)
 clone import PROM.FullRO as HRO_mod_c with
   type in_t    <= h_input,
   type out_t   <= tag * key,
@@ -28,7 +28,7 @@ clone import PROM.FullRO as HRO_mod_c with
 proof *.
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Protocol using all public values as input *)
+(* Protocol using all public keys as input to RO *)
 module (S : UAKE_mod.Server) (H : RO) = {
   proc keygen() : (pkey * skey) = {
     var sk_s, pk_s;

@@ -6,14 +6,14 @@ clone import NTOR_nosid as NTOR_nosid_c.
 import NTORc UAKE_mod DH.G DH.GP DH.FD.
 
 (* Proof:
-- Step 0: inline everathing;
+- Step 0: inline everything;
 - Step 1: prevent collisions in and between long-term and ephemeral
   keys;
 - Step 2: make the adversary loose when they predict a long-term 
   or ephemeral public key;
-- Step 2.5: split the random oracle so that tag and key are sampled
+- Step 3a: split the random oracle so that tag and key are sampled
   separately;
-- Step 3: delay the sampling of the session key to reveal or test;
+- Step 3b: delay the sampling of the session key to reveal or test;
   (use Eager/Lazy, replacing the RO call in msg2 + msg3 with sample)
 - Step 4: make adversary loose when they guess a correct tag that 
   makes a client instance accept;
@@ -24,13 +24,11 @@ import NTORc UAKE_mod DH.G DH.GP DH.FD.
 
 (* Step0 inlining everything and adding bad event *)
 module Game0 : UAKE_res_pk_i = {
-  (* This is not aligned with the sequence above *)
   var b0 : bool 
 
   var hm : (pkey * pkey * pkey * pkey * pkey, tag * key) fmap
 
   var servers : (pkey, server_state) fmap
-
   var c_smap : (int, c_state instance_state) fmap
   var s_smap : (pkey * int, s_state instance_state) fmap
   
@@ -38,7 +36,6 @@ module Game0 : UAKE_res_pk_i = {
   
   var b_set, x_set, y_set, pk_set, m1_set, m2_set : pkey fset
   var bad1, bad2 : bool
-
 
   proc init(b: bool) : unit = {
     b0 <- b;
@@ -96,6 +93,7 @@ module Game0 : UAKE_res_pk_i = {
     return r;
   }
 
+  (* starting client instances and sends *)
   proc exec(i: int, m1: pkey) : pkey option = {
     var st, pk, sk;
     var r <- None;
@@ -353,8 +351,7 @@ module Game0 : UAKE_res_pk_i = {
   }
 }.
 
-
-(* Step1: Removing key collisions *)
+(* Step1: Removing key collisions in sampling *)
 module Game1 = Game0 with {
   proc h [
      1 + ^ {tk <- (witness, witness);}
@@ -410,7 +407,7 @@ module Game1 = Game0 with {
   ]
 }.
 
-
+(* Step2: No prediction of public keys by adversary *)
 module Game2 = Game1 with {
   proc h [
     ^if ~ (!bad1 /\ !bad2)
@@ -465,7 +462,7 @@ module Game2 = Game1 with {
 }.
 
 
-(* Step2: Splitting the random oracle and tracking bad event of overlap between RO queries and test query *)
+(* Step3a: Splitting the random oracle and adding bad event of overlap between RO queries and test query *)
 module Game3 = Game2 with {
   var h1m : (pkey * pkey * pkey * pkey * pkey, tag) fmap
   var h2m : (pkey * pkey * pkey * pkey * pkey, key) fmap
@@ -530,7 +527,7 @@ module Game3 = Game2 with {
 }.
 
 
-(* Step3: Moving the sampling of keys *)
+(* Step3b: Moving the sampling of session keys to reveals and tests *)
 module Game4 = Game3 with {
   var test_ephrev_s : bool
   var test_ltkrev : bool
@@ -606,7 +603,7 @@ module Game4 = Game3 with {
   ]
 }.
 
-
+(* Step4: No guessing of the tag by the adversary *)
 module Game5 = Game4 with {
   var comp_tag : bool
 
@@ -666,7 +663,7 @@ module Game5 = Game4 with {
   ]
 }.
 
-
+(* Step 5: Introducing games that silence oracles when flag is set that is disallowed (event has probability 0) *)
 module Game5Ltk = Game5 with {
   proc h [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)

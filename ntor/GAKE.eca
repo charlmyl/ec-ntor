@@ -1,6 +1,10 @@
 require import AllCore FMap FSet Distr.
 require PROM.
 
+
+(* ------------------------------------------------------------------------------------------ *)
+(* Definitions for name-based models *)
+(* ------------------------------------------------------------------------------------------ *)
 type s_id, tag, state, key, key_sess, pkey, skey.
 
 op [lossless] dskey : skey distr.
@@ -207,8 +211,8 @@ op get_tested_pot_partner_c (b: s_id) (fmap1: (int, c_state instance_state) fmap
 fdom (
   filter
   (fun i (val: c_state instance_state) =>
-        (exists m1o m2o, get_trace val = Some ((b, m1o), m2o))         (* Partners share the same server identifier *)
-    /\ get_ir_test val = true                                                    (* Partner is tested *)
+        (exists m1o m2o, get_trace val = Some ((b, m1o), m2o))                        (* Partners share the same server identifier *)
+    /\ get_ir_test val = true                                                         (* Partner is tested *)
     /\ (forall j, (b,j) \in fmap2 => get_trace (oget fmap2.[(b,j)]) <> get_trace val) (* There is no full partner for this client *)
   )
   fmap1
@@ -235,7 +239,7 @@ op tested_pot_partner_c (b: s_id) (fmap1: (int, c_state instance_state) fmap) (f
 1 <= card (get_tested_pot_partner_c b fmap1 fmap2).
 
 
-(* Rondom oracle *)
+(* rondom oracle *)
 clone import PROM.FullRO as HROc with
   type in_t    <= h_input,
   type out_t   <= tag * key,
@@ -244,7 +248,7 @@ clone import PROM.FullRO as HROc with
   type d_out_t <= bool
 proof *.
 
-(* protocol definition split into Server and Client side *)
+(* one-round UAKE protocol algorithms split into Server and Client side *)
 module type Server (H : HROc.RO) = {
   proc keygen() : pkey * skey
   proc respond_session(st: s_state option, pk: pkey) : (s_state * (pkey * tag) * key) option
@@ -256,7 +260,7 @@ module type Client (H : HROc.RO) = {
 }.
 
 (********************************************************************************)
-(* UAKE games *)
+(* UAKE games for name-based models *)
 
 (* oracles that are exposed to the adversary *)
 module type UAKE_unres_name = {
@@ -608,6 +612,7 @@ module O_HN (S: Server) (C: Client) (H : RO) = O_UN (S, C, H) with {
   ]
 }.
 
+(* UAKE game for one-round protocols using random oracle H in the restricted name-based model *)
 module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
   var b0 : bool 
 

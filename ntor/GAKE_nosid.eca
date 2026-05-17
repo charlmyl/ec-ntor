@@ -1,6 +1,9 @@
 require import AllCore FMap FSet Distr.
 require PROM.
 
+(* ------------------------------------------------------------------------------------------ *)
+(* Definitions for public-key-only model *)
+(* ------------------------------------------------------------------------------------------ *)
 type tag, state, key, key_sess, pkey, skey.
 
 op [lossless] dskey : skey distr.
@@ -234,7 +237,7 @@ clone import PROM.FullRO as HROc with
   type d_out_t <= bool
 proof *.
 
-(* protocol definition split into Server and Client side *)
+(* one-round UAKE protocol algorithms split into Server and Client side *)
 module type Server (H : HROc.RO) = {
   proc keygen() : pkey * skey
   proc respond_session(st: s_state option, pk: pkey) : (s_state * (pkey * tag) * key) option
@@ -246,7 +249,7 @@ module type Client (H : HROc.RO) = {
 }.
 
 (********************************************************************************)
-(* UAKE games *)
+(* UAKE games for public-key-only model *)
 
 (* oracles that are exposed to the adversary *)
 module type UAKE_unres_pk = {
@@ -289,7 +292,7 @@ module type UAKE_res_pk_i = {
   proc init(b : bool) : unit
 }.
 
-(* UAKE game for restricted public-key-only model *)
+(* UAKE game for one-round protocols using random oracle H in the restricted public-key-only model *)
 module O_RPK (S: Server) (C: Client) (H : RO) : UAKE_res_pk = {
   var b0 : bool 
 
