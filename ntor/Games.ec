@@ -11,15 +11,18 @@ import NTORc UAKE_mod DH.G DH.GP DH.FD.
   keys;
 - Step 2: make the adversary loose when they predict a long-term 
   or ephemeral public key;
-- Step 3a: split the random oracle so that tag and key are sampled
+- Step 2.5: split the random oracle so that tag and key are sampled
   separately;
-- Step 3b: delay the sampling of the session key to reveal or test;
+- Step 3: delay the sampling of the session key to reveal or test;
   (use Eager/Lazy, replacing the RO call in msg2 + msg3 with sample)
 - Step 4: make adversary loose when they guess a correct tag that 
   makes a client instance accept;
 - Step 5: if the adversary wins, it must be because they
   directly queried H on the right input before the test session;
-- Step 6: reduction to hardness assumption;
+- Step 6: spliiting the event in cases where there is a server 
+  partner with unrevealed ephemeral key and all other cases;
+- Step 7a and 7b: reduction to hardness assumption by embedding in 
+  long-term and ephemeral keys;
 *)
 
 (* Step0 inlining everything and adding bad event *)
@@ -463,7 +466,7 @@ module Game2 = Game1 with {
 
 
 (* Step3a: Splitting the random oracle and adding bad event of overlap between RO queries and test query *)
-module Game3 = Game2 with {
+module Game2_5 = Game2 with {
   var h1m : (pkey * pkey * pkey * pkey * pkey, tag) fmap
   var h2m : (pkey * pkey * pkey * pkey * pkey, key) fmap
   var hq : (pkey * pkey * pkey * pkey * pkey) fset
@@ -528,7 +531,7 @@ module Game3 = Game2 with {
 
 
 (* Step3b: Moving the sampling of session keys to reveals and tests *)
-module Game4 = Game3 with {
+module Game3 = Game2_5 with {
   var test_ephrev_s : bool
   var test_ltkrev : bool
   var bad3 : bool
@@ -604,7 +607,7 @@ module Game4 = Game3 with {
 }.
 
 (* Step4: No guessing of the tag by the adversary *)
-module Game5 = Game4 with {
+module Game4 = Game3 with {
   var comp_tag : bool
 
   proc init [
@@ -663,8 +666,8 @@ module Game5 = Game4 with {
   ]
 }.
 
-(* Step 5: Introducing games that silence oracles when flag is set that is disallowed (event has probability 0) *)
-module Game5Ltk = Game5 with {
+(* Step 6: Introducing games that silence oracles when disallowed flag is set (event has probability 0) *)
+module Game5Ltk = Game4 with {
   proc h [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
@@ -720,8 +723,7 @@ module Game5Ltk = Game5 with {
   ]
 }.
 
-
-module Game5Eph = Game5 with {
+module Game5Eph = Game4 with {
   proc h [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
