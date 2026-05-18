@@ -12877,7 +12877,7 @@ by case : (!bqr) => />.
   sp; if => //.
   + by auto => />; rewrite dkey_ll.
   auto => //.
-qed.
+qed. 
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 7b: Reduction to the hardness assumption with embedding in long-term key *)
@@ -13108,7 +13108,6 @@ auto => /> &hr *.
 smt(get_setE in_fsetU1 mem_set pow_bij loggK expgK expM).
 qed.
 
-
 hoare R_Ltk_inv_gen: R_Ltk(A, O_CDH).Red_O.gen:
     (inv_R_Ltk R_Ltk.Red_O.tested R_Ltk.Red_O.test_ltkrev R_Ltk.Red_O.b0 R_Ltk.Red_O.bad1 R_Ltk.Red_O.bad2
        R_Ltk.Red_O.pk_set R_Ltk.Red_O.m1_set R_Ltk.Red_O.m2_set R_Ltk.Red_O.x_set R_Ltk.Red_O.y_set R_Ltk.Red_O.b_set
@@ -13216,73 +13215,17 @@ sp 5; if => //.
   smt(get_setE).
 auto => /> &hr 3? x_map n 4? inv 13? inv2 3? inv3 *.
 do split; ~1: smt(get_setE in_fsetU1 mem_set pow_bij).
-+ move => m.
-split; 2: smt(get_set_neqE).
-      rewrite get_set_neqE //=.
-      rewrite i'eq get_setE //=.
-      move => b b' m1 m2 m2' stnn tr teq.
-      have := inv i0 i{hr} b b' m1 m2 None. 
-      smt().
-    + move => b0 j bjin bjt.
-      have := inv2 b0 j bjin bjt.
-      move => [i2] itr.
-      exists i2.
-      smt(get_setE mem_set).
-    + move => i0 int m1 m2.
-      case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
-      rewrite get_setE mem_set ieq //=.
-      smt().
-    move => int intin incr1.
-    have := inv3 int intin incr1.
-    move => [i0 H1].
-    exists i0.
-    smt(get_setE mem_set).
-  auto => /> &hr 20? inv 3? inv2 6? inv3 *.
-  do split; ~3,5,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
-  + move => i0 i'.
-    case (i0 = i{hr}) => ieq.
-    + rewrite ieq get_set_sameE //=.
-      case (i' = i{hr}) => i'eq; 1: by rewrite i'eq.
-      rewrite get_set_neqE //=.
-      move => b b' m1 m2 m2' [] t1eq t2eq stnn tr.
-      have := inv i{hr} i' b b' m1 None m2'. 
-      smt().
-    case (i' = i{hr}) => i'eq; 2: smt(get_set_neqE).
-    rewrite get_set_neqE //=.
-    rewrite i'eq get_setE //=.
-    move => b b' m1 m2 m2' stnn tr teq.
-    have := inv i0 i{hr} b b' m1 m2 None. 
-    smt().
-  + move => b0 j bjin bjt.
-    have := inv2 b0 j bjin bjt.
-    move => [i2] itr.
-    exists i2.
-    smt(get_setE mem_set).
-  + move => i0 int m1 m2.
-    case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
-    rewrite get_setE mem_set ieq //=.
-    smt().
-  move => int intin incr1.
-  have := inv3 int intin incr1.
-  move => [i0 H1].
+move => m.
+split; 2: smt(mem_set get_setE in_fsetU1).
+rewrite in_fsetU1.
+move => [min|meq].
++ have := inv m.
+  rewrite min //=.
+  move => [i0 i0in].
   exists i0.
-  smt(get_setE mem_set).
-auto => /> &hr 22? inv 6? inv2*.
-do split; ~5,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
-+ move => b0 j bjin bjt.
-  have := inv b0 j bjin bjt.
-  move => [i2] itr.
-  exists i2.
-  smt(get_setE mem_set). 
-+ move => i0 int m1 m2.
-  case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
-  rewrite get_setE mem_set ieq //=.
-  smt().
-move => int intin incr1.
-have := inv2 int intin incr1.
-move => [i0 H1].
-exists i0.
-smt(get_setE mem_set).
+  smt(mem_set get_setE).
+exists (n + 1).
+smt(mem_set get_setE).
 qed.
 
 hoare R_Ltk_inv_c_rev_skey: R_Ltk(A, O_CDH).Red_O.c_rev_skey:
