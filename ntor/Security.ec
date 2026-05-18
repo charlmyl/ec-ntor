@@ -12877,7 +12877,7 @@ by case : (!bqr) => />.
   sp; if => //.
   + by auto => />; rewrite dkey_ll.
   auto => //.
-qed. 
+qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 7b: Reduction to the hardness assumption with embedding in long-term key *)
@@ -12986,7 +12986,7 @@ hoare R_Ltk_inv_h: R_Ltk(A, O_CDH).Red_O.h:
          R_Ltk.Red_O.s_smap R_Ltk.Red_O.c_smap R_Ltk.Red_O.h1m_opt R_Ltk.Red_O.h2m_opt R_Ltk.Red_O.servers 
          R_Ltk.Red_O.count_i R_Ltk.Red_O.count_b R_Ltk.Red_O.i_inst R_Ltk.Red_O.b_inst O_CDH.n O_CDH.m 
          O_CDH.x_map O_CDH.y_map O_CDH.cr1 O_CDH.cr2).
-proof. 
+proof.
 proc; inline.
 sp; if => //. 
 if => //; first last. 
@@ -13226,6 +13226,230 @@ move => [min|meq].
   smt(mem_set get_setE).
 exists (n + 1).
 smt(mem_set get_setE).
+qed.
+
+hoare R_Ltk_inv_send_msg1: R_Ltk(A, O_CDH).Red_O.send_msg1:
+    (inv_R_Ltk R_Ltk.Red_O.tested R_Ltk.Red_O.test_ltkrev R_Ltk.Red_O.b0 R_Ltk.Red_O.bad1 R_Ltk.Red_O.bad2
+       R_Ltk.Red_O.pk_set R_Ltk.Red_O.m1_set R_Ltk.Red_O.m2_set R_Ltk.Red_O.x_set R_Ltk.Red_O.y_set R_Ltk.Red_O.b_set
+       R_Ltk.Red_O.s_smap R_Ltk.Red_O.c_smap R_Ltk.Red_O.h1m_opt R_Ltk.Red_O.h2m_opt R_Ltk.Red_O.servers 
+       R_Ltk.Red_O.count_i R_Ltk.Red_O.count_b R_Ltk.Red_O.i_inst R_Ltk.Red_O.b_inst O_CDH.n O_CDH.m 
+       O_CDH.x_map O_CDH.y_map O_CDH.cr1 O_CDH.cr2)
+==>
+    (inv_R_Ltk R_Ltk.Red_O.tested R_Ltk.Red_O.test_ltkrev R_Ltk.Red_O.b0 R_Ltk.Red_O.bad1 R_Ltk.Red_O.bad2
+       R_Ltk.Red_O.pk_set R_Ltk.Red_O.m1_set R_Ltk.Red_O.m2_set R_Ltk.Red_O.x_set R_Ltk.Red_O.y_set R_Ltk.Red_O.b_set
+       R_Ltk.Red_O.s_smap R_Ltk.Red_O.c_smap R_Ltk.Red_O.h1m_opt R_Ltk.Red_O.h2m_opt R_Ltk.Red_O.servers 
+       R_Ltk.Red_O.count_i R_Ltk.Red_O.count_b R_Ltk.Red_O.i_inst R_Ltk.Red_O.b_inst O_CDH.n O_CDH.m 
+       O_CDH.x_map O_CDH.y_map O_CDH.cr1 O_CDH.cr2).
+proof.
+proc; inline.
+sp; if => //.
+sp; match => //.
+match => //.
+seq 1: (#pre /\ sk \in dt); 1: by auto => />.
+sp 4; if => //.
++ sp 1; if => //.
+  + sp; seq 1: (#pre /\ ts \in dtag); 1: by auto=> />.
+    if => //.
+    + sp 3; if => //; 1: by auto => />.
+      auto => /> &hr 24? inv *.
+      do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+    auto => /> &hr 24? inv *.
+    do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+  sp; seq 1: (#pre /\ ts \in dtag); 1: by auto=> />.
+  if => //.
+  + sp 3; if => //.
+    + auto => /> &hr 24? inv *.
+      do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+    auto => /> &hr 24? inv *.
+    do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+  sp 2; if => //.
+  + sp 1; if => //.
+    + auto => /> &hr 23? inv *.
+      do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+    auto => /> &hr 23? inv *.
+    do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+  if => //.
+  + auto => /> &hr 23? inv *.
+    do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+  auto => /> &hr 23? inv *.
+  do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+auto => /> &hr *.
+do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+qed.
+
+
+hoare R_Ltk_inv_send_msg2: R_Ltk(A, O_CDH).Red_O.send_msg2:
+    (inv_R_Ltk R_Ltk.Red_O.tested R_Ltk.Red_O.test_ltkrev R_Ltk.Red_O.b0 R_Ltk.Red_O.bad1 R_Ltk.Red_O.bad2
+       R_Ltk.Red_O.pk_set R_Ltk.Red_O.m1_set R_Ltk.Red_O.m2_set R_Ltk.Red_O.x_set R_Ltk.Red_O.y_set R_Ltk.Red_O.b_set
+       R_Ltk.Red_O.s_smap R_Ltk.Red_O.c_smap R_Ltk.Red_O.h1m_opt R_Ltk.Red_O.h2m_opt R_Ltk.Red_O.servers 
+       R_Ltk.Red_O.count_i R_Ltk.Red_O.count_b R_Ltk.Red_O.i_inst R_Ltk.Red_O.b_inst O_CDH.n O_CDH.m 
+       O_CDH.x_map O_CDH.y_map O_CDH.cr1 O_CDH.cr2)
+==>
+    (inv_R_Ltk R_Ltk.Red_O.tested R_Ltk.Red_O.test_ltkrev R_Ltk.Red_O.b0 R_Ltk.Red_O.bad1 R_Ltk.Red_O.bad2
+       R_Ltk.Red_O.pk_set R_Ltk.Red_O.m1_set R_Ltk.Red_O.m2_set R_Ltk.Red_O.x_set R_Ltk.Red_O.y_set R_Ltk.Red_O.b_set
+       R_Ltk.Red_O.s_smap R_Ltk.Red_O.c_smap R_Ltk.Red_O.h1m_opt R_Ltk.Red_O.h2m_opt R_Ltk.Red_O.servers 
+       R_Ltk.Red_O.count_i R_Ltk.Red_O.count_b R_Ltk.Red_O.i_inst R_Ltk.Red_O.b_inst O_CDH.n O_CDH.m 
+       O_CDH.x_map O_CDH.y_map O_CDH.cr1 O_CDH.cr2).
+proof.
+proc; inline.
+sp; if => //.
+sp; match => //.
++ match => //.
+sp; seq 1 : (#pre). auto => />.
+if => //.
++ sp 4; if => //.
+  + sp 1; if => //.
+    + sp 1; if => //.
+      + rcondf ^if. auto => />.
+        auto => |> &hr *.
+        smt(get_setE in_fsetU1 mem_set pow_bij).
+      auto => |> &hr *.
+      smt(get_setE in_fsetU1 mem_set pow_bij).
+    if => //.
+    + rcondf ^if. auto => />.
+      auto => |> &hr *.
+      smt(get_setE in_fsetU1 mem_set pow_bij).
+    auto => |> &hr *.
+    smt(get_setE in_fsetU1 mem_set pow_bij).
+  if => //.
+  + sp 1; if => //.
+    + rcondf ^if. auto => />.
+      auto => /> &hr 24? inv *.
+      do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+    auto => /> &hr 24? inv 6? inv2 *.
+    do split; ~7,11,12: smt(get_setE in_fsetU1 mem_set pow_bij).
+    + move => b0 j bjin bjt.
+      have := inv b0 j bjin bjt.
+      move => [i2] itr.
+      exists i2.
+      smt(get_setE mem_set).
+    + move => i0 int m1 m2.
+      case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
+      rewrite get_setE mem_set ieq //=.
+      smt().
+    move => int intin incr1.
+    have := inv2 int intin incr1.
+    move => [i0 H1].
+    exists i0.
+    smt(get_setE mem_set).
+  if => //.
+  + rcondf ^if. auto => />.
+    auto => /> &hr 23? inv *.
+    do split; smt(get_setE in_fsetU1 mem_set pow_bij).
+  auto => /> &hr 23? inv 6? inv2 *.
+  do split; ~6,10,11: smt(get_setE in_fsetU1 mem_set pow_bij).
+  + move => b0 j bjin bjt.
+    have := inv b0 j bjin bjt.
+    move => [i2] itr.
+    exists i2.
+    smt(get_setE mem_set).
+  + move => i0 int m1 m2.
+    case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
+    rewrite get_setE mem_set ieq //=.
+    smt().
+  move => int intin incr1.
+  have := inv2 int intin incr1.
+  move => [i0 H1].
+  exists i0.
+  smt(get_setE mem_set).
+rcondf ^if. auto => /#.
+rcondf ^if. auto => /#.
+sp 2; if => //.
++ sp 1; if => //; 2: auto => />.
+  if => //.
+  + auto => /> &hr 23? inv 6? inv2 *.
+    do split; ~5,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
+    + move => b0 j bjin bjt.
+      have := inv b0 j bjin bjt.
+      move => [i2] itr.
+      exists i2.
+      smt(get_setE mem_set).
+    + move => i0 int m1 m2.
+      case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
+      rewrite get_setE mem_set ieq //=.
+      smt().
+    move => int intin incr1.
+    have := inv2 int intin incr1.
+    move => [i0 H1].
+    exists i0.
+    smt(get_setE mem_set).
+  sp 1; if => //.
+  + auto => /> &hr 20? inv 3? inv2 6? inv3 *.
+    do split; ~3,5,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
+    + move => i0 i'.
+      case (i0 = i{hr}) => ieq.
+      + rewrite ieq get_set_sameE //=.
+        case (i' = i{hr}) => i'eq; 1: by rewrite i'eq.
+        rewrite get_set_neqE //=.
+        move => b b' m1 m2 m2' [] t1eq t2eq stnn tr.
+        have := inv i{hr} i' b b' m1 None m2'. 
+        smt().
+      case (i' = i{hr}) => i'eq; 2: by smt(get_set_neqE).
+      rewrite get_set_neqE //=.
+      rewrite i'eq get_setE //=.
+      move => b b' m1 m2 m2' stnn tr teq.
+      have := inv i0 i{hr} b b' m1 m2 None. 
+      smt().
+    + move => b0 j bjin bjt.
+      have := inv2 b0 j bjin bjt.
+      move => [i2] itr.
+      exists i2.
+      smt(get_setE mem_set).
+    + move => i0 int m1 m2.
+      case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
+      rewrite get_setE mem_set ieq //=.
+      smt().
+    move => int intin incr1.
+    have := inv3 int intin incr1.
+    move => [i0 H1].
+    exists i0.
+    smt(get_setE mem_set).
+  auto => /> &hr 20? inv 3? inv2 6? inv3 *.
+  do split; ~3,5,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
+  + move => i0 i'.
+    case (i0 = i{hr}) => ieq.
+    + rewrite ieq get_set_sameE //=.
+      case (i' = i{hr}) => i'eq; 1: by rewrite i'eq.
+      rewrite get_set_neqE //=.
+      move => b b' m1 m2 m2' [] t1eq t2eq stnn tr.
+      have := inv i{hr} i' b b' m1 None m2'. 
+      smt().
+    case (i' = i{hr}) => i'eq; 2: by smt(get_set_neqE).
+    rewrite get_set_neqE //=.
+    rewrite i'eq get_setE //=.
+    move => b b' m1 m2 m2' stnn tr teq.
+    have := inv i0 i{hr} b b' m1 m2 None. 
+    smt().
+  + move => b0 j bjin bjt.
+    have := inv2 b0 j bjin bjt.
+    move => [i2] itr.
+    exists i2.
+    smt(get_setE mem_set).
+  + move => i0 int m1 m2.
+    case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
+    rewrite get_setE mem_set ieq //=.
+    smt().
+  move => int intin incr1.
+  have := inv3 int intin incr1.
+  move => [i0 H1].
+  exists i0.
+  smt(get_setE mem_set).
+auto => /> &hr 22? inv 6? inv2*.
+do split; ~5,9,10: smt(get_setE in_fsetU1 mem_set pow_bij).
++ move => b0 j bjin bjt.
+  have := inv b0 j bjin bjt.
+  move => [i2] itr.
+  exists i2.
+  smt(get_setE mem_set). 
++ move => i0 int m1 m2.
+  case (i0 = i{hr}) => ieq; 2: smt(get_setE mem_set).
+  rewrite get_setE mem_set ieq //=.
+  smt().
+move => int intin incr1.
+have := inv2 int intin incr1.
+move => [i0 H1].
+exists i0.
+smt(get_setE mem_set).
 qed.
 
 hoare R_Ltk_inv_c_rev_skey: R_Ltk(A, O_CDH).Red_O.c_rev_skey:
