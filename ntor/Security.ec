@@ -594,8 +594,6 @@ call (: ={b0, servers, c_smap, s_smap, tested}(O_RPK, Game0) /\ RO.m{1} = Game0.
 - proc; inline.
   sp; match = => // sko.
   match = => //.
-  match Some {1} 4.
-  + by auto=> /> _ _ _ _; exists (sko, None).
   match Some {1} ^match=> //; 1: by auto=> /> /#.
   auto => />.
 

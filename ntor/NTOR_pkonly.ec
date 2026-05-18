@@ -39,21 +39,16 @@ module (S : UAKE_mod.Server) (H : RO) = {
     return (pk_s, sk_s);
   }
 
-  proc respond_session(st : s_state option, m2: pkey) : (s_state * (pkey * tag) * key) option = {
+  proc respond_session(st : s_state, m2: pkey) : (s_state * (pkey * tag) * key) option = {
     var sk_b, pk_se, sk_se, sko;
-    var sk, t_B;
-    var r <- None;
+    var sk, t_B, r;
     
-    match st with 
-    | None => {}
-    | Some st => {
-        (sk_b, sko) <- st;
-        sk_se <$ dt;
-        pk_se <- g ^ sk_se;
-        (t_B, sk) <@ H.get(m2 ^ sk_se, m2 ^ sk_b, g ^ sk_b, m2, pk_se);
-        r <- Some ((sk_b, Some sk_se), (pk_se, t_B), sk);
-      }
-    end;
+    (sk_b, sko) <- st;
+    sk_se <$ dt;
+    pk_se <- g ^ sk_se;
+    (t_B, sk) <@ H.get(m2 ^ sk_se, m2 ^ sk_b, g ^ sk_b, m2, pk_se);
+    r <- Some ((sk_b, Some sk_se), (pk_se, t_B), sk);
+
     return r;
   }
 }.

@@ -11,6 +11,9 @@ op [lossless] dskey : skey distr.
 op [lossless] dtag : tag distr.
 op [lossless] dkey : key distr.
 
+type msg1 = pkey.
+type msg2 = (pkey * tag).
+
 type trace = (pkey * pkey) * (pkey * tag) option.
 type part_trace = pkey * pkey.
 type sid = (pkey * pkey) * trace.
@@ -240,12 +243,12 @@ proof *.
 (* one-round UAKE protocol algorithms split into Server and Client side *)
 module type Server (H : HROc.RO) = {
   proc keygen() : pkey * skey
-  proc respond_session(st: s_state option, pk: pkey) : (s_state * (pkey * tag) * key) option
+  proc respond_session(st: s_state, m: msg1) : (s_state * msg2 * key) option
 }.
 
 module type Client (H : HROc.RO) = {
-  proc new_session(pk: pkey) : c_state * pkey
-  proc complete_session(st: c_state, m: pkey * tag) : (c_state * key) option
+  proc new_session(pk: pkey) : c_state * msg1
+  proc complete_session(st: c_state, m: msg2) : (c_state * key) option
 }.
 
 (********************************************************************************)
@@ -354,7 +357,7 @@ module O_RPK (S: Server) (C: Client) (H : RO) : UAKE_res_pk = {
     if (sko is Some sk) (* Server was initialised as honest *) {
       match s_smap.[b, j] with
       | None => {
-          resp <@ S(H).respond_session(Some (sk, None), m2);
+          resp <@ S(H).respond_session((sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
             if (get_sr_ltk (oget servers.[b])) {

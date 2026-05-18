@@ -151,7 +151,7 @@ module UAKE_name_st (S: Server) (C: Client) (H : UAKEc.HROc.RO) : UAKEc.UAKE_res
     if (sko is Some sk) (* Server was initialised as honest *) {
       match s_smap.[b, j] with
       | None => {
-          resp <@ S(H).respond_session(Some (b, sk, None), m2);
+          resp <@ S(H).respond_session((b, sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
             if (get_sr_ltk (oget servers.[b])) {
@@ -1054,7 +1054,6 @@ fel
   match Some ^match. auto => />.
   match None ^match. auto => />.
   match Some ^match. auto => /#. 
-  match Some ^match. auto => /#.
   rcondt ^if{3}. auto => />.
   wp.
   swap ^r1<$ @ 1.
@@ -1084,7 +1083,6 @@ fel
   proc; inline.
   sp; match; 1: auto => /#.
   match; 2: auto => /#.
-  sp; match; 1: auto => /#.
   auto => />.  
   smt(fcardU1).
 + move => b c.
@@ -1205,7 +1203,6 @@ fel
   match Some ^match. auto => />.
   match None ^match. auto => />.
   match Some ^match. auto => /#. 
-  match Some ^match. auto => /#.
   rcondt ^if{3}. auto => />.
   wp.
   swap ^r1<$ @ 1.
@@ -1234,7 +1231,6 @@ fel
   proc; inline.
   sp; match; 1: auto => /#.
   match; 2: auto => /#.
-  sp; match; 1: auto => /#.
   auto => />.  
   smt(fcardU1).
 + move => b c.
@@ -1437,9 +1433,6 @@ wp; call (: ={b0, servers, s_smap, tested}(UAKEc.O_UN, UAKEc.O_HN) /\ ={m}(UAKEc
   sp; match = => //.
   move => sk.
   match = => //.
-  sp; match = => //.
-  + auto => />.
-  move => sts.
   sp; seq 1 1 : (#pre /\ ={sk_se}). auto => />.
   sp; seq 1 1 : (#pre /\ ={r1}). auto => />. 
   if => //.
@@ -1501,7 +1494,7 @@ wp; call (: ={b0, servers, s_smap, tested}(UAKEc.O_UN, UAKEc.O_HN) /\ ={m}(UAKEc
   sp 3 3; match = => //; 1,2: auto => /#.
   move => r'.
   sp 1 1; if => //.
-  + auto => /> &1 &2 22? inv inv2 inv3 *. do split; ~5..7: smt(get_setE mem_set in_fsetU1).
+  + auto => /> &1 &2 16? inv inv2 inv3 *. do split; ~5..7: smt(get_setE mem_set in_fsetU1).
     + move => i1 st0 pt ir0 m3 iin ipen.
       rewrite /get_partners_c.
       rewrite filter_set.
@@ -1527,7 +1520,7 @@ wp; call (: ={b0, servers, s_smap, tested}(UAKEc.O_UN, UAKEc.O_HN) /\ ={m}(UAKEc
     have := inv3 i1 st0 t k0 ir0 iin ipen.
     rewrite /get_partners_c /get_origins_c. 
     by smt(get_setE mem_set in_fsetU1).
-  auto => /> &1 &2 22? inv inv2 inv3 *. do split; ~5..7: smt(get_setE mem_set in_fsetU1).
+  auto => /> &1 &2 16? inv inv2 inv3 *. do split; ~5..7: smt(get_setE mem_set in_fsetU1).
   + move => i1 st0 pt ir0 m3 iin ipen.
     rewrite /get_partners_c.
     rewrite filter_set.
@@ -2022,8 +2015,6 @@ wp; call (: ={b0, c_smap, s_smap, tested}(O_HN, UAKEc.O_RN) /\ ={m}(UAKEc.HROc.R
   sp; match = => //; 1: auto => /#.
   move => sk.
   match = => //.
-  sp; match = => //; 1: auto => />.
-  move => st.
   auto => />. smt(get_setE mem_set).
 
 + proc; inline.
@@ -2376,17 +2367,13 @@ case : (!(st1r \/ st2r)) => />. smt().
   + rcondf {2} ^if. auto => />.
     sp; match {1} => //. 
     + auto => />.
-    match {1} => //. 
-    sp; match {1} => //; auto => />.
+    match {1} => //; auto => />.
   sp 1 1; if {2} => //.
   + sp 1 6. match = => //. auto => /> &1 &2 *. smt(get_setE mem_set).
     + auto => />. smt(get_setE mem_set in_fsetU1).
     move => sk.
     match; 1..2: smt().
-    + sp; match; 1..2: smt().
-      + auto => />.
-      move => stl str.
-      sp. seq 1 1 : (#pre /\ ={sk_se}). auto => />. 
+    + sp. seq 1 1 : (#pre /\ ={sk_se}). auto => />. 
       sp; seq 1 1 : (#pre /\ r1{1} = r2{2}). auto => />.
       if {1} => //. 
       + rcondt {2} ^if. auto => /#.
@@ -2412,7 +2399,6 @@ case : (!(st1r \/ st2r)) => />. smt().
 - move => &2 bad; proc; inline.
   sp; match; 1: by auto => /#.
   match; 2: by auto => />.
-  sp; match; 1: by auto => />.
   auto => /> &hr *.
   by rewrite weight_dprod dkey_ll dtag_ll dt_ll bad /#.
 - move => &1; proc; inline.

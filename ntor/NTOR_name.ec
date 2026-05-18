@@ -38,22 +38,17 @@ module (NTOR_S : Server) (H : RO) = {
     return (pk_s, sk_s);
   }
 
-  proc respond_session(st : s_state option, m2: pkey) : (s_state * (pkey * tag) * key) option = {
+  proc respond_session(st : s_state, m2: pkey) : (s_state * (pkey * tag) * key) option = {
     var b, sk_b, pk_se, sk_se, sko;
-    var sk, t_B;
-    var r <- None;
+    var sk, t_B, r;
     
-    match st with 
-    | None => {}
-    | Some st => {
-        (b, sk_b, sko) <- st;
-        sk_se <$ dt;
-        pk_se <- g ^ sk_se;
+    (b, sk_b, sko) <- st;
+    sk_se <$ dt;
+    pk_se <- g ^ sk_se;
         
-        (t_B, sk) <@ H.get(m2 ^ sk_se, m2 ^ sk_b, b, m2, pk_se);
-        r <- Some ((b, sk_b, Some sk_se), (pk_se, t_B), sk);
-      }
-    end;
+    (t_B, sk) <@ H.get(m2 ^ sk_se, m2 ^ sk_b, b, m2, pk_se);
+    r <- Some ((b, sk_b, Some sk_se), (pk_se, t_B), sk);
+
     return r;
   }
 }.
