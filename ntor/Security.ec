@@ -1363,10 +1363,6 @@ qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 2.5: Splitting the codomain of the random oracle *)
-local clone import DProd.ProdSampling with
-  type t1 <- tag,
-  type t2 <- key
-proof *.
 
 lemma game2_game2_5 bit &m: Pr[E_UAKE(Game2, A).run(bit) @ &m : res] =  Pr[E_UAKE(Game2_5, A).run(bit) @ &m : res].
 proof.
@@ -18706,7 +18702,8 @@ auto => /> &1 &2 *. smt().
           have<-: get_sr_ltk (oget Game5Ltk.servers{2}.[b{2}]) = get_sr_ltk (oget R_Ltk.Red_O.servers{1}.[b{2}]).
           + move : inv4. clear. smt().
           smt().
-        move => *. do split; ~1,3,5,16,17,20,21: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        move => *.
+        do split; ~1,3,5,11,16,17,20,21: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
         + have->: (get_fresh_partners_s t'{1} R_Ltk.Red_O.c_smap{1}) = (get_fresh_partners_s t'{2} Game5Ltk.c_smap{2}). 
           + have->: t'{1} = t'{2} by smt().
             by move : inv4 inv7 inv14; clear; smt(s_eq_have_fresh_p_ce).
@@ -18728,6 +18725,10 @@ auto => /> &1 &2 *. smt().
           have->: t'{1} = t'{2}. smt().
           have<-: st'{1}.`2 = st'{2}.`2. smt().
           have->: t'{2}.`1.`1 = g ^ st'{2}.`1. smt().
+          smt(get_setE mem_set in_fsetU1 loggK expgK expM).
+        + move=> b0 x0 y.
+          rewrite mem_set.
+          case; 1: smt(get_setE mem_set in_fsetU1 loggK expgK expM).
           smt(get_setE mem_set in_fsetU1 loggK expgK expM).
         + move => i2.
           move : fresh.
@@ -19014,18 +19015,18 @@ apply (ler_trans (`|Pr[E_UAKE(Game2, A).run(false) @ &m : res] - Pr[E_UAKE(Game2
 rewrite ler_add2r.
 rewrite !(game2_game2_5 _).
 rewrite !game2_5_RO !LRO_game3.
-apply (ler_trans (`|Pr[E_UAKE(Game5, A).run(false) @ &m : res] - Pr[E_UAKE(Game5, A).run(true) @ &m : res]| 
+apply (ler_trans (`|Pr[E_UAKE(Game4, A).run(false) @ &m : res] - Pr[E_UAKE(Game4, A).run(true) @ &m : res]| 
         + 2%r * q_m2%r * p_max dtag)).
 + smt(game3_game4 game3_bad3).
 rewrite ler_add2r.
-apply (ler_trans Pr[E_UAKE(Game5, A).run(true) @ &m : Game5.badq]).
+apply (ler_trans Pr[E_UAKE(Game4, A).run(true) @ &m : Game4.badq]).
 + rewrite distrC.
   by apply interestingbit.
 rewrite split_pr.
-apply (ler_trans (Pr[E_UAKE(Game5Eph, A).run(true) @ &m : Game5Eph.badq] + Pr[E_UAKE(Game5, A).run(true) @ &m : Game5.badq /\ Game5.test_ltkrev = false])).
+apply (ler_trans (Pr[E_UAKE(Game5Eph, A).run(true) @ &m : Game5Eph.badq] + Pr[E_UAKE(Game4, A).run(true) @ &m : Game4.badq /\ Game4.test_ltkrev = false])).
 + rewrite ler_add2r.
   apply game4_game5_eph.
-apply (ler_trans (Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_UAKE(Game5, A).run(true) @ &m : Game5.badq /\ Game5.test_ltkrev = false])).
+apply (ler_trans (Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_UAKE(Game4, A).run(true) @ &m : Game4.badq /\ Game4.test_ltkrev = false])).
 + rewrite ler_add2r.
   apply cdh_red_eph.
 apply (ler_trans (Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_UAKE(Game5Ltk, A).run(true) @ &m : Game5Ltk.badq])).
