@@ -264,7 +264,7 @@ module type UAKE_unres_pk = {
   proc register_dishonest(pk: pkey) : unit option
 
   (* starting clients and sends *)
-  proc exec(i: int, m1: pkey) : pkey option
+  proc init(i: int, m1: pkey) : pkey option
   proc send_msg1(b: pkey, j: int, m2: pkey) : (pkey * tag) option
   proc send_msg2(i: int, m3: pkey * tag) : unit option
 
@@ -286,13 +286,13 @@ module type UAKE_res_pk = {
 module type UAKE_unres_pk_i = {
   include UAKE_unres_pk
 
-  proc init(b : bool) : unit
+  proc init_mem(b : bool) : unit
 }.
 
 module type UAKE_res_pk_i = {
   include UAKE_res_pk
 
-  proc init(b : bool) : unit
+  proc init_mem(b : bool) : unit
 }.
 
 (* UAKE game for one-round protocols using random oracle H in the restricted public-key-only model *)
@@ -306,7 +306,7 @@ module O_RPK (S: Server) (C: Client) (H : RO) : UAKE_res_pk = {
   
   var tested: int option
 
-  proc init(b: bool) : unit = {
+  proc init_mem(b: bool) : unit = {
     b0 <- b;
     H.init();
     servers <- empty;
@@ -331,7 +331,7 @@ module O_RPK (S: Server) (C: Client) (H : RO) : UAKE_res_pk = {
     return r;
   }
 
-  proc exec(i: int, m1: pkey) : pkey option = {
+  proc init(i: int, m1: pkey) : pkey option = {
     var st, st', m2;
     var r <- None;
 
@@ -597,7 +597,7 @@ module E_UAKE (O: UAKE_res_pk_i) (A : A_UAKE_res_pk) = {
   proc run(b: bool) : bool = {
     var b' : bool;
 
-    O.init(b);
+    O.init_mem(b);
     
     b' <@ A(O).run();
     

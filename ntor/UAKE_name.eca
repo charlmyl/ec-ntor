@@ -275,7 +275,7 @@ module type UAKE_unres_name = {
   proc register_dishonest(b: s_id, pk: pkey) : unit option
 
   (* starting clients and sends *)
-  proc exec(i: int, m1: s_id) : pkey option
+  proc init(i: int, m1: s_id) : pkey option
   proc send_msg1(b: s_id, j: int, m2: pkey) : (pkey * tag) option
   proc send_msg2(i: int, m3: pkey * tag) : unit option
 
@@ -297,13 +297,13 @@ module type UAKE_res_name = {
 module type UAKE_unres_name_i = {
   include UAKE_unres_name
 
-  proc init(b : bool) : unit
+  proc init_mem(b : bool) : unit
 }.
 
 module type UAKE_res_name_i = {
   include UAKE_res_name
 
-  proc init(b : bool) : unit
+  proc init_mem(b : bool) : unit
 }.
 
 (* UAKE game for one-round protocols using random oracle H in the unrestricted name-based model *)
@@ -317,7 +317,7 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
   
   var tested: int option
 
-  proc init(b: bool) : unit = {
+  proc init_mem(b: bool) : unit = {
     b0 <- b;
     H.init();
     servers <- empty;
@@ -350,7 +350,7 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
     return r;
   }
 
-  proc exec(i: int, m1: s_id) : pkey option = {
+  proc init(i: int, m1: s_id) : pkey option = {
     var st, pk_b, st', m2;
     var r <- None;
 
@@ -610,7 +610,7 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
 (* ------------------------------------------------------------------------------------------ *)
 (* Defining honest communicatin and restricted name-based oracles *)
 module O_HN (S: Server) (C: Client) (H : RO) = O_UN (S, C, H) with {
-  proc exec [
+  proc init [
     ^if ~ (m1 \in servers /\ !get_sr_dh (oget servers.[m1]))
   ]
 }.
@@ -626,7 +626,7 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
   
   var tested: int option
 
-  proc init(b: bool) : unit = {
+  proc init_mem(b: bool) : unit = {
     b0 <- b;
     H.init();
     servers <- empty;
@@ -649,7 +649,7 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
     return omap get_pkey servers.[b];
   }
 
-  proc exec(i: int, m1: s_id) : pkey option = {
+  proc init(i: int, m1: s_id) : pkey option = {
     var st, pk_b, st', m2;
     var r <- None;
 
@@ -916,7 +916,7 @@ module E_UAKE_UN (O: UAKE_unres_name_i) (A : A_UAKE_unres_name) = {
   proc run(b: bool) : bool = {
     var b' : bool;
 
-    O.init(b);
+    O.init_mem(b);
     
     b' <@ A(O).run();
     
@@ -933,7 +933,7 @@ module E_UAKE_RN (O: UAKE_res_name_i) (A : A_UAKE_res_name) = {
   proc run(b: bool) : bool = {
     var b' : bool;
 
-    O.init(b);
+    O.init_mem(b);
     
     b' <@ A(O).run();
     

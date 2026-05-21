@@ -40,7 +40,7 @@ module Game0 : UAKE_res_pk_i = {
   var b_set, x_set, y_set, pk_set, m1_set, m2_set : pkey fset
   var bad1, bad2 : bool
 
-  proc init(b: bool) : unit = {
+  proc init_mem(b: bool) : unit = {
     b0 <- b;
     hm <- empty;
     servers <- empty;
@@ -97,7 +97,7 @@ module Game0 : UAKE_res_pk_i = {
   }
 
   (* starting client instances and sends *)
-  proc exec(i: int, m1: pkey) : pkey option = {
+  proc init(i: int, m1: pkey) : pkey option = {
     var st, pk, sk;
     var r <- None;
 
@@ -367,7 +367,7 @@ module Game1 = Game0 with {
     [^pk_set<- - ^if] + (!bad1)
   ]
 
-  proc exec [
+  proc init [
     [^r<- - ^if] + (!bad1)
     [^if.^match#None.^bad1<- - ^c_smap<-] + (!bad1)
   ]
@@ -421,7 +421,7 @@ module Game2 = Game1 with {
     ^if.^if ~ (!bad1 /\ !bad2)
   ]
 
-  proc exec [
+  proc init [
     ^if ~ (!bad1 /\ !bad2)
     ^if.^if.^match#None.^if ~ (!bad1 /\ !bad2)
   ]
@@ -473,7 +473,7 @@ module Game2_5 = Game2 with {
   var tq : (pkey * pkey * pkey * pkey * pkey) option
   var badq : bool
 
-  proc init [
+  proc init_mem [
     -1 + { h1m <- empty; h2m <- empty; hq <- fset0; tq <- None; badq <- false;}
   ]
 
@@ -536,7 +536,7 @@ module Game3 = Game2_5 with {
   var test_ltkrev : bool
   var bad3 : bool
 
-  proc init [
+  proc init_mem [
     -1 + { test_ephrev_s <- false; test_ltkrev <- false; bad3 <- false; }
   ]
 
@@ -610,7 +610,7 @@ module Game3 = Game2_5 with {
 module Game4 = Game3 with {
   var comp_tag : bool
 
-  proc init [
+  proc init_mem [
     -1 + { comp_tag <- false; }
   ]
 
@@ -623,7 +623,7 @@ module Game4 = Game3 with {
     ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
-  proc exec [
+  proc init [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3)
   ]
 
@@ -676,7 +676,7 @@ module Game5Ltk = Game4 with {
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
 
-  proc exec [
+  proc init [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev)
   ]
 
@@ -732,7 +732,7 @@ module Game5Eph = Game4 with {
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 
-  proc exec [
+  proc init [
     ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ephrev_s)
   ]
 

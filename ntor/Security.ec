@@ -9,7 +9,7 @@ import NTOR_nosid_c NTORc UAKE_mod HRO_mod_c DH.G DH.GP DH.FD DH.GP.ZModE.
 (* ------------------------------------------------------------------------------------------ *)
 (* introducing counter and query bounds *)
 op q_gen : { int | 0 <= q_gen } as ge0_q_gen.
-op q_exec : { int | 0 <= q_exec } as ge0_q_exec.
+op q_init : { int | 0 <= q_init } as ge0_q_init.
 op q_m1 : { int | 0 <= q_m1 } as ge0_q_m1.
 op q_m2 : { int | 0 <= q_m2 } as ge0_q_m2.
 op q_h  : { int | 0 <= q_h } as ge0_q_h.
@@ -19,9 +19,9 @@ module Counter (G : UAKE_res_pk_i) : UAKE_res_pk_i = {
 
   include G[c_rev_skey, s_rev_skey, rev_ltkey, c_rev_ephkey, s_rev_ephkey, c_test, s_test]
 
-  proc init(b: bool) = {
+  proc init_mem(b: bool) = {
     (ch, cg, ce, cm1, cm2) <- (0, 0, 0, 0, 0);
-    G.init(b);
+    G.init_mem(b);
   }
   
   proc gen() = {
@@ -30,10 +30,10 @@ module Counter (G : UAKE_res_pk_i) : UAKE_res_pk_i = {
     m <@ G.gen();
     return m;
   }
-  proc exec(x) = {
+  proc init(x) = {
     var m;
     ce <- ce + 1;
-    m <@ G.exec(x);
+    m <@ G.init(x);
     return m;
   }
   proc send_msg1(x) = {
@@ -90,7 +90,7 @@ module (Red_ROM (D : A_UAKE_res_pk) : ROc.IdealAll.RO_Distinguisher) (O : ROc.Id
 
   proc distinguish(b) = {
     var b';
-    AKE_O.init(b);
+    AKE_O.init_mem(b);
     b' <@ D(AKE_O).run();
     return b';
   }
@@ -98,7 +98,7 @@ module (Red_ROM (D : A_UAKE_res_pk) : ROc.IdealAll.RO_Distinguisher) (O : ROc.Id
 
 module (Red_ROM2 (D : A_UAKE_res_pk) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguisher) (O2 : ROSc.I2.RO) = {
   module AKE_O : UAKE_res_pk = Game2_5 with {
-    proc init [
+    proc init_mem [
       ^h1m<- ~ {O1.init();}
       ^h2m<- -
     ]
@@ -151,7 +151,7 @@ module (Red_ROM2 (D : A_UAKE_res_pk) (O1 : ROSc.I1.RO) : ROSc.I2.RO_Distinguishe
 
   proc distinguish(b) = {
     var b';
-    AKE_O.init(b);
+    AKE_O.init_mem(b);
     b' <@ D(AKE_O).run();
     return b';
   }
@@ -170,7 +170,7 @@ module type Oracle = {
 module type Oracle_i = {
   include Oracle
 
-  proc init() : unit
+  proc init_mem() : unit
 }.
 
 module O_CDH : Oracle_i = {
@@ -180,7 +180,7 @@ module O_CDH : Oracle_i = {
   var x_map : (int, exp) fmap
   var y_map : (int, exp) fmap
 
-  proc init() : unit = {
+  proc init_mem() : unit = {
     win <- false;
     n <- 0;
     m <- 0;
@@ -256,7 +256,7 @@ module type A_CDH (O : Oracle) = {
 module E_CDH (O : Oracle_i) (A : A_CDH) = {
   proc run(): unit = {
     
-    O.init();
+    O.init_mem();
     A(O).solve();
 
     return ();
@@ -274,7 +274,7 @@ module (R_Ltk (A : A_UAKE_res_pk) : A_CDH) (O : Oracle) = {
     var h1m_opt : (pkey option * pkey option * pkey * pkey * pkey, tag) fmap
     var h2m_opt : (pkey option * pkey option * pkey * pkey * pkey, key) fmap
 
-    proc init [
+    proc init_mem [
       -1 + {h1m_opt <- empty; h2m_opt <- empty; count_b <- 0; b_inst <- empty; count_i <- 0; i_inst <- empty;}
     ]
 
@@ -310,7 +310,7 @@ module (R_Ltk (A : A_UAKE_res_pk) : A_CDH) (O : Oracle) = {
       ^if.^if.^if.^r<- + ^ {b_inst.[pk] <- count_b;}
     ]
 
-    proc exec [
+    proc init [
       ^if ~ (!bad1 /\ !bad2 /\ !bad3 /\ !test_ltkrev /\ !comp_tag)
       [^if.^if.^match#None.^sk<$ - ^pk<-] ~ {count_i <- count_i + 1; sk <- witness; pk <@ O.gen1(); i_inst.[i] <- count_i;}
     ]
@@ -411,7 +411,7 @@ module (R_Ltk (A : A_UAKE_res_pk) : A_CDH) (O : Oracle) = {
   proc solve() : unit = {
     var b' : bool;
 
-    Red_O.init(true);
+    Red_O.init_mem(true);
     b' <@ A(Red_O).run();
     return ();
   }
@@ -426,7 +426,7 @@ module (R_Eph (A : A_UAKE_res_pk) : A_CDH) (O : Oracle) = {
     var h1m_opt : (pkey option * pkey option * pkey * pkey * pkey, tag) fmap
     var h2m_opt : (pkey option * pkey option * pkey * pkey * pkey, key) fmap
 
-    proc init [
+    proc init_mem [
       -1 + {h1m_opt <- empty; h2m_opt <- empty; count_j <- 0; j_inst <- empty; count_i <- 0; i_inst <- empty;}
     ]
 
@@ -455,7 +455,7 @@ module (R_Eph (A : A_UAKE_res_pk) : A_CDH) (O : Oracle) = {
       ^if.^hq<- -
     ]
 
-    proc exec [
+    proc init [
       [^if.^if.^match#None.^sk<$ - ^pk<-] ~ {count_i <- count_i + 1; sk <- witness; pk <@ O.gen1(); i_inst.[i] <- count_i;}
     ]
 
@@ -544,7 +544,7 @@ module (R_Eph (A : A_UAKE_res_pk) : A_CDH) (O : Oracle) = {
   proc solve() : unit = {
     var b' : bool;
 
-    Red_O.init(true);
+    Red_O.init_mem(true);
     b' <@ A(Red_O).run();
     return ();
   }
@@ -561,7 +561,7 @@ declare module A <: A_UAKE_res_pk {-O_RPK, -Game0, -Game1, -Game2, -Game2_5, -Ga
 declare axiom A_ll (G <: UAKE_res_pk{-A}):
   islossless G.h =>
   islossless G.gen =>
-  islossless G.exec =>
+  islossless G.init =>
   islossless G.send_msg1 =>
   islossless G.send_msg2 =>
   islossless G.c_rev_skey =>
@@ -574,7 +574,7 @@ declare axiom A_ll (G <: UAKE_res_pk{-A}):
   islossless A(G).run.
 
 declare axiom A_bounded_qs: forall (G <: UAKE_res_pk_i{-A}), hoare[A(Counter(G)).run: Counter.cg = 0 /\ Counter.ce = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.ch = 0
-                                                                  ==> Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h].
+                                                                  ==> Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h].
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 0: Inlining everything. *)
@@ -789,7 +789,7 @@ qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 1b: Bound the bad event. *)
-lemma game0_bad1 bit &m: Pr[E_UAKE(Game0, A).run(bit) @ &m : Game0.bad1] <= ((q_gen + q_exec + q_m1) * (q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r.
+lemma game0_bad1 bit &m: Pr[E_UAKE(Game0, A).run(bit) @ &m : Game0.bad1] <= ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2 * order)%r.
 proof.
 have ->: Pr[E_UAKE(Game0, A).run(bit) @ &m : Game0.bad1]
        = Pr[E_UAKE(Counter(Game0), A).run(bit) @ &m : Game0.bad1].
@@ -804,10 +804,10 @@ have ->: Pr[E_UAKE(Game0, A).run(bit) @ &m : Game0.bad1]
   by inline; auto => />. 
 have ->: Pr[E_UAKE(Counter(Game0), A).run(bit) @ &m : Game0.bad1]
        = Pr[E_UAKE(Counter(Game0), A).run(bit) @ &m : Game0.bad1
-            /\ Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1].
+            /\ Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1].
 + byequiv => //.
   proc.
-  conseq (: _ ==> ={Game0.bad1}) _ (: _ ==> Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1) => //.
+  conseq (: _ ==> ={Game0.bad1}) _ (: _ ==> Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1) => //.
   + call (A_bounded_qs Game0).
     by inline; auto.
   by sim. 
@@ -815,21 +815,52 @@ fel
   1
   (Counter.cg + Counter.ce + Counter.cm1)
   (fun x => x%r / order%r)
-  (q_exec + q_m1 + q_gen)
+  (q_init + q_m1 + q_gen)
   Game0.bad1
   [ Counter(Game0).gen : true;
-    Counter(Game0).exec : ((arg.`2 \in Game0.servers) /\ Game0.c_smap.[arg.`1] = None);
+    Counter(Game0).init : ((arg.`2 \in Game0.servers) /\ Game0.c_smap.[arg.`1] = None);
     Counter(Game0).send_msg1 : (Game0.s_smap.[(arg.`1, arg.`2)] = None
                                 /\ exists v, obind get_skey Game0.servers.[arg.`1] = Some v)
   ]
   (card (Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr}) <= Counter.cg + Counter.ce + Counter.cm1 /\ 0 <= Counter.cg /\ 0 <= Counter.ce /\ 0 <= Counter.cm1)
 .
 + rewrite -mulr_suml StdBigop.Bigreal.sumidE.
-  + smt(ge0_q_exec ge0_q_m1 ge0_q_gen).
+  + smt(ge0_q_init ge0_q_m1 ge0_q_gen).
   smt().
 + smt().
 + inline; auto.
   smt(fcards0 fsetU0).
+
++ proc; inline.
+  wp.
+  rnd (fun x => g ^ x \in Game0.pk_set \/ g ^ x \in Game0.m1_set \/ g ^ x \in Game0.m2_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem (Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr})))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game0.pk_set{hr} \/ y \in Game0.m1_set{hr} \/ y \in Game0.m2_set{hr})).
+    smt(in_fsetU mu_le).
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  auto => />.
+  move => &hr 4? sk ?. 
+  have->: Game0.pk_set{hr} `|` fset1 (g ^ sk) `|` Game0.m1_set{hr} `|` Game0.m2_set{hr}
+           = Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr} `|` fset1 (g ^ sk).
+  + smt(@FSet).
+  rewrite fcardU1.
+  smt().
++ move => b c.
+  proc; inline.
+  by auto => />.
 
 + proc; inline.
   rcondt ^if; 1: auto => />.
@@ -867,38 +898,7 @@ fel
   sp; if => //.
   + by match Some ^match; auto => /#.
   by auto => /#.
-
-+ proc; inline.
-  wp.
-  rnd (fun x => g ^ x \in Game0.pk_set \/ g ^ x \in Game0.m1_set \/ g ^ x \in Game0.m2_set).
-  auto => />.
-  move => &hr *.
-  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem (Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr})))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game0.pk_set{hr} \/ y \in Game0.m1_set{hr} \/ y \in Game0.m2_set{hr})).
-    smt(in_fsetU mu_le).
-  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-  + move => x xin.
-    rewrite dmap1E /(\o) /pred1 /=.
-    rewrite (mu_eq dt _ (pred1 (loge x))).
-    + move => v.
-      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-    rewrite duniform1E.
-    rewrite DZmodP.Support.enumP /=.
-    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-  smt(gt0_order).
-+ move => c.
-  proc; inline.
-  auto => />.
-  move => &hr 4? sk ?. 
-  have->: Game0.pk_set{hr} `|` fset1 (g ^ sk) `|` Game0.m1_set{hr} `|` Game0.m2_set{hr}
-           = Game0.pk_set{hr} `|` Game0.m1_set{hr} `|` Game0.m2_set{hr} `|` fset1 (g ^ sk).
-  + smt(@FSet).
-  rewrite fcardU1.
-  smt().
-+ move => b c.
-  proc; inline.
-  by auto => />.
-
+  
 + proc; inline.
   match Some ^match. auto => />.
   match None ^match. auto => />.
@@ -1155,7 +1155,7 @@ qed.
 (* Step 2b: Bound the bad event *)
 lemma game1_bad2 b &m:
         Pr[E_UAKE(Game1, A).run(b) @ &m : Game1.bad2]
-        <= ((q_h + q_gen + q_exec + q_m1) * (q_h + q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r.
+        <= ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / (2 * order)%r.
 proof.
 have ->: Pr[E_UAKE(Game1, A).run(b) @ &m : Game1.bad2]
        = Pr[E_UAKE(Counter(Game1), A).run(b) @ &m : Game1.bad2].
@@ -1167,11 +1167,11 @@ have ->: Pr[E_UAKE(Game1, A).run(b) @ &m : Game1.bad2]
   by auto => />. 
 have ->: Pr[E_UAKE(Counter(Game1), A).run(b) @ &m : Game1.bad2]
        = Pr[E_UAKE(Counter(Game1), A).run(b) @ &m : Game1.bad2
-            /\ Counter.cg < q_gen /\ Counter.ce < q_exec 
+            /\ Counter.cg < q_gen /\ Counter.ce < q_init 
             /\ Counter.cm1 < q_m1 /\ Counter.ch < q_h].
 + byequiv => //.
   proc.
-  conseq (: _ ==> ={bad2}(Game1, Game1)) _ (: _ ==> Counter.cg < q_gen /\ Counter.ce < q_exec /\ Counter.cm1 < q_m1 /\ Counter.ch < q_h /\ Counter.cm2 < q_m2) => //.
+  conseq (: _ ==> ={bad2}(Game1, Game1)) _ (: _ ==> Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1 /\ Counter.ch < q_h /\ Counter.cm2 < q_m2) => //.
   + call (A_bounded_qs (Game1)).
     by inline; auto.
   by sim. 
@@ -1179,11 +1179,11 @@ fel
   1
   (Counter.ce + Counter.cm1 + Counter.cg + Counter.ch)
   (fun x => x%r / order%r)
-  (q_h + q_exec + q_m1 + q_gen)
+  (q_h + q_init + q_m1 + q_gen)
   Game1.bad2
   [ Counter(Game1).h : false;
     Counter(Game1).gen : (!Game1.bad1);
-    Counter(Game1).exec : (!Game1.bad1 /\ arg.`2 \in Game1.servers /\ arg.`1 \notin Game1.c_smap);
+    Counter(Game1).init : (!Game1.bad1 /\ arg.`2 \in Game1.servers /\ arg.`1 \notin Game1.c_smap);
     Counter(Game1).send_msg1 : (!Game1.bad1 /\ (arg.`1, arg.`2) \notin Game1.s_smap
                                 /\ exists v, obind get_skey Game1.servers.[arg.`1] = Some v);
     Counter(Game1).send_msg2 : false
@@ -1192,49 +1192,11 @@ fel
    /\ 0 <= Counter.ce /\ 0 <= Counter.cm1 /\ 0 <= Counter.cg /\ 0 <= Counter.ch /\ 0 <= Counter.cm2)
 .
 + rewrite -mulr_suml StdBigop.Bigreal.sumidE.
-  + smt(ge0_q_exec ge0_q_m1 ge0_q_gen ge0_q_h).
+  + smt(ge0_q_init ge0_q_m1 ge0_q_gen ge0_q_h).
   smt().
 + smt().
 + inline; auto.
   smt(fcards0).
-
-+ proc; inline.
-  rcondt ^if; 1: by auto.
-  rcondt ^if; 1: by auto.
-  match None ^match.
-  + auto => /#.
-  wp.
-  rnd (fun x => g ^ x \in Game1.x_set).
-  auto => />.
-  move => &hr *.
-  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem Game1.x_set{hr}))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game1.x_set{hr})).
-    exact mu_le.
-  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-  + move => x xin.
-    rewrite dmap1E /(\o) /pred1 /=.
-    rewrite (mu_eq dt _ (pred1 (loge x))).
-    + move => v.
-      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-    rewrite duniform1E.
-    rewrite DZmodP.Support.enumP /=.
-    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-  smt(gt0_order).
- 
-+ move => c.
-  proc; inline.
-  rcondt ^if; 1: by auto.
-  rcondt ^if; 1: by auto.
-  match None ^match.
-  + auto => /#.
-  auto => />.
-  smt().
-+ move => b' c.
-  proc; inline.
-  sp; if; last by auto => /#.
-  sp; if; last by auto => /#.
-  match Some ^match; 1: by auto => /> /#.
-  by auto => /#.
 
 + proc; inline.
   rcondt ^if; 1: by auto.
@@ -1288,6 +1250,43 @@ fel
     smt(fcardU1).
   auto.
   smt(fcardU1).
+
++ proc; inline.
+  rcondt ^if; 1: by auto.
+  rcondt ^if; 1: by auto.
+  match None ^match.
+  + auto => /#.
+  wp.
+  rnd (fun x => g ^ x \in Game1.x_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem Game1.x_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in Game1.x_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  rcondt ^if; 1: by auto.
+  rcondt ^if; 1: by auto.
+  match None ^match.
+  + auto => /#.
+  auto => />.
+  smt().
++ move => b' c.
+  proc; inline.
+  sp; if; last by auto => /#.
+  sp; if; last by auto => /#.
+  match Some ^match; 1: by auto => /> /#.
+  by auto => /#.
 
 + proc; inline.
   rcondt ^if; 1: by auto.
@@ -2224,7 +2223,7 @@ auto => />.
 smt(get_setE in_fsetU1 pow_bij in_fsetU).
 qed.
 
-hoare Game4_inv_exec: Game4.exec:
+hoare Game4_inv_init: Game4.init:
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.x_set Game4.y_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers)
 ==>
     (inv_Game4 Game4.tested Game4.tq Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.x_set Game4.y_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers).
@@ -3589,12 +3588,12 @@ by case : (!bqr) => />.
   sp; if => //; auto => />. 
   by rewrite dt_ll.
 
-(* exec *)
+(* init *)
 - conseq (: ={res} /\ ={servers, c_smap, s_smap, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, hm, bad1, bad2, bad3, h1m, hq, tq, badq, test_ephrev_s, test_ltkrev, comp_tag}(Game4, Game4)
         /\ (Game4.tq{1} = None => ={Game4.h2m})
         /\ (forall x, Game4.tq{1} = Some x => eq_except (pred1 x) Game4.h2m{1} Game4.h2m{2})
         /\ (forall x, x \in Game4.h2m{1} <=> x \in Game4.h2m{2})
-        /\ Game4.b0{1} = true /\ Game4.b0{2} = false) Game4_inv_exec => // [/#|/#|].
+        /\ Game4.b0{1} = true /\ Game4.b0{2} = false) Game4_inv_init => // [/#|/#|].
   proc; inline.
   sp; if => //.
   sp; if => //.
@@ -4282,7 +4281,7 @@ hoare Game4_inv_h': Game4.h:
     (inv_Game4' Game4.tested Game4.tq Game4.bad3 Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.x_set Game4.y_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers Game4.comp_tag)
 ==>
     (inv_Game4' Game4.tested Game4.tq Game4.bad3 Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.x_set Game4.y_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers Game4.comp_tag).
-proof. admit. (*
+proof.
 proc; inline.
 sp; if => //.
 sp; seq 1: (#pre /\ t \in dtag); 1: by auto => />.
@@ -4380,7 +4379,7 @@ if => //.
 + auto => /> *.
   do split; smt(get_setE in_fsetU1 mem_set).
 auto => /> *.
-do split; smt(get_setE in_fsetU1 mem_set). *)
+do split; smt(get_setE in_fsetU1 mem_set).
 qed.
 
 hoare Game4_inv_gen': Game4.gen:
@@ -4401,7 +4400,7 @@ auto => /> &1 *.
 do split; smt(get_setE mem_set in_fsetU1 pow_bij in_fsetU).
 qed.
 
-hoare Game4_inv_exec': Game4.exec:
+hoare Game4_inv_init': Game4.init:
     (inv_Game4' Game4.tested Game4.tq Game4.bad3 Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.x_set Game4.y_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers Game4.comp_tag)
 ==>
     (inv_Game4' Game4.tested Game4.tq Game4.bad3 Game4.badq Game4.pk_set Game4.m1_set Game4.m2_set Game4.x_set Game4.y_set Game4.s_smap Game4.hq Game4.c_smap Game4.h1m Game4.h2m Game4.servers Game4.comp_tag).
@@ -6268,7 +6267,7 @@ by case : (tephr) => />.
   proc. 
   rcondf ^if; auto => />.
 
-(* exec *)
+(* init *)
 - conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, tq, hq, badq, test_ephrev_s, test_ltkrev, comp_tag}(Game4, Game5Eph)
          /\ (Game4.test_ltkrev => Game4.tested <> None){1}
          /\ (forall b j, (b, j) \in Game4.s_smap => (oget (get_trace (oget Game4.s_smap.[b, j]))).`1.`1 = b
@@ -6286,7 +6285,7 @@ by case : (tephr) => />.
          /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}
          /\ (forall b j, Game5Eph.test_ltkrev => (b, j) \in Game5Eph.s_smap => get_ir_test (oget Game5Eph.s_smap.[(b, j)]) => get_sr_ltk (oget Game5Eph.servers.[b])){2}
          /\ (forall i b j, Game5Eph.test_ltkrev => (i \in Game5Eph.c_smap) => (b, j) \in Game5Eph.s_smap => get_ir_test (oget Game5Eph.c_smap.[i]) 
-              => get_trace (oget Game5Eph.c_smap.[i]) = get_trace (oget Game5Eph.s_smap.[b, j]) => get_sr_ltk (oget Game5Eph.servers.[b])){2}) Game4_inv_exec' => //.
+              => get_trace (oget Game5Eph.c_smap.[i]) = get_trace (oget Game5Eph.s_smap.[b, j]) => get_sr_ltk (oget Game5Eph.servers.[b])){2}) Game4_inv_init' => //.
   proc.
   sp; if => //.
   sp; if => //.
@@ -7043,7 +7042,7 @@ by case (tltkr) => //.
   proc. 
   rcondf ^if; auto => />.
 
-(* exec *)
+(* init *)
 - conseq (: ={res} /\ ={b0, hm, h1m, h2m, c_smap, s_smap, servers, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, tq, 
                            hq, badq, test_ephrev_s, test_ltkrev, comp_tag}(Game4, Game5Ltk)
         /\ Game4.b0{1}
@@ -7055,7 +7054,7 @@ by case (tltkr) => //.
         /\ (forall i1 i2, i1 \in Game4.c_smap => i2 \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i1]) 
              => get_ir_test (oget Game4.c_smap.[i2]) => i1 = i2){1}
         /\ (forall b j i, (b, j) \in Game4.s_smap => i \in Game4.c_smap => get_ir_test (oget Game4.c_smap.[i]) => !get_ir_test (oget Game4.s_smap.[(b, j)])){1}
-    ) Game4_inv_exec' => //.
+    ) Game4_inv_init' => //.
   proc.
   sp; if => //.
   sp; if => //.
@@ -7819,7 +7818,7 @@ auto => />.
 smt(get_setE in_fsetU1 mem_set pow_bij).
 qed.
 
-hoare Game5Eph_inv_exec: Game5Eph.exec:
+hoare Game5Eph_inv_init: Game5Eph.init:
     (inv_Game5Eph Game5Eph.tested Game5Eph.tq Game5Eph.hq Game5Eph.test_ephrev_s Game5Eph.test_ltkrev Game5Eph.b0 
        Game5Eph.bad1 Game5Eph.bad2 Game5Eph.pk_set Game5Eph.m1_set Game5Eph.m2_set Game5Eph.x_set Game5Eph.y_set 
        Game5Eph.b_set Game5Eph.s_smap Game5Eph.c_smap Game5Eph.h1m Game5Eph.h2m Game5Eph.servers)
@@ -9635,7 +9634,7 @@ by case : (!bqr) => />.
   sp; if => //; auto => />.
   by rewrite dt_ll //=.
 
-(* exec *)
+(* init *)
 - conseq (: ={res} /\ ={b0, hm, tested, servers, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, test_ephrev_s, test_ltkrev, comp_tag}(R_Eph.Red_O, Game5Eph)
          /\ (Game5Eph.tq{2} <> None => oget Game5Eph.tq{2} \in Game5Eph.hq{2} => O_CDH.win{1})
 
@@ -9756,7 +9755,7 @@ by case : (!bqr) => />.
          /\ (forall b b', b \in R_Eph.Red_O.j_inst{1} => b' \in R_Eph.Red_O.j_inst{1}
               => R_Eph.Red_O.j_inst{1}.[b] = R_Eph.Red_O.j_inst{1}.[b']
               => b = b')
-         /\ (forall x, x \in R_Eph.Red_O.h2m_opt{1} => x \in R_Eph.Red_O.h1m_opt{1})) _ Game5Eph_inv_exec => //.
+         /\ (forall x, x \in R_Eph.Red_O.h2m_opt{1} => x \in R_Eph.Red_O.h1m_opt{1})) _ Game5Eph_inv_init => //.
   proc; inline. 
   sp; if => //.
   sp; if => //.
@@ -13149,7 +13148,7 @@ have : (exists (j : int), (j \in y_map) /\ b = g ^ oget y_map.[j]) => (exists (j
 smt(mem_set get_setE expgK expM in_fsetU1).
 qed.
 
-hoare R_Ltk_inv_exec: R_Ltk(A, O_CDH).Red_O.exec:
+hoare R_Ltk_inv_init: R_Ltk(A, O_CDH).Red_O.init:
     (inv_R_Ltk R_Ltk.Red_O.tested R_Ltk.Red_O.test_ltkrev R_Ltk.Red_O.b0 R_Ltk.Red_O.bad1 R_Ltk.Red_O.bad2
        R_Ltk.Red_O.pk_set R_Ltk.Red_O.m1_set R_Ltk.Red_O.m2_set R_Ltk.Red_O.x_set R_Ltk.Red_O.y_set R_Ltk.Red_O.b_set
        R_Ltk.Red_O.s_smap R_Ltk.Red_O.c_smap R_Ltk.Red_O.h1m_opt R_Ltk.Red_O.h2m_opt R_Ltk.Red_O.servers 
@@ -15044,7 +15043,7 @@ by case : (!bqr) => />.
   sp; if => //; auto => />.
   by rewrite dt_ll //=.
 
-(* exec *) 
+(* init *) 
 - conseq (: ={res}
          /\ ={b0, hm, tested, b_set, x_set, y_set, pk_set, m1_set, m2_set, bad1, bad2, bad3, test_ephrev_s, test_ltkrev, comp_tag}(R_Ltk.Red_O, Game5Ltk)
          /\ (forall x, x \in Game5Ltk.h1m{2} => !Game5Ltk.bad1{2} => !Game5Ltk.bad2{2} => !Game5Ltk.bad3{2} 
@@ -15175,7 +15174,7 @@ by case : (!bqr) => />.
                 => (exists i tag, i \in Game5Ltk.c_smap{2} /\ get_trace (oget Game5Ltk.c_smap{2}.[i]) = Some ((g ^ b, g ^ x), Some (g ^ y, tag)))
                   \/ (exists i tag, i \in Game5Ltk.s_smap{2} /\ get_trace (oget Game5Ltk.s_smap{2}.[i]) = Some ((g ^ b, g ^ x), Some (g ^ y, tag))
                        /\ tag = oget Game5Ltk.h1m{2}.[(g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y)])
-                  \/ (g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y) \in Game5Ltk.hq{2})) R_Ltk_inv_exec => //.
+                  \/ (g ^ (ZModE.( * ) x y), g ^ (ZModE.( * ) x b), g ^ b, g ^ x, g ^ y) \in Game5Ltk.hq{2})) R_Ltk_inv_init => //.
   proc; inline.
   sp; if => //. smt().
   sp; if => //. auto => /#.
@@ -19001,16 +19000,16 @@ qed.
 lemma security &m: `| Pr[E_UAKE(O_RPK(S, C, RO), A).run(false) @ &m : res] - Pr[E_UAKE(O_RPK(S, C, RO), A).run(true) @ &m : res]|
   <= Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_CDH(O_CDH, R_Ltk(A)).run() @ &m : O_CDH.win]
        + 2%r * q_m2%r * p_max dtag
-       + 2%r * ((q_h + q_gen + q_exec + q_m1) * (q_h + q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r 
-       + 2%r * ((q_gen + q_exec + q_m1) * (q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r.
+       + 2%r * ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / (2 * order)%r 
+       + 2%r * ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2 * order)%r.
 proof. 
 rewrite !(gake_game0 _).
 apply (ler_trans (`|Pr[E_UAKE(Game1, A).run(false) @ &m : res] - Pr[E_UAKE(Game1, A).run(true) @ &m : res]| 
-        + 2%r * ((q_gen + q_exec + q_m1) * (q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r)).
+        + 2%r * ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2 * order)%r)).
 + smt(game0_game1 game0_bad1).
 rewrite ler_add2r.
 apply (ler_trans (`|Pr[E_UAKE(Game2, A).run(false) @ &m : res] - Pr[E_UAKE(Game2, A).run(true) @ &m : res]| 
-        + 2%r * ((q_h + q_gen + q_exec + q_m1) * (q_h + q_gen + q_exec + q_m1 - 1))%r / (2 * order)%r)).
+        + 2%r * ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / (2 * order)%r)).
 + smt(game1_game2 game1_bad2).
 rewrite ler_add2r.
 rewrite !(game2_game2_5 _).
