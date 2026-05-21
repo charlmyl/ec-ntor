@@ -18995,9 +18995,9 @@ auto => /> &1 &2 *. smt().
   auto => //.
 qed.
 
-
-
-lemma security &m: `| Pr[E_UAKE(O_RPK(S, C, RO), A).run(false) @ &m : res] - Pr[E_UAKE(O_RPK(S, C, RO), A).run(true) @ &m : res]|
+(* ------------------------------------------------------------------------------------------ *)
+(* Summing up *)
+lemma Security_modified_NTOR &m: `| Pr[E_UAKE(O_RPK(S, C, RO), A).run(false) @ &m : res] - Pr[E_UAKE(O_RPK(S, C, RO), A).run(true) @ &m : res]|
   <= Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_CDH(O_CDH, R_Ltk(A)).run() @ &m : O_CDH.win]
        + 2%r * q_m2%r * p_max dtag
        + 2%r * ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / (2 * order)%r 
@@ -19034,7 +19034,6 @@ apply (ler_trans (Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_UAKE(
 rewrite ler_add2l.
 apply cdh_red_ltk.
 qed.
-
 
 end section.
 

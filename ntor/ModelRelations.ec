@@ -682,7 +682,6 @@ module (Hon_s_Red (A : UAKEc.A_UAKE_unres_name) : UAKEc.A_UAKE_res_name) (O : UA
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Reduction preventing collisions and prediction of public keys  *)
-
 module (Name_Red (A : UAKEc.A_UAKE_res_name) : UAKE_mod.A_UAKE_res_pk) (O : UAKE_mod.UAKE_res_pk) = {
   module O_UAKE_RN : UAKEc.UAKE_res_name = {
     var unreg_ro : (pkey * pkey * s_id * pkey * pkey, (tag * key)) fmap
@@ -931,330 +930,6 @@ proof.
 move => ->.
 by rewrite in_fset0.
 qed.
-
-lemma sum_stop bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : (UAKE_name_st.stop1 \/ UAKE_name_st.stop2)] 
-  <= Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1] 
-      + Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2].
-proof.
-rewrite Pr[mu_or].
-smt(ge0_mu).
-qed.
-
-lemma bound_stop1 bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1] 
-  <= ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2 * order)%r.
-proof.
-have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1]
-       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1].
-+ byequiv => //.
-  proc.
-  call (: ={glob UAKE_name_st, glob HROc.RO}); try (proc; inline; sim />).
-  + proc; inline. 
-    by sp; if; auto.
-  + by auto => />. 
-  + by auto => />. 
-  + by auto => />. 
-  by inline; auto => />.
-have ->: Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1]
-       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1
-            /\ Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1].
-+ byequiv => //.
-  proc.
-  conseq (: _ ==> ={UAKE_name_st.stop1}) _ (: _ ==> Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1) => //.
-  + call (A_res_bounded_qs (UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO))).
-    by inline; auto.
-  by sim. 
-fel
-  1
-  (Counter.cg + Counter.ce + Counter.cm1)
-  (fun x => x%r / order%r)
-  (q_init + q_m1 + q_gen)
-  UAKE_name_st.stop1
-  [ Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).gen : (arg \notin UAKE_name_st.servers);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).init : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
-                                /\ UAKE_name_st.c_smap.[arg.`1] = None);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
-                                /\ exists v, obind get_skey UAKE_name_st.servers.[arg.`1] = Some v)
-  ]
-  (card UAKE_name_st.pk_set <= Counter.cg + Counter.ce + Counter.cm1 /\ 0 <= Counter.cg /\ 0 <= Counter.ce /\ 0 <= Counter.cm1)
-.
-+ rewrite -mulr_suml StdBigop.Bigreal.sumidE.
-  + smt(ge0_q_init ge0_q_m1 ge0_q_gen).
-  smt().
-+ smt().
-+ inline; auto.
-  smt(fcards0).
-
-
-+ proc; inline.
-  rcondt ^if; 1: auto => />.
-  wp.
-  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
-  auto => />.
-  move => &hr *.
-  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
-    exact mu_le.
-  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-  + move => x xin.
-    rewrite dmap1E /(\o) /pred1 /=.
-    rewrite (mu_eq dt _ (pred1 (loge x))).
-    + move => v.
-      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-    rewrite duniform1E.
-    rewrite DZmodP.Support.enumP /=.
-    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-  smt(gt0_order).
-+ move => c.
-  proc; inline.
-  sp; if; auto => />.
-  smt(fcardU1).
-+ move => b c.
-  proc; inline.
-  rcondf ^if. auto => />.
-  by auto => /#.
-
-+ proc; inline.
-  rcondt ^if; 1: auto => />.
-  match None ^match; 1: auto => />.
-  rcondt ^if; 1: auto => />.
-  auto => />.
-  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
-  auto => />.
-  move => &hr *.
-  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
-    exact mu_le.
-  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-  + move => x xin.
-    rewrite dmap1E /(\o) /pred1 /=.
-    rewrite (mu_eq dt _ (pred1 (loge x))).
-    + move => v.
-      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-    rewrite duniform1E.
-    rewrite DZmodP.Support.enumP /=.
-    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-  smt(gt0_order).
-+ move => c.
-  proc; inline.
-  sp; if.  
-  + sp; match; auto => />.
-    + smt(fcardU1).
-    smt().
-  auto => /#.
-+ move => b c.
-  proc; inline.
-  sp; if => //.
-  + match Some ^match. auto => />.
-    + smt().
-    rcondf ^if. auto => />.
-    by auto => /#.
-  rcondf ^if. auto => />.
-  by auto => /#.
-
-+ proc; inline.
-  match Some ^match. auto => />.
-  match None ^match. auto => />.
-  match Some ^match. auto => /#. 
-  rcondt ^if{3}. auto => />.
-  wp.
-  swap ^r1<$ @ 1.
-  wp.
-  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
-  auto => />.
-  move => &hr 3? H *.
-  split.
-  + apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
-    + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
-      exact mu_le.
-    rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-    + move => x xin.
-      rewrite dmap1E /(\o) /pred1 /=.
-      rewrite (mu_eq dt _ (pred1 (loge x))).
-      + move => v.
-        by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-      rewrite duniform1E.
-      rewrite DZmodP.Support.enumP /=.
-      by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-    move => />.
-    move : H. clear.
-    smt(gt0_order).
-  move => *.
-  smt().
-+ move => c.
-  proc; inline.
-  sp; match; 1: auto => /#.
-  match; 2: auto => /#.
-  auto => />.  
-  smt(fcardU1).
-+ move => b c.
-  proc; inline.
-  sp; match; 1: auto => /#.
-  match Some ^match; 1: auto => /#.
-  by auto => /#. 
-qed.
-
-lemma bound_stop2 bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2] 
-  <= ((q_h + q_init + q_m1 + q_m2) * (q_h + q_init + q_m1 + q_m2 - 1))%r / (2 * order)%r.
-proof.
-have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2]
-       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2].
-+ byequiv => //.
-  proc.
-  call (: ={glob UAKE_name_st, glob HROc.RO}); try (proc; inline; sim />).
-  + proc; inline. 
-    by sp; if; auto.
-  + by auto => />. 
-  + by auto => />.
-  + by auto => />.
-  by inline; auto => />.
-have ->: Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2]
-       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2
-            /\ Counter.ch < q_h /\ Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2].
-+ byequiv => //.
-  proc.
-  conseq (: _ ==> ={UAKE_name_st.stop2}) _ (: _ ==> Counter.ch < q_h /\ Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2) => //.
-  + call (A_res_bounded_qs (UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO))).
-    by inline; auto.
-  by sim. 
-fel
-  1
-  (Counter.ch + Counter.ce + Counter.cm1 + Counter.cm2)
-  (fun x => x%r / order%r)
-  (q_h + q_init + q_m1 + q_m2)
-  UAKE_name_st.stop2
-  [ Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).h : false;
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).gen : false;
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).init : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
-                                /\ UAKE_name_st.c_smap.[arg.`1] = None);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
-                                /\ exists v, obind get_skey UAKE_name_st.servers.[arg.`1] = Some v);
-    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg2 : false
-  ]
-  (card UAKE_name_st.x_set <= Counter.ch + Counter.cm1 /\ card UAKE_name_st.y_set <= Counter.ch + Counter.cm2 /\ 0 <= Counter.ch /\ 0 <= Counter.cg /\ 0 <= Counter.ce /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2)
-.
-+ rewrite -mulr_suml StdBigop.Bigreal.sumidE.
-  + smt(ge0_q_init ge0_q_m1 ge0_q_m2 ge0_q_h).
-  smt().
-+ smt().
-+ inline; auto.
-  smt(fcards0).
-
-+ by exfalso.
-+ move => c.
-  proc; inline.
-  sp; if; auto => />.
-+ move => b c.
-  proc; inline.
-  sp 2; if.
-  + auto => /#.
-  auto => /#.
-
-+ by exfalso.
-+ move => c.
-  conseq />.
-  proc; inline.
-  auto.
-+ move => b c.
-  proc; inline.
-  sp 2; if.
-  + auto => />.
-    smt(fcardU1).
-  auto => />.
-  smt(fcardU1).
-
-+ proc; inline.
-  rcondt ^if; 1: auto => />.
-  match None ^match; 1: auto => />.
-  rcondt ^if; 1: auto => />.
-  auto => />.
-  rnd (fun x => g ^ x \in UAKE_name_st.x_set).
-  auto => />.
-  move => &hr *.
-  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.x_set{hr}))). 
-  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.x_set{hr})).
-    exact mu_le.
-  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-  + move => x xin.
-    rewrite dmap1E /(\o) /pred1 /=.
-    rewrite (mu_eq dt _ (pred1 (loge x))).
-    + move => v.
-      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-    rewrite duniform1E.
-    rewrite DZmodP.Support.enumP /=.
-    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-  smt(gt0_order).
-+ move => c.
-  proc; inline.
-  sp; if.  
-  + sp; match; auto => />.
-    + smt(fcardU1).
-    smt().
-  auto => /#.
-+ move => b c.
-  proc; inline.
-  sp; if => //.
-  + match Some ^match. auto => />.
-    + smt().
-    rcondf ^if. auto => />.
-    by auto => /#.
-  rcondf ^if. auto => />.
-  by auto => /#.
-
-+ proc; inline.
-  match Some ^match. auto => />.
-  match None ^match. auto => />.
-  match Some ^match. auto => /#. 
-  rcondt ^if{3}. auto => />.
-  wp.
-  swap ^r1<$ @ 1.
-  wp. 
-  rnd (fun x => g ^ x \in UAKE_name_st.y_set).
-  auto => />.
-  move => &hr 4? H *.
-  split.
-  + apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.y_set{hr}))). 
-    + rewrite  (dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.y_set{hr})).
-      smt(in_fsetU1 mu_le).
-    rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
-    + move => x xin.
-      rewrite dmap1E /(\o) /pred1 /=.
-      rewrite (mu_eq dt _ (pred1 (loge x))).
-      + move => v.
-        by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
-      rewrite duniform1E.
-      rewrite DZmodP.Support.enumP /=.
-      by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
-    have : (card UAKE_name_st.y_set{hr})%r * (1%r / order%r) <= (Counter.ch{hr} + Counter.cm2{hr})%r / order%r.
-    + by move : H; clear; smt(gt0_order).
-    smt(gt0_order).
-  rewrite /get_as_Some //=.
-+ move => c.
-  proc; inline.
-  sp; match; 1: auto => /#.
-  match; 2: auto => /#.
-  auto => />.  
-  smt(fcardU1).
-+ move => b c.
-  proc; inline.
-  sp; match; 1: auto => /#.
-  match Some ^match; 1: auto => /#.
-  auto => /> *.
-  smt(fcardU1).
-
-+ by exfalso.
-+ move => c.
-  proc; inline.
-  sp; match; 1: auto => /#.
-  match; 2: auto => /#; auto => />.
-+ move => b c.
-  proc; inline.
-  sp; match.
-  + auto => />. smt(fcardU1).
-  match => //; 2,3: by auto => />; smt(fcardU1).
-  auto => />.
-  smt(fcardU1).
-qed.
-
 
 (* Unrestricted vs. restricted for the name-based model *)
 (* First restricted => unrestricted security *)
@@ -2140,7 +1815,6 @@ wp; call (: ={b0, c_smap, s_smap, tested}(O_HN, UAKEc.O_RN) /\ ={m}(UAKEc.HROc.R
 
 auto => />. smt(mem_empty emptyE).
 qed.
-
 
 lemma unres_to_res bit &m: Pr[UAKEc.E_UAKE_UN(UAKEc.O_UN(NTOR_S, NTOR_C, UAKEc.HROc.RO), A).run(bit) @ &m : res] 
   = Pr[UAKEc.E_UAKE_RN(UAKEc.O_RN(NTOR_S, NTOR_C, UAKEc.HROc.RO), Hon_s_Red(Hon_Red(A))).run(bit) @ &m : res].
@@ -3304,6 +2978,328 @@ case : (!(st1r \/ st2r)) => />. smt().
   rcondf ^if; auto => />.
 qed.
 
+lemma sum_stop bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : (UAKE_name_st.stop1 \/ UAKE_name_st.stop2)] 
+  <= Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1] 
+      + Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2].
+proof.
+rewrite Pr[mu_or].
+smt(ge0_mu).
+qed.
+
+lemma bound_stop1 bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1] 
+  <= ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2 * order)%r.
+proof.
+have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop1]
+       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1].
++ byequiv => //.
+  proc.
+  call (: ={glob UAKE_name_st, glob HROc.RO}); try (proc; inline; sim />).
+  + proc; inline. 
+    by sp; if; auto.
+  + by auto => />. 
+  + by auto => />. 
+  + by auto => />. 
+  by inline; auto => />.
+have ->: Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1]
+       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop1
+            /\ Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1].
++ byequiv => //.
+  proc.
+  conseq (: _ ==> ={UAKE_name_st.stop1}) _ (: _ ==> Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1) => //.
+  + call (A_res_bounded_qs (UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO))).
+    by inline; auto.
+  by sim. 
+fel
+  1
+  (Counter.cg + Counter.ce + Counter.cm1)
+  (fun x => x%r / order%r)
+  (q_init + q_m1 + q_gen)
+  UAKE_name_st.stop1
+  [ Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).gen : (arg \notin UAKE_name_st.servers);
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).init : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
+                                /\ UAKE_name_st.c_smap.[arg.`1] = None);
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
+                                /\ exists v, obind get_skey UAKE_name_st.servers.[arg.`1] = Some v)
+  ]
+  (card UAKE_name_st.pk_set <= Counter.cg + Counter.ce + Counter.cm1 /\ 0 <= Counter.cg /\ 0 <= Counter.ce /\ 0 <= Counter.cm1)
+.
++ rewrite -mulr_suml StdBigop.Bigreal.sumidE.
+  + smt(ge0_q_init ge0_q_m1 ge0_q_gen).
+  smt().
++ smt().
++ inline; auto.
+  smt(fcards0).
+
+
++ proc; inline.
+  rcondt ^if; 1: auto => />.
+  wp.
+  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  sp; if; auto => />.
+  smt(fcardU1).
++ move => b c.
+  proc; inline.
+  rcondf ^if. auto => />.
+  by auto => /#.
+
++ proc; inline.
+  rcondt ^if; 1: auto => />.
+  match None ^match; 1: auto => />.
+  rcondt ^if; 1: auto => />.
+  auto => />.
+  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  sp; if.  
+  + sp; match; auto => />.
+    + smt(fcardU1).
+    smt().
+  auto => /#.
++ move => b c.
+  proc; inline.
+  sp; if => //.
+  + match Some ^match. auto => />.
+    + smt().
+    rcondf ^if. auto => />.
+    by auto => /#.
+  rcondf ^if. auto => />.
+  by auto => /#.
+
++ proc; inline.
+  match Some ^match. auto => />.
+  match None ^match. auto => />.
+  match Some ^match. auto => /#. 
+  rcondt ^if{3}. auto => />.
+  wp.
+  swap ^r1<$ @ 1.
+  wp.
+  rnd (fun x => g ^ x \in UAKE_name_st.pk_set).
+  auto => />.
+  move => &hr 3? H *.
+  split.
+  + apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.pk_set{hr}))). 
+    + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.pk_set{hr})).
+      exact mu_le.
+    rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+    + move => x xin.
+      rewrite dmap1E /(\o) /pred1 /=.
+      rewrite (mu_eq dt _ (pred1 (loge x))).
+      + move => v.
+        by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+      rewrite duniform1E.
+      rewrite DZmodP.Support.enumP /=.
+      by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+    move => />.
+    move : H. clear.
+    smt(gt0_order).
+  move => *.
+  smt().
++ move => c.
+  proc; inline.
+  sp; match; 1: auto => /#.
+  match; 2: auto => /#.
+  auto => />.  
+  smt(fcardU1).
++ move => b c.
+  proc; inline.
+  sp; match; 1: auto => /#.
+  match Some ^match; 1: auto => /#.
+  by auto => /#. 
+qed.
+
+lemma bound_stop2 bit &m: Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2] 
+  <= ((q_h + q_init + q_m1 + q_m2) * (q_h + q_init + q_m1 + q_m2 - 1))%r / (2 * order)%r.
+proof.
+have ->: Pr[E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : UAKE_name_st.stop2]
+       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2].
++ byequiv => //.
+  proc.
+  call (: ={glob UAKE_name_st, glob HROc.RO}); try (proc; inline; sim />).
+  + proc; inline. 
+    by sp; if; auto.
+  + by auto => />. 
+  + by auto => />.
+  + by auto => />.
+  by inline; auto => />.
+have ->: Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2]
+       = Pr[E_UAKE_RN(Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)), A_res).run(bit) @ &m : UAKE_name_st.stop2
+            /\ Counter.ch < q_h /\ Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2].
++ byequiv => //.
+  proc.
+  conseq (: _ ==> ={UAKE_name_st.stop2}) _ (: _ ==> Counter.ch < q_h /\ Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2) => //.
+  + call (A_res_bounded_qs (UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO))).
+    by inline; auto.
+  by sim. 
+fel
+  1
+  (Counter.ch + Counter.ce + Counter.cm1 + Counter.cm2)
+  (fun x => x%r / order%r)
+  (q_h + q_init + q_m1 + q_m2)
+  UAKE_name_st.stop2
+  [ Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).h : false;
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).gen : false;
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).init : ((arg.`2 \in UAKE_name_st.servers) /\ ! get_sr_dh (oget UAKE_name_st.servers.[arg.`2]) 
+                                /\ UAKE_name_st.c_smap.[arg.`1] = None);
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg1 : (UAKE_name_st.s_smap.[(arg.`1, arg.`2)] = None
+                                /\ exists v, obind get_skey UAKE_name_st.servers.[arg.`1] = Some v);
+    Counter(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)).send_msg2 : false
+  ]
+  (card UAKE_name_st.x_set <= Counter.ch + Counter.cm1 /\ card UAKE_name_st.y_set <= Counter.ch + Counter.cm2 /\ 0 <= Counter.ch /\ 0 <= Counter.cg /\ 0 <= Counter.ce /\ 0 <= Counter.cm1 /\ 0 <= Counter.cm2)
+.
++ rewrite -mulr_suml StdBigop.Bigreal.sumidE.
+  + smt(ge0_q_init ge0_q_m1 ge0_q_m2 ge0_q_h).
+  smt().
++ smt().
++ inline; auto.
+  smt(fcards0).
+
++ by exfalso.
++ move => c.
+  proc; inline.
+  sp; if; auto => />.
++ move => b c.
+  proc; inline.
+  sp 2; if.
+  + auto => /#.
+  auto => /#.
+
++ by exfalso.
++ move => c.
+  conseq />.
+  proc; inline.
+  auto.
++ move => b c.
+  proc; inline.
+  sp 2; if.
+  + auto => />.
+    smt(fcardU1).
+  auto => />.
+  smt(fcardU1).
+
++ proc; inline.
+  rcondt ^if; 1: auto => />.
+  match None ^match; 1: auto => />.
+  rcondt ^if; 1: auto => />.
+  auto => />.
+  rnd (fun x => g ^ x \in UAKE_name_st.x_set).
+  auto => />.
+  move => &hr *.
+  apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.x_set{hr}))). 
+  + rewrite -(dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.x_set{hr})).
+    exact mu_le.
+  rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+  + move => x xin.
+    rewrite dmap1E /(\o) /pred1 /=.
+    rewrite (mu_eq dt _ (pred1 (loge x))).
+    + move => v.
+      by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+    rewrite duniform1E.
+    rewrite DZmodP.Support.enumP /=.
+    by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+  smt(gt0_order).
++ move => c.
+  proc; inline.
+  sp; if.  
+  + sp; match; auto => />.
+    + smt(fcardU1).
+    smt().
+  auto => /#.
++ move => b c.
+  proc; inline.
+  sp; if => //.
+  + match Some ^match. auto => />.
+    + smt().
+    rcondf ^if. auto => />.
+    by auto => /#.
+  rcondf ^if. auto => />.
+  by auto => /#.
+
++ proc; inline.
+  match Some ^match. auto => />.
+  match None ^match. auto => />.
+  match Some ^match. auto => /#. 
+  rcondt ^if{3}. auto => />.
+  wp.
+  swap ^r1<$ @ 1.
+  wp. 
+  rnd (fun x => g ^ x \in UAKE_name_st.y_set).
+  auto => />.
+  move => &hr 4? H *.
+  split.
+  + apply (ler_trans (mu (dmap dt (fun x : ZModE.exp => g ^ x)) (mem UAKE_name_st.y_set{hr}))). 
+    + rewrite  (dmapE dt (fun x : ZModE.exp => g ^ x) (fun y => y \in UAKE_name_st.y_set{hr})).
+      smt(in_fsetU1 mu_le).
+    rewrite (Mu_mem.mu_mem _ _ (1%r / order%r)).
+    + move => x xin.
+      rewrite dmap1E /(\o) /pred1 /=.
+      rewrite (mu_eq dt _ (pred1 (loge x))).
+      + move => v.
+        by rewrite -{1}(expgK x) -(pow_bij v (loge x)).
+      rewrite duniform1E.
+      rewrite DZmodP.Support.enumP /=.
+      by rewrite undup_id 1:DZmodP.Support.enum_uniq -DZmodP.cardE.
+    have : (card UAKE_name_st.y_set{hr})%r * (1%r / order%r) <= (Counter.ch{hr} + Counter.cm2{hr})%r / order%r.
+    + by move : H; clear; smt(gt0_order).
+    smt(gt0_order).
+  rewrite /get_as_Some //=.
++ move => c.
+  proc; inline.
+  sp; match; 1: auto => /#.
+  match; 2: auto => /#.
+  auto => />.  
+  smt(fcardU1).
++ move => b c.
+  proc; inline.
+  sp; match; 1: auto => /#.
+  match Some ^match; 1: auto => /#.
+  auto => /> *.
+  smt(fcardU1).
+
++ by exfalso.
++ move => c.
+  proc; inline.
+  sp; match; 1: auto => /#.
+  match; 2: auto => /#; auto => />.
++ move => b c.
+  proc; inline.
+  sp; match.
+  + auto => />. smt(fcardU1).
+  match => //; 2,3: by auto => />; smt(fcardU1).
+  auto => />.
+  smt(fcardU1).
+qed.
 
 lemma name_to_pk bit &m: `| Pr[UAKEc.E_UAKE_RN(UAKEc.O_RN(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_res).run(bit) @ &m : res]
      - Pr[UAKE_mod.E_UAKE(UAKE_mod.O_RPK(S, C, UAKE_mod.HROc.RO), Name_Red(A_res)).run(bit) @ &m : res] | 
@@ -3318,4 +3314,3 @@ apply (ler_trans (Pr[UAKEc.E_UAKE_RN(UAKE_name_st(NTOR_S, NTOR_C, UAKEc.HROc.RO)
 + apply sum_stop.
 smt(bound_stop1 bound_stop2).
 qed.
-
