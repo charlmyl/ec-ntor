@@ -19000,16 +19000,20 @@ qed.
 lemma Security_modified_NTOR &m: `| Pr[E_UAKE(O_RPK(S, C, RO), A).run(false) @ &m : res] - Pr[E_UAKE(O_RPK(S, C, RO), A).run(true) @ &m : res]|
   <= Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_CDH(O_CDH, R_Ltk(A)).run() @ &m : O_CDH.win]
        + 2%r * q_m2%r * p_max dtag
-       + 2%r * ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / (2 * order)%r 
-       + 2%r * ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2 * order)%r.
+       + ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / order%r
+       + ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / order%r.
 proof. 
 rewrite !(gake_game0 _).
+have H : forall x y, x / y = 2%r * x / (2%r * y).
++ move=> x y.
+  by rewrite eq_sym RField.invfM RField.mulrA [2%r * _]RField.mulrC -!RField.mulrA [2%r * _]RField.mulrA RField.divrr.
+rewrite H [_ / order%r]H.
 apply (ler_trans (`|Pr[E_UAKE(Game1, A).run(false) @ &m : res] - Pr[E_UAKE(Game1, A).run(true) @ &m : res]| 
-        + 2%r * ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2 * order)%r)).
+        + 2%r * ((q_gen + q_init + q_m1) * (q_gen + q_init + q_m1 - 1))%r / (2%r * order%r))).
 + smt(game0_game1 game0_bad1).
 rewrite ler_add2r.
 apply (ler_trans (`|Pr[E_UAKE(Game2, A).run(false) @ &m : res] - Pr[E_UAKE(Game2, A).run(true) @ &m : res]| 
-        + 2%r * ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / (2 * order)%r)).
+        + 2%r * ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / (2%r * order%r))).
 + smt(game1_game2 game1_bad2).
 rewrite ler_add2r.
 rewrite !(game2_game2_5 _).
@@ -19036,7 +19040,5 @@ apply cdh_red_ltk.
 qed.
 
 end section.
-
-
 
 
