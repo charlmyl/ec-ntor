@@ -15,9 +15,9 @@ Below we outline what each contains:
 ## Key Theorems and Security Statement
 
 Section 2
-- Theorem 1, From restricted to unrestricted security applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line ?
-- Theorem 2, From unrestricted to restricted security applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line ?
-- Theorem 3, From restricted name-based security of the simplified NTOR protocol to restricted public-key-only security of the modified NTOR protocol: `ntor/ModelRelations.ec` line ?
+- Theorem 1, From restricted to unrestricted security applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line 936
+- Theorem 2, From unrestricted to restricted security applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line 1810
+- Theorem 3, From restricted name-based security of the simplified NTOR protocol to restricted public-key-only security of the modified NTOR protocol: `ntor/ModelRelations.ec` line 3304
 
 Section 4
 - Theorem 5, Restricted public-key-only security of the modified NTOR protocol: `ntor/Security.ec` line 19000
