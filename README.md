@@ -1,5 +1,21 @@
 # EasyCrypt Formalisation of the NTOR Protocol
 
+## Project Structure
+
+The `ntor` folder contains the various EasyCrypt files that make-up the proof and definitions.
+Below we outline what each contains:
+- `Games.ec`:
+- `ModelRelations.ec`:
+- `NTOR_name.ec`:
+- `NTOR_pkonly.ec`:
+- `Security.ec`:
+- `UAKE_name.eca`:
+- `UAKE_pkonly.eca`:
+
+## Key Theorems and Security Statement
+
+
+
 ## Compiling the Project
 
 This project has been verified with EasyCrypt (r2026.02) along with the following provers:
