@@ -19100,7 +19100,7 @@ qed.
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Summing up *)
-lemma Security_modified_NTOR &m: `| Pr[E_UAKE(O_RPK(S, C, RO), A).run(false) @ &m : res] - Pr[E_UAKE(O_RPK(S, C, RO), A).run(true) @ &m : res]|
+lemma Security_modified_NTOR &m: `| Pr[E_UAKE(O_HPK(S, C, RO), A).run(false) @ &m : res] - Pr[E_UAKE(O_HPK(S, C, RO), A).run(true) @ &m : res]|
   <= Pr[E_CDH(O_CDH, R_Eph(A)).run() @ &m : O_CDH.win] + Pr[E_CDH(O_CDH, R_Ltk(A)).run() @ &m : O_CDH.win]
        + 2%r * q_m2%r * p_max dtag
        + ((q_h + q_gen + q_init + q_m1) * (q_h + q_gen + q_init + q_m1 - 1))%r / order%r
