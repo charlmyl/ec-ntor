@@ -576,7 +576,7 @@ declare axiom A_ll (G <: UAKE_h_pk{-A}):
 
 declare axiom A_bounded_qs: forall (G <: UAKE_h_pk_i{-A}), hoare[A(Counter(G)).run: Counter.cg = 0 /\ Counter.ce = 0 /\ Counter.cm1 = 0 /\ Counter.cm2 = 0 /\ Counter.ch = 0
                                                                   ==> Counter.cg < q_gen /\ Counter.ce < q_init /\ Counter.cm1 < q_m1 /\ Counter.cm2 < q_m2 /\ Counter.ch < q_h].
-(*
+
 (* ------------------------------------------------------------------------------------------ *)
 (* Step 0: Inlining everything. *)
 lemma gake_game0 b &m :
@@ -4243,7 +4243,7 @@ proof.
 rewrite Pr[mu_split Game4.test_ltkrev = true].
 by congr; rewrite Pr[mu_eq] // => &hr; smt().
 qed.
-*)
+
 local lemma fset0_nin (s : 'a fset) x : s = fset0 => x \notin s.
 proof.
 move => ->.
@@ -4287,7 +4287,7 @@ move => /(_ (pick (fdom
 rewrite mem_fdom mem_filter negb_and H1 negb_and H2 //=.
 smt().
 qed.
-(*
+
 (* One-sided invariant for Game4 *)
 op inv_Game4' (tested : int option, 
 tq : (pkey * pkey * pkey * pkey * pkey) option,
@@ -7545,7 +7545,7 @@ by case (tltkr) => //.
 - move => &1.
   proc; inline.
   rcondf ^if; auto => />.
-qed. *)
+qed. 
 
 (* ------------------------------------------------------------------------------------------ *)
 (* Removing keys from state *)
