@@ -210,13 +210,13 @@ fdom (
   fmap
 ).
 
-op get_tested_pot_partner_c (b: s_id) (fmap1: (int, c_state instance_state) fmap) (fmap2: (s_id * int, s_state instance_state) fmap) : int fset =
+op get_tested_pot_partner_c (s: s_id) (fmap1: (int, c_state instance_state) fmap) (fmap2: (s_id * int, s_state instance_state) fmap) : int fset =
 fdom (
   filter
   (fun i (val: c_state instance_state) =>
-        (exists m1o m2o, get_trace val = Some ((b, m1o), m2o))                        (* Partners share the same server identifier *)
+        (exists m1o m2o, get_trace val = Some ((s, m1o), m2o))                        (* Partners share the same server identifier *)
     /\ get_ir_test val = true                                                         (* Partner is tested *)
-    /\ (forall j, (b,j) \in fmap2 => get_trace (oget fmap2.[(b,j)]) <> get_trace val) (* There is no full partner for this client *)
+    /\ (forall j, (s,j) \in fmap2 => get_trace (oget fmap2.[(s,j)]) <> get_trace val) (* There is no full partner for this client *)
   )
   fmap1
 ).
@@ -238,8 +238,8 @@ if 1 <= card (get_partners_s t fmap) then Some (1 <= card (get_untested_partners
 op fresh_partner_s (t: trace) (fmap: (int, c_state instance_state) fmap) : bool option =
 if 1 <= card (get_origins_s t fmap) then Some (1 <= card (get_fresh_partners_s t fmap)) else None.
 
-op tested_pot_partner_c (b: s_id) (fmap1: (int, c_state instance_state) fmap) (fmap2: (s_id * int, s_state instance_state) fmap) : bool = 
-1 <= card (get_tested_pot_partner_c b fmap1 fmap2).
+op tested_pot_partner_c (s: s_id) (fmap1: (int, c_state instance_state) fmap) (fmap2: (s_id * int, s_state instance_state) fmap) : bool = 
+1 <= card (get_tested_pot_partner_c s fmap1 fmap2).
 
 
 (* rondom oracle *)
@@ -258,7 +258,7 @@ module type Server (H : HROc.RO) = {
 }.
 
 module type Client (H : HROc.RO) = {
-  proc new_session(b: s_id, pk: pkey) : c_state * msg1
+  proc new_session(s: s_id, pk: pkey) : c_state * msg1
   proc complete_session(st: c_state, m: msg2) : (c_state * key) option
 }.
 
@@ -266,48 +266,48 @@ module type Client (H : HROc.RO) = {
 (* UAKE games for name-based models *)
 
 (* oracles that are exposed to the adversary *)
-module type UAKE_unres_name = {
+module type UAKE_wdh_name = {
   (* random oracle *)
   proc h(input: h_input) : tag * key
 
   (* server management *)
-  proc gen(b: s_id) : pkey option
-  proc register_dishonest(b: s_id, pk: pkey) : unit option
+  proc gen(s: s_id) : pkey option
+  proc register_dishonest(s: s_id, pk: pkey) : unit option
 
   (* starting clients and sends *)
   proc init(i: int, m1: s_id) : pkey option
-  proc send_msg1(b: s_id, j: int, m2: pkey) : (pkey * tag) option
+  proc send_msg1(s: s_id, j: int, m2: pkey) : (pkey * tag) option
   proc send_msg2(i: int, m3: pkey * tag) : unit option
 
   (* reveal and test *)
   proc c_rev_skey(i: int) : key option
-  proc s_rev_skey(b: s_id, j: int) : key option
-  proc rev_ltkey(b: s_id) : skey option
+  proc s_rev_skey(s: s_id, j: int) : key option
+  proc rev_ltkey(s: s_id) : skey option
   proc c_rev_ephkey(i: int) : skey option
-  proc s_rev_ephkey(b: s_id, j: int) : skey option
+  proc s_rev_ephkey(s: s_id, j: int) : skey option
   proc c_test(i: int) : key option
-  proc s_test(b: s_id, j: int) : key option
+  proc s_test(s: s_id, j: int) : key option
 }.
 
-module type UAKE_res_name = {
-  include UAKE_unres_name [-register_dishonest]
+module type UAKE_h_name = {
+  include UAKE_wdh_name [-register_dishonest]
 }.
 
 (* oracles that are exposed to the experiment *)
-module type UAKE_unres_name_i = {
-  include UAKE_unres_name
+module type UAKE_wdh_name_i = {
+  include UAKE_wdh_name
 
   proc init_mem(b : bool) : unit
 }.
 
-module type UAKE_res_name_i = {
-  include UAKE_res_name
+module type UAKE_h_name_i = {
+  include UAKE_h_name
 
   proc init_mem(b : bool) : unit
 }.
 
-(* UAKE game for one-round protocols using random oracle H in the unrestricted name-based model *)
-module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
+(* UAKE game for one-round protocols using random oracle H in the name-based model with dishonest servers *)
+module O_DHN (S: Server) (C: Client) (H : RO) : UAKE_wdh_name = {
   var b0 : bool 
 
   var servers : (s_id, server_state) fmap
@@ -330,21 +330,21 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
   proc h = H.get
   
   (* server management *)
-  proc gen(b: s_id) : pkey option = {
+  proc gen(s: s_id) : pkey option = {
     var kp;
 
-    if (b \notin servers) {
+    if (s \notin servers) {
       kp <@ S(H).keygen();
-      servers.[b] <- Honest kp;
+      servers.[s] <- Honest kp;
     }
-    return omap get_pkey servers.[b];
+    return omap get_pkey servers.[s];
   }
 
-  proc register_dishonest(b: s_id, pk: pkey) : unit option = {
+  proc register_dishonest(s: s_id, pk: pkey) : unit option = {
     var r <- None;
 
-    if (b \notin servers) {
-      servers.[b] <- Dishonest pk;
+    if (s \notin servers) {
+      servers.[s] <- Dishonest pk;
       r <- Some ();
     }
     return r;
@@ -369,25 +369,25 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
     return r;
   }
 
-  proc send_msg1(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
+  proc send_msg1(s: s_id, j: int, m2: pkey) : (pkey * tag) option = {
     var sko, resp, st', k, m3;
     var r <- None;
 
-    sko <- obind get_skey servers.[b];
+    sko <- obind get_skey servers.[s];
     if (sko is Some sk) (* Server was initialised as honest *) {
-      match s_smap.[b, j] with
+      match s_smap.[s, j] with
       | None => {
-          resp <@ S(H).respond_session((b, sk, None), m2);
+          resp <@ S(H).respond_session((s, sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
-            if (get_sr_ltk (oget servers.[b])) {
-              s_smap.[(b, j)] <- Accepted st' ((b, m2), Some m3) k (false, false, false, true);
+            if (get_sr_ltk (oget servers.[s])) {
+              s_smap.[(s, j)] <- Accepted st' ((s, m2), Some m3) k (false, false, false, true);
             } else {
-              s_smap.[(b, j)] <- Accepted st' ((b, m2), Some m3) k (false, false, false, false);
+              s_smap.[(s, j)] <- Accepted st' ((s, m2), Some m3) k (false, false, false, false);
             }
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted None (Some ((b, m2), None)) (false, false, false, false);
+            s_smap.[(s, j)] <- Aborted None (Some ((s, m2), None)) (false, false, false, false);
           }
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -447,18 +447,18 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
     return k;
   }
 
-  proc s_rev_skey(b: s_id, j: int) : key option = {
+  proc s_rev_skey(s: s_id, j: int) : key option = {
     var k <- None;
 
-    match s_smap.[(b, j)] with
+    match s_smap.[(s, j)] with
     | None => { }
     | Some st => {
         (* only accepted server instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
         if (st is Accepted st' t' k' ir') {
-          if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
+          if (!(get_ir_test (oget s_smap.[s, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+            s_smap.[(s, j)] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -466,23 +466,23 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
     return k;
   }
 
-  proc rev_ltkey(b: s_id) : skey option = {
+  proc rev_ltkey(s: s_id) : skey option = {
     var ltk <- None;
 
-    match servers.[b] with
+    match servers.[s] with
     | None => { }
     | Some st => {
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
         if (st is Honest kp) {
           if (forall j,
-                (b, j) \in s_smap (* just checking instances of b *)
-                => !(   (   get_ir_test (oget s_smap.[b, j])
+                (s, j) \in s_smap (* just checking instances of b *)
+                => !(   (   get_ir_test (oget s_smap.[s, j])
                             (* This is always OK (get_trace always Some on server side *)
-                         \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
-                     /\ get_ir_eph (oget s_smap.[b,j]))) {
+                         \/ untested_partner_s (oget (get_trace (oget s_smap.[s, j]))) c_smap = Some false)
+                     /\ get_ir_eph (oget s_smap.[s,j]))) {
             ltk <- Some kp.`2; 
-            servers.[b] <- Corrupt kp; 
+            servers.[s] <- Corrupt kp; 
           }
         }
       }
@@ -520,20 +520,20 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
     return ek;
   }
 
-  proc s_rev_ephkey(b: s_id, j: int) : skey option = {
+  proc s_rev_ephkey(s: s_id, j: int) : skey option = {
     var ek <- None;
 
-    match s_smap.[b, j] with
+    match s_smap.[s, j] with
     | None => { }
     | Some st => {
         (* only accepted server instances that are not ltkey revealed in case they 
            or all partners are tested can be ephkey revealed *)
         if (st is Accepted st t k ir) { (* No Pending on Server side *)
-          if (!((   get_ir_test (oget s_smap.[b, j])
+          if (!((   get_ir_test (oget s_smap.[s, j])
                  \/ untested_partner_s t c_smap = Some false)
-                /\ get_sr_ltk (oget servers.[b]))) {
+                /\ get_sr_ltk (oget servers.[s]))) {
             ek <- Some (oget st.`3);
-            s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+            s_smap.[(s, j)] <- set_ir_eph (Accepted st t k ir);
           }
         }
       }
@@ -573,27 +573,27 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
     return k;
   }
 
-  proc s_test(b: s_id, j: int) : key option = {
+  proc s_test(s: s_id, j: int) : key option = {
     var ks;
     var k <- None;
 
     if (tested = None) {
-      match s_smap.[(b, j)] with
+      match s_smap.[(s, j)] with
       | None => { }
       | Some st => {
           (* only accepted server instances that are not sesskey revealed, not trivially broken
              and not all partner instances are unfresh can be tested *)
           if (st is Accepted st' t' k' ir') {
-            if (!(   get_ir_sess (oget s_smap.[b, j]) 
-                  \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
+            if (!(   get_ir_sess (oget s_smap.[s, j]) 
+                  \/ (get_ir_eph (oget s_smap.[s, j]) /\ get_sr_ltk (oget servers.[s]))
                   \/ fresh_partner_s t' c_smap <> Some true)) {
               if (b0 = false) {
                 k <- Some k';
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(s, j)] <- set_ir_test (Accepted st' t' k' ir');
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(s, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
               tested <- Some (pick (get_fresh_partners_s t' c_smap));
             }
@@ -608,15 +608,15 @@ module O_UN (S: Server) (C: Client) (H : RO) : UAKE_unres_name = {
 
 
 (* ------------------------------------------------------------------------------------------ *)
-(* Defining honest communicatin and restricted name-based oracles *)
-module O_HN (S: Server) (C: Client) (H : RO) = O_UN (S, C, H) with {
+(* Defining honest communication and name-based oracles still including dishonest registration *)
+module O_HCN (S: Server) (C: Client) (H : RO) = O_DHN (S, C, H) with {
   proc init [
     ^if ~ (m1 \in servers /\ !get_sr_dh (oget servers.[m1]))
   ]
 }.
 
-(* UAKE game for one-round protocols using random oracle H in the restricted name-based model *)
-module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
+(* UAKE game for one-round protocols using random oracle H in the name-based model with only honest servers *)
+module O_HN (S: Server) (C: Client) (H : RO) : UAKE_h_name = {
   var b0 : bool 
 
   var servers : (s_id, server_state) fmap
@@ -639,14 +639,14 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
   proc h = H.get
   
   (* server management *)
-  proc gen(b: s_id) : pkey option = {
+  proc gen(s: s_id) : pkey option = {
     var kp;
 
-    if (b \notin servers) {
+    if (s \notin servers) {
       kp <@ S(H).keygen();
-      servers.[b] <- Honest kp;
+      servers.[s] <- Honest kp;
     }
-    return omap get_pkey servers.[b];
+    return omap get_pkey servers.[s];
   }
 
   proc init(i: int, m1: s_id) : pkey option = {
@@ -668,25 +668,26 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
     return r;
   }
 
-  proc send_msg1(b: s_id, j: int, m2: pkey) : (pkey * tag) option = {
-    var sko, resp, st', k, m3;
+  proc send_msg1(s: s_id, j: int, m2: pkey) : (pkey * tag) option = {
+    var sk, resp, st', k, m3;
     var r <- None;
 
-    sko <- obind get_skey servers.[b];
-    if (sko is Some sk) (* Server was initialised as honest *) {
-      match s_smap.[b, j] with
+    if (s \in servers) {
+      sk <- oget (get_skey (oget servers.[s]));
+
+      match s_smap.[s, j] with
       | None => {
-          resp <@ S(H).respond_session((b, sk, None), m2);
+          resp <@ S(H).respond_session((s, sk, None), m2);
           if (resp is Some r') {
             (st', m3, k) <- r';
-            if (get_sr_ltk (oget servers.[b])) {
-              s_smap.[(b, j)] <- Accepted st' ((b, m2), Some m3) k (false, false, false, true);
+            if (get_sr_ltk (oget servers.[s])) {
+              s_smap.[(s, j)] <- Accepted st' ((s, m2), Some m3) k (false, false, false, true);
             } else {
-              s_smap.[(b, j)] <- Accepted st' ((b, m2), Some m3) k (false, false, false, false);
+              s_smap.[(s, j)] <- Accepted st' ((s, m2), Some m3) k (false, false, false, false);
             }
             r <- Some m3;
           } else {
-            s_smap.[(b, j)] <- Aborted None (Some ((b, m2), None)) (false, false, false, false);
+            s_smap.[(s, j)] <- Aborted None (Some ((s, m2), None)) (false, false, false, false);
           }
         }
       | Some st => { (* only completed sessions would be stored, and those can't be aborted; do nothing *) }
@@ -746,18 +747,18 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
     return k;
   }
 
-  proc s_rev_skey(b: s_id, j: int) : key option = {
+  proc s_rev_skey(s: s_id, j: int) : key option = {
     var k <- None;
 
-    match s_smap.[(b, j)] with
+    match s_smap.[(s, j)] with
     | None => { }
     | Some st => {
         (* only accepted server instances that are not tested and 
            that not only have tested partners can be sesskey revealed *)
         if (st is Accepted st' t' k' ir') {
-          if (!(get_ir_test (oget s_smap.[b, j]) \/ untested_partner_s t' c_smap = Some false)) {
+          if (!(get_ir_test (oget s_smap.[s, j]) \/ untested_partner_s t' c_smap = Some false)) {
             k <- Some k';
-            s_smap.[(b, j)] <- set_ir_sess (Accepted st' t' k' ir');
+            s_smap.[(s, j)] <- set_ir_sess (Accepted st' t' k' ir');
           }
         }
       }
@@ -765,23 +766,23 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
     return k;
   }
 
-  proc rev_ltkey(b: s_id) : skey option = {
+  proc rev_ltkey(s: s_id) : skey option = {
     var ltk <- None;
 
-    match servers.[b] with
+    match servers.[s] with
     | None => { }
     | Some st => {
         (* a server can be ltkey revealed if no instance of it is ephkey revealed 
            in case that instance or all its partners are tested *) 
         if (st is Honest kp) {
           if (forall j,
-                (b, j) \in s_smap (* just checking instances of b *)
-                => !(   (   get_ir_test (oget s_smap.[b, j])
+                (s, j) \in s_smap (* just checking instances of b *)
+                => !(   (   get_ir_test (oget s_smap.[s, j])
                             (* This is always OK (get_trace always Some on server side *)
-                         \/ untested_partner_s (oget (get_trace (oget s_smap.[b, j]))) c_smap = Some false)
-                     /\ get_ir_eph (oget s_smap.[b,j]))) {
+                         \/ untested_partner_s (oget (get_trace (oget s_smap.[s, j]))) c_smap = Some false)
+                     /\ get_ir_eph (oget s_smap.[s,j]))) {
             ltk <- Some kp.`2; 
-            servers.[b] <- Corrupt kp; 
+            servers.[s] <- Corrupt kp; 
           }
         }
       }
@@ -819,20 +820,20 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
     return ek;
   }
 
-  proc s_rev_ephkey(b: s_id, j: int) : skey option = {
+  proc s_rev_ephkey(s: s_id, j: int) : skey option = {
     var ek <- None;
 
-    match s_smap.[b, j] with
+    match s_smap.[s, j] with
     | None => { }
     | Some st => {
         (* only accepted server instances that are not ltkey revealed in case they 
            or all partners are tested can be ephkey revealed *)
         if (st is Accepted st t k ir) { (* No Pending on Server side *)
-          if (!((   get_ir_test (oget s_smap.[b, j])
+          if (!((   get_ir_test (oget s_smap.[s, j])
                  \/ untested_partner_s t c_smap = Some false)
-                /\ get_sr_ltk (oget servers.[b]))) {
+                /\ get_sr_ltk (oget servers.[s]))) {
             ek <- Some (oget st.`3);
-            s_smap.[(b, j)] <- set_ir_eph (Accepted st t k ir);
+            s_smap.[(s, j)] <- set_ir_eph (Accepted st t k ir);
           }
         }
       }
@@ -872,27 +873,27 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
     return k;
   }
 
-  proc s_test(b: s_id, j: int) : key option = {
+  proc s_test(s: s_id, j: int) : key option = {
     var ks;
     var k <- None;
 
     if (tested = None) {
-      match s_smap.[(b, j)] with
+      match s_smap.[(s, j)] with
       | None => { }
       | Some st => {
           (* only accepted server instances that are not sesskey revealed, not trivially broken
              and not all partner instances are unfresh can be tested *)
           if (st is Accepted st' t' k' ir') {
-            if (!(   get_ir_sess (oget s_smap.[b, j]) 
-                  \/ (get_ir_eph (oget s_smap.[b, j]) /\ get_sr_ltk (oget servers.[b]))
+            if (!(   get_ir_sess (oget s_smap.[s, j]) 
+                  \/ (get_ir_eph (oget s_smap.[s, j]) /\ get_sr_ltk (oget servers.[s]))
                   \/ fresh_partner_s t' c_smap <> Some true)) {
               if (b0 = false) {
                 k <- Some k';
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(s, j)] <- set_ir_test (Accepted st' t' k' ir');
               } else {
                 ks <$ dkey;
                 k <- Some ks;
-                s_smap.[(b, j)] <- set_ir_test (Accepted st' t' k' ir');
+                s_smap.[(s, j)] <- set_ir_test (Accepted st' t' k' ir');
               }
               tested <- Some (pick (get_fresh_partners_s t' c_smap));
             }
@@ -906,12 +907,12 @@ module O_RN (S: Server) (C: Client) (H : RO) : UAKE_res_name = {
 
 
 (********************************************************************************)
-(* Adversary and Experiment for unrestricted and restricted name-based UAKE game *)
-module type A_UAKE_unres_name (G : UAKE_unres_name) = {
+(* Adversary and Experiment for name-based UAKE game with and without dishonest servers *)
+module type A_UAKE_wdh_name (G : UAKE_wdh_name) = {
   proc run() : bool
 }.
 
-module E_UAKE_UN (O: UAKE_unres_name_i) (A : A_UAKE_unres_name) = {
+module E_UAKE_DHN (O: UAKE_wdh_name_i) (A : A_UAKE_wdh_name) = {
 
   proc run(b: bool) : bool = {
     var b' : bool;
@@ -924,11 +925,11 @@ module E_UAKE_UN (O: UAKE_unres_name_i) (A : A_UAKE_unres_name) = {
   }
 }.
 
-module type A_UAKE_res_name (G : UAKE_res_name) = {
+module type A_UAKE_h_name (G : UAKE_h_name) = {
   proc run() : bool
 }.
 
-module E_UAKE_RN (O: UAKE_res_name_i) (A : A_UAKE_res_name) = {
+module E_UAKE_HN (O: UAKE_h_name_i) (A : A_UAKE_h_name) = {
 
   proc run(b: bool) : bool = {
     var b' : bool;
