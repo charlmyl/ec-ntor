@@ -5,22 +5,22 @@
 The `ntor` folder contains the various EasyCrypt files that make-up the proof and definitions.
 Below we outline what each contains:
 - `Games.ec`: the implementation of all intermediate games.
-- `ModelRelations.ec`: the proofs for the equivalence between the unrestricted and restricted name-based model and reduction from restricted name-based to restricted public-key-only security in the setting of NTOR. 
+- `ModelRelations.ec`: the proofs for the equivalence between the name-based model with and without dishonest servers and reduction from name-based to public-key-only security with only honest servers in the setting of NTOR. 
 - `NTOR_name.ec`: the definition of the simplified NTOR protocol.
 - `NTOR_pkonly.ec`: the definition of the modified NTOR protocol using only public keys instead of names as server identifiers.
-- `Security.ec`: the proofs for all game hops and the statement for restricted public-key-only security of the modified NTOR protocol including reductions and supporting lemmas. 
-- `UAKE_name.eca`: the implementation of the restricted and unrestricted name-based models.
-- `UAKE_pkonly.eca`: the implementation of the restricted public-key-only model.
+- `Security.ec`: the proofs for all game hops and the statement for public-key-only security with only honest servers of the modified NTOR protocol including reductions and supporting lemmas. 
+- `UAKE_name.eca`: the implementation of the name-based models with and without dishonest servers.
+- `UAKE_pkonly.eca`: the implementation of the public-key-only model with only honest servers.
 
 ## Key Theorems and Security Statement
 
 Section 2
-- Theorem 1, From restricted to unrestricted security applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line 936
-- Theorem 2, From unrestricted to restricted security applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line 1810
-- Theorem 3, From restricted name-based security of the simplified NTOR protocol to restricted public-key-only security of the modified NTOR protocol: `ntor/ModelRelations.ec` line 3304
+- Theorem 1, From name-based security with only honest servers to name-based security with dishonest servers applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line 936
+- Theorem 2, From name-based security with dishonest servers to name-based security with only honest servers applied to the simplified NTOR protocol: `ntor/ModelRelations.ec` line 1833
+- Theorem 3, From name-based security with only honest servers of the simplified NTOR protocol to public-key-only security with only honest servers of the modified NTOR protocol: `ntor/ModelRelations.ec` line 3339
 
 Section 4
-- Theorem 5, Restricted public-key-only security of the modified NTOR protocol: `ntor/Security.ec` line 19000
+- Theorem 5, Public-key-only security with only honest servers of the modified NTOR protocol: `ntor/Security.ec` line 19103
 
 ## Compiling the Project
 
