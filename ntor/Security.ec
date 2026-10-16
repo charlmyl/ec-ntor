@@ -3458,7 +3458,7 @@ if => //.
     smt(get_setE pow_bij expgK).
   have := inv x0 y0 b0.
   have->: (g ^ (ZModE.( * ) x0 y0), g ^ (ZModE.( * ) x0 b0), g ^ b0, g ^ x0, g ^ y0) \in Game4.h2m{1}; 1: smt(mem_set).
-simplify  simplify.
+  simplify. simplify.
   move => [H1|H2].
   + left.
     move : H1 => [i'] t k'' ir'' H1.
