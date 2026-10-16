@@ -933,7 +933,7 @@ qed.
 
 (* Name-based model with vs. without dishonest servers *)
 (* First honest => dishonest security *)
-lemma res_to_wdh bit &m: Pr[UAKEc.E_UAKE_HN(UAKEc.O_HN(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_h).run(bit) @ &m : res]
+lemma h_to_wdh bit &m: Pr[UAKEc.E_UAKE_HN(UAKEc.O_HN(NTOR_S, NTOR_C, UAKEc.HROc.RO), A_h).run(bit) @ &m : res]
   = Pr[UAKEc.E_UAKE_DHN(UAKEc.O_DHN(NTOR_S, NTOR_C, UAKEc.HROc.RO), Res_Red(A_h)).run(bit) @ &m : res].
 proof.
 byequiv => //.
@@ -1830,7 +1830,7 @@ wp; call (: ={b0, c_smap, s_smap, tested}(O_HCN, UAKEc.O_HN) /\ ={m}(UAKEc.HROc.
 auto => />. smt(mem_empty emptyE).
 qed.
 
-lemma unres_to_h bit &m: Pr[UAKEc.E_UAKE_DHN(UAKEc.O_DHN(NTOR_S, NTOR_C, UAKEc.HROc.RO), A).run(bit) @ &m : res] 
+lemma wdh_to_h bit &m: Pr[UAKEc.E_UAKE_DHN(UAKEc.O_DHN(NTOR_S, NTOR_C, UAKEc.HROc.RO), A).run(bit) @ &m : res] 
   = Pr[UAKEc.E_UAKE_HN(UAKEc.O_HN(NTOR_S, NTOR_C, UAKEc.HROc.RO), Hon_s_Red(Hon_Red(A))).run(bit) @ &m : res].
 proof.
 by rewrite gake_hon -gake_rem_dhs. 
